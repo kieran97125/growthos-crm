@@ -198,6 +198,13 @@ test("mobile list, chat and customer sheet are usable without horizontal overflo
   await expect(
     page.getByRole("textbox", { name: "回覆訊息", exact: true }),
   ).toBeVisible();
+  await expect(
+    page
+      .getByRole("log")
+      .getByText("想問星期六下晝 3 點，兩位一齊做護理仲有冇位？", {
+        exact: true,
+      }),
+  ).toBeInViewport();
   await page.screenshot({ path: info.outputPath("conversation-mobile.png") });
   await page.getByRole("button", { name: "查看客戶資料", exact: true }).click();
   await expect(

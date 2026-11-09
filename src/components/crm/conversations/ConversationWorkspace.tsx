@@ -91,6 +91,7 @@ export function ConversationWorkspace({
   const [notice, setNotice] = useState("");
   const [bookingDraft, setBookingDraft] = useState<Booking | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const stickToLatest = useRef(true);
   const composerRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -119,7 +120,25 @@ export function ConversationWorkspace({
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [selectedKey, messages.length, ready]);
+    stickToLatest.current = true;
+  }, [selectedKey, messages.length, ready, mobileChat]);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || !ready) return;
+    const onScroll = () => {
+      stickToLatest.current =
+        el.scrollHeight - el.scrollTop - el.clientHeight < 45;
+    };
+    const resize = new ResizeObserver(() => {
+      if (stickToLatest.current) el.scrollTop = el.scrollHeight;
+    });
+    resize.observe(el);
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      resize.disconnect();
+      el.removeEventListener("scroll", onScroll);
+    };
+  }, [ready]);
 
   function changeDraft(value: string) {
     if (!selected) return;

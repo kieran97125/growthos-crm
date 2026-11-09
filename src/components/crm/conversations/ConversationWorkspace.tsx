@@ -361,7 +361,11 @@ export function ConversationWorkspace({
             <span />
             {empty ? "尚未連接" : "互動 Demo"}
           </span>
-          <button className="fh-guide-button" onClick={() => setPanel("guide")}>
+          <button
+            className="fh-guide-button"
+            aria-label="試用指南"
+            onClick={() => setPanel("guide")}
+          >
             <HelpCircle size={15} />
             <span>試用指南</span>
           </button>
@@ -981,6 +985,8 @@ export function ConversationWorkspace({
                         <button
                           type="button"
                           className="fh-quick-trigger fh-ai-trigger"
+                          aria-label="AI 建議"
+                          title="AI 建議"
                           onClick={() => setAssistantOpen(true)}
                         >
                           <Sparkles size={16} />

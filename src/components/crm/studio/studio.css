@@ -1015,7 +1015,7 @@
 }
 .fh-app .st-phone-body button {
   border-radius: 6px;
-  background: #8dab9e;
+  background: #426655;
   color: white;
   padding: 11px 12px;
   display: flex;
@@ -1669,7 +1669,7 @@
   width: 29px;
   height: 29px;
   flex-shrink: 0;
-  background: #b896d1;
+  background: #7960ad;
   color: white;
 }
 .st-lab-takeover {
@@ -1884,7 +1884,7 @@
 /* Accessible operational palette: soft surfaces, legible text and controls. */
 .st-workspace {
   --st-text: #5c526b;
-  --st-secondary: #756781;
+  --st-secondary: #655770;
   --st-muted: #7e7089;
 }
 .fh-app .st-workspace p,

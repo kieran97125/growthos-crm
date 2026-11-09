@@ -76,6 +76,11 @@ test("native form preview collects intent without claiming a confirmed appointme
   await page.getByRole("button", { name: "提交預約意向", exact: true }).click();
   await expect(page.getByRole("dialog")).toContainText("等待同事核實後確認");
   await expect(page.getByRole("dialog")).not.toContainText("預約成功");
+  const accessibility = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+    .include(".fh-dialog")
+    .analyze();
+  expect(accessibility.violations).toEqual([]);
 });
 
 test("BOT modes, source citations and manual ownership follow the configured behavior", async ({
@@ -165,6 +170,11 @@ test("inbox copilot inserts an editable draft and can open a pending follow-up",
   await page.getByRole("button", { name: "AI 建議", exact: true }).click();
   await page.getByRole("button", { name: "準備回覆建議", exact: true }).click();
   await expect(page.getByRole("dialog")).toContainText("未接模型");
+  const accessibility = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+    .include(".fh-dialog")
+    .analyze();
+  expect(accessibility.violations).toEqual([]);
   await page.getByRole("button", { name: "插入回覆草稿", exact: true }).click();
   await expect(
     page.getByRole("textbox", { name: "回覆訊息", exact: true }),

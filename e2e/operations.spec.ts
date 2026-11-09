@@ -134,7 +134,10 @@ test("the product backlog retains explicit unfinished system cards and verified-
   await expect(
     page.getByRole("heading", { name: "CRM 功能藍圖", exact: true }),
   ).toBeVisible();
-  await expect(page.locator("article")).toHaveCount(18);
+  await expect(page.locator("article")).toHaveCount(19);
+  await expect(page.locator("#CRM-019")).toContainText(
+    "未建立或發布 Meta Flow",
+  );
   await expect(
     page.getByText("未有登入後台逐項驗收", { exact: false }),
   ).toBeVisible();

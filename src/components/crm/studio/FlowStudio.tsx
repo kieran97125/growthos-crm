@@ -82,7 +82,12 @@ function BusinessNode({ data, selected }: NodeProps<CanvasNode>) {
       className={`st-flow-node ${selected ? "is-selected" : ""} ${data.step ? `st-node-${data.step}` : ""}`}
     >
       {n.kind !== "trigger" && (
-        <Handle type="target" position={Position.Top} aria-label="輸入連線" />
+        <Handle
+          type="target"
+          position={Position.Top}
+          role="group"
+          aria-label="輸入連線"
+        />
       )}
       <header>
         <NodeGlyph kind={n.kind} />
@@ -100,6 +105,7 @@ function BusinessNode({ data, selected }: NodeProps<CanvasNode>) {
               <Handle
                 id={o.id}
                 type="source"
+                role="group"
                 position={Position.Bottom}
                 style={{ left: `${((i + 1) / (outputs.length + 1)) * 100}%` }}
                 aria-label={`${o.label}出口`}
@@ -110,6 +116,7 @@ function BusinessNode({ data, selected }: NodeProps<CanvasNode>) {
       ) : !["answer", "reminder", "handoff", "end"].includes(n.kind) ? (
         <Handle
           type="source"
+          role="group"
           position={Position.Bottom}
           aria-label="下一步出口"
         />

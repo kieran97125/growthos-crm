@@ -78,6 +78,8 @@ async function verify(gated) {
     }
     for (const route of [
       "/crm",
+      "/crm/demo",
+      "/crm/leads",
       "/crm/campaigns",
       "/crm/automations",
       "/crm/system",
@@ -102,5 +104,5 @@ async function verify(gated) {
 await verify(false);
 await verify(true);
 console.log(
-  "Production fixture 404 and all five protected operations routes verified.",
+  "Production fixture 404 and all seven protected CRM routes verified.",
 );

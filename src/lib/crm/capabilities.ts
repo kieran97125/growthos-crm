@@ -32,8 +32,8 @@ export const capabilities: Capability[] = [
     phase: "P1 · 客服工作台",
     state: "partial",
     summary:
-      "搜尋、來源／狀態／品牌／負責人篩選、到期跟進已連動。仍然係查詢紀錄，並非多渠道訊息收件匣。",
-    next: "接入標準化 Conversation／Message 模型、已讀與未回覆狀態。",
+      "四欄對話工作台、客戶搜尋、品牌／渠道篩選、回覆／備註、分配與預約已可互動示範；正式渠道尚未接駁。",
+    next: "以共用 Contact／Conversation／Message 合約接入正式 provider，補上多用戶同步與未回覆 SLA。",
     acceptance: "新訊息、分派、已讀及結束對話喺多用戶之間保持一致。",
     source: "https://www.omnichat.ai/hk/customer-service",
     href: "/crm",
@@ -64,7 +64,8 @@ export const capabilities: Capability[] = [
     name: "Customer 360 與跨渠道身份",
     phase: "P1 · 客服工作台",
     state: "partial",
-    summary: "已有查詢詳情、來源、預約及互動紀錄；跨渠道身份尚未整合。",
+    summary:
+      "示範 Customer 360 已整合聯絡資料、標籤、備忘、來源及預約；跨渠道身份與正式資料庫尚未接駁。",
     next: "分開 Contact、Channel Identity、Lead、Conversation；合併要有證據同還原路徑。",
     acceptance: "同名不自動合併、跨品牌不混合身份；歷史來源同預約全部保留。",
     source:
@@ -75,7 +76,8 @@ export const capabilities: Capability[] = [
     name: "分派、備註與協作",
     phase: "P1 · 客服工作台",
     state: "partial",
-    summary: "已有受寫入開關控制嘅分派、內部備註同跟進任務。",
+    summary:
+      "互動示範支援分配、內部備註、結束／重開與稍後跟進；正式協作仍需個別用戶及伺服器資料層。",
     next: "加入個別用戶、團隊、接手衝突檢查、內部提及與分派紀錄。",
     acceptance: "同時接手不覆蓋他人操作；內部備註永遠不當作客戶訊息。",
     source: "https://www.omnichat.ai/hk/customer-service",
@@ -85,7 +87,8 @@ export const capabilities: Capability[] = [
     name: "預存回覆與個人化草稿",
     phase: "P1 · 客服工作台",
     state: "partial",
-    summary: "客戶詳情已有可編輯草稿、姓名／療程變數同複製操作。",
+    summary:
+      "對話工作台可搜尋快捷回覆、代入目前客戶與品牌、編輯後傳送示範訊息；草稿按對話分開。",
     next: "加入品牌與角色範圍、分類、版本、媒體及受權管理。",
     acceptance: "未填變數會提示；只可讀取及使用獲授權品牌嘅回覆。",
     source: "https://docs.omnichat.ai/features/ke-fu-she-ding/yu-cun-hui-fu",

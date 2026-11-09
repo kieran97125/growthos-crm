@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:operations": "node --import tsx --test tests/operations.test.ts",
+    "test:operations": "node --import tsx --test tests/operations.test.ts tests/conversations.test.ts",
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit",
     "verify:production-boundary": "node scripts/verify-production-boundary.mjs"

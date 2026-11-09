@@ -10,11 +10,18 @@ import {
   Layers3,
   Radio,
   Send,
+  UsersRound,
   type LucideIcon,
 } from "lucide-react";
 
 type CrmSidebarKey =
-  "home" | "inbox" | "campaigns" | "automations" | "system" | "settings";
+  | "home"
+  | "leads"
+  | "inbox"
+  | "campaigns"
+  | "automations"
+  | "system"
+  | "settings";
 const items: {
   key: CrmSidebarKey;
   label: string;
@@ -24,10 +31,17 @@ const items: {
 }[] = [
   {
     key: "inbox",
-    label: "業務收件匣",
+    label: "訊息收件匣",
     sub: "Inbox",
     href: "/crm",
     icon: Inbox,
+  },
+  {
+    key: "leads",
+    label: "Lead 管理",
+    sub: "Leads",
+    href: "/crm/leads",
+    icon: UsersRound,
   },
   {
     key: "campaigns",

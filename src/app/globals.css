@@ -313,6 +313,73 @@ a.ops-button-primary {
   box-shadow: inset 0 0 0 1px var(--ops-accent);
   background: var(--ops-tint);
 }
+.ops-queue:disabled {
+  cursor: not-allowed;
+  background: var(--ops-bg);
+}
+.ops-mobile-list {
+  height: 100%;
+  overflow: auto;
+  padding: 14px;
+}
+.ops-mobile-case {
+  display: block;
+  border: 1px solid var(--ops-line);
+  border-radius: 9px;
+  padding: 15px;
+  margin-bottom: 12px;
+  background: var(--ops-surface);
+}
+.ops-mobile-case > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+}
+.ops-mobile-case h2 {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0;
+}
+.ops-mobile-case > p {
+  color: var(--ops-muted);
+  font-size: 11px;
+  line-height: 1.8;
+  margin-top: 9px;
+  overflow-wrap: anywhere;
+}
+.ops-mobile-case .ops-mobile-phone {
+  font-size: 12px;
+  color: var(--ops-ink);
+  font-variant-numeric: tabular-nums;
+}
+.ops-mobile-case dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  font-size: 10px;
+  margin: 15px 0;
+}
+.ops-mobile-case dt {
+  color: var(--ops-muted);
+}
+.ops-mobile-case dd {
+  margin: 5px 0 0;
+  color: var(--ops-ink);
+  overflow-wrap: anywhere;
+}
+.ops-mobile-case footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 10px;
+  color: var(--ops-accent);
+  padding-top: 12px;
+  border-top: 1px solid var(--ops-line);
+}
+.ops-sidebar a:focus-visible {
+  outline-color: #9ed8bf;
+}
 .ops-queue.is-active span,
 .ops-queue.is-active strong {
   color: var(--ops-accent);

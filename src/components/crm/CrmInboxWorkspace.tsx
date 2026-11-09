@@ -36,19 +36,38 @@ export function CrmInboxWorkspace({
   initialFilter,
   now,
   readError,
+  operationsReady,
   writesEnabled,
 }: {
   cases: CrmLeadCase[];
   initialFilter: InboxFilter;
   now: number;
   readError: boolean;
+  operationsReady: boolean;
   writesEnabled: boolean;
 }) {
   const router = useRouter();
   const [filter, setFilter] = useState(initialFilter);
+  const activeQueue =
+    operationsReady || ["all", "no_show"].includes(filter.queue)
+      ? filter.queue
+      : "all";
   const visible = useMemo(
-    () => filterCases(cases, filter, now),
-    [cases, filter, now],
+    () =>
+      filterCases(
+        cases,
+        operationsReady
+          ? filter
+          : {
+              ...filter,
+              owner: "all",
+              queue: ["all", "no_show"].includes(filter.queue)
+                ? filter.queue
+                : "all",
+            },
+        now,
+      ),
+    [cases, filter, now, operationsReady],
   );
   const brands = [
     ...new Map(cases.map((row) => [row.brandSlug, row.brandName])).entries(),
@@ -97,17 +116,25 @@ export function CrmInboxWorkspace({
           暫時未能讀取最新查詢。請更新資料後再試；目前畫面不可視為完整名單。
         </div>
       ) : null}
+      {!operationsReady && cases.length > 0 ? (
+        <p className="ops-notice ops-notice-warning" role="status">
+          分派與跟進資料未能確認；相關佇列同負責人篩選暫停，未知數量顯示為「—」。
+        </p>
+      ) : null}
       <section aria-label="跟進佇列" className="ops-queues">
         {queues.map(({ key, label }) => (
           <button
             key={key}
-            aria-pressed={filter.queue === key}
-            className={`ops-queue ${filter.queue === key ? "is-active" : ""}`}
+            disabled={!operationsReady && !["all", "no_show"].includes(key)}
+            aria-pressed={activeQueue === key}
+            className={`ops-queue ${activeQueue === key ? "is-active" : ""}`}
             onClick={() => update({ queue: key })}
           >
             <span>{label}</span>
             <strong>
-              {cases.filter((item) => inQueue(item, key, now)).length}
+              {!operationsReady && !["all", "no_show"].includes(key)
+                ? "—"
+                : cases.filter((item) => inQueue(item, key, now)).length}
             </strong>
           </button>
         ))}
@@ -117,6 +144,7 @@ export function CrmInboxWorkspace({
           <Search size={16} />
           <span className="sr-only">搜尋查詢</span>
           <input
+            type="search"
             value={filter.query}
             maxLength={200}
             onChange={(event) => update({ query: event.target.value })}
@@ -176,7 +204,8 @@ export function CrmInboxWorkspace({
           <span className="sr-only">負責人</span>
           <select
             aria-label="負責人"
-            value={filter.owner}
+            disabled={!operationsReady}
+            value={operationsReady ? filter.owner : "all"}
             onChange={(event) => update({ owner: event.target.value })}
           >
             <option value="all">全部負責人</option>

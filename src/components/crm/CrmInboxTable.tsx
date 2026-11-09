@@ -23,7 +23,39 @@ const headings = [
 export function CrmInboxTable({ cases }: { cases: CrmLeadCase[] }) {
   return (
     <div className="min-h-0 flex-1 overflow-hidden border-t border-[#e5e7eb] bg-white">
-      <div className="h-full overflow-auto">
+      <div className="ops-mobile-list lg:hidden" aria-label="查詢卡片">
+        {cases.map((item) => (
+          <Link
+            className="ops-mobile-case"
+            key={item.id}
+            href={`/crm/leads/${item.id}`}
+          >
+            <div>
+              <h2>{item.customerName}</h2>
+              <CrmStatusBadge status={item.status} label={item.statusLabel} />
+            </div>
+            <p>
+              {item.brandName} · {item.treatmentOffer}
+            </p>
+            <p className="ops-mobile-phone">{item.normalizedPhone}</p>
+            <dl>
+              <div>
+                <dt>負責人</dt>
+                <dd>{item.assignedCsLabel}</dd>
+              </div>
+              <div>
+                <dt>下次跟進</dt>
+                <dd>{item.nextFollowUpLabel}</dd>
+              </div>
+            </dl>
+            <footer>
+              <span>{item.sourceLabel}</span>
+              <span>查看客戶 →</span>
+            </footer>
+          </Link>
+        ))}
+      </div>
+      <div className="hidden h-full overflow-auto lg:block">
         <table className="min-w-[1480px] table-fixed border-separate border-spacing-0 text-left text-[12px] leading-5">
           <thead className="sticky top-0 z-10 bg-[#f9fafb]">
             <tr className="h-9 text-[10px] font-bold uppercase tracking-[0.08em] text-[#6b7280]">
@@ -72,7 +104,9 @@ export function CrmInboxTable({ cases }: { cases: CrmLeadCase[] }) {
                       href={`/crm/leads/${item.id}`}
                       className="block min-w-0 text-[12px] font-bold text-[#111827] hover:text-[#0f766e]"
                     >
-                      <span className="block truncate">{item.customerName}</span>
+                      <span className="block truncate">
+                        {item.customerName}
+                      </span>
                       <span className="block truncate font-mono text-[10px] font-semibold text-[#64748b]">
                         {item.canonicalIdentity}
                       </span>
@@ -92,10 +126,15 @@ export function CrmInboxTable({ cases }: { cases: CrmLeadCase[] }) {
                     </span>
                   </td>
                   <td className="border-b border-[#eef2f6] px-2.5 py-1.5">
-                    <CrmStatusBadge status={item.status} label={item.statusLabel} />
+                    <CrmStatusBadge
+                      status={item.status}
+                      label={item.statusLabel}
+                    />
                   </td>
                   <td className="border-b border-[#eef2f6] px-2.5 py-1.5">
-                    <span className="whitespace-nowrap">{item.createdLabel}</span>
+                    <span className="whitespace-nowrap">
+                      {item.createdLabel}
+                    </span>
                   </td>
                   <td className="border-b border-[#eef2f6] px-2.5 py-1.5">
                     <span className="whitespace-nowrap font-semibold">
@@ -111,7 +150,9 @@ export function CrmInboxTable({ cases }: { cases: CrmLeadCase[] }) {
                     </span>
                   </td>
                   <td className="border-b border-[#eef2f6] px-2.5 py-1.5">
-                    <span className="block truncate font-semibold">{item.brandName}</span>
+                    <span className="block truncate font-semibold">
+                      {item.brandName}
+                    </span>
                     <span className="block truncate text-[10px] text-[#64748b]">
                       {item.treatmentOffer}
                     </span>
@@ -167,7 +208,10 @@ export function CrmInboxTable({ cases }: { cases: CrmLeadCase[] }) {
               ))
             ) : (
               <tr>
-                <td colSpan={headings.length} className="px-4 py-10 text-center text-[#64748b]">
+                <td
+                  colSpan={headings.length}
+                  className="px-4 py-10 text-center text-[#64748b]"
+                >
                   暫時未有 CRM inbox records。
                 </td>
               </tr>

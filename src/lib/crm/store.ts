@@ -267,12 +267,12 @@ export async function getCrmRuntimeStatus(): Promise<CrmRuntimeStatus> {
   }
 }
 
-export async function getCrmCasesBySourceLeadIds(leadIds: string[]) {
+export async function readCrmCaseIndex(leadIds: string[]) {
   const uniqueIds = Array.from(new Set(leadIds.filter(Boolean)));
   const casesByLeadId = new Map<string, CrmLeadCaseRecord>();
 
   if (uniqueIds.length === 0 || !hasSupabaseAdminEnv()) {
-    return casesByLeadId;
+    return { records: casesByLeadId, available: false };
   }
 
   try {
@@ -287,17 +287,18 @@ export async function getCrmCasesBySourceLeadIds(leadIds: string[]) {
         code: error.code,
         message: error.message,
       });
-      return casesByLeadId;
+      return { records: casesByLeadId, available: false };
     }
 
     ((data ?? []) as CrmLeadCaseRecord[]).forEach((item) => {
       if (item.source_lead_id) casesByLeadId.set(item.source_lead_id, item);
     });
+    return { records: casesByLeadId, available: true };
   } catch (error) {
     console.warn("crm_cases_read_failed", safeError(error));
   }
 
-  return casesByLeadId;
+  return { records: casesByLeadId, available: false };
 }
 
 export async function getCrmCaseBundleBySourceLeadId(

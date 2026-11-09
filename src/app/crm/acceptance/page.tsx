@@ -19,7 +19,12 @@ export default async function AcceptancePage({
   )
     notFound();
   const query = await searchParams;
-  const data = { cases: fixtureCases, now: fixtureTime, readError: false };
+  const data = {
+    cases: fixtureCases,
+    now: fixtureTime,
+    readError: false,
+    operationsReady: query.view !== "unavailable",
+  };
   if (query.view === "campaigns")
     return (
       <CrmShell active="campaigns">

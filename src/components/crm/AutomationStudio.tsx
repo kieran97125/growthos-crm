@@ -23,10 +23,12 @@ export function AutomationStudio({
   cases,
   now,
   readError,
+  operationsReady,
 }: {
   cases: CrmLeadCase[];
   now: number;
   readError: boolean;
+  operationsReady: boolean;
 }) {
   const brands = [
     ...new Map(cases.map((row) => [row.brandSlug, row.brandName])).entries(),
@@ -225,7 +227,9 @@ export function AutomationStudio({
                         <td>
                           {row.existingFollowUpAt
                             ? formatTime(row.existingFollowUpAt)
-                            : "未設定"}
+                            : operationsReady
+                              ? "未設定"
+                              : "未能確認"}
                         </td>
                         <td>{formatTime(row.proposedFollowUpAt)}</td>
                       </tr>

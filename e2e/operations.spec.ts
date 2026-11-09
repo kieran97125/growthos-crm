@@ -79,7 +79,9 @@ test("workflow simulation is scoped, editable and cannot write follow-ups", asyn
     0,
   );
   await page.getByRole("button", { name: "執行模擬" }).click();
-  await expect(page.getByRole("alert")).toContainText("1 至 720");
+  await expect(
+    page.getByRole("alert").filter({ hasText: "1 至 720" }),
+  ).toBeVisible();
 });
 test("personalized saved replies stay editable and direct send stays disabled", async ({
   page,
@@ -111,6 +113,10 @@ test("mobile navigation is keyboard accessible and page width stays contained", 
       .getByRole("navigation", { name: "CRM 主導航" })
       .getByRole("link", { name: "受眾與推播" }),
   ).toBeVisible();
+  await expect(page.getByRole("link", { name: /Demo Jordan/ })).toBeVisible();
+  await page.getByRole("link", { name: "受眾與推播" }).focus();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "跟進自動化" })).toBeFocused();
   const size = await page.evaluate(() => ({
     width: document.documentElement.scrollWidth,
     viewport: innerWidth,
@@ -147,4 +153,22 @@ test("primary operations surfaces meet automated accessibility checks", async ({
       .analyze();
     expect(results.violations, `${view} accessibility`).toEqual([]);
   }
+});
+
+test("unavailable case data is unknown, never zero or unassigned", async ({
+  page,
+}) => {
+  await page.goto(
+    "/crm/acceptance?view=unavailable&queue=follow_up_due&owner=unassigned",
+  );
+  const due = page.getByRole("button", { name: /到期跟進/ });
+  await expect(due).toBeDisabled();
+  await expect(due).toContainText("—");
+  await expect(
+    page.getByRole("combobox", { name: "負責人", exact: true }),
+  ).toBeDisabled();
+  await expect(page.getByRole("link", { name: /Demo Jordan/ })).toBeVisible();
+  await expect(
+    page.getByText("分派與跟進資料未能確認", { exact: false }),
+  ).toBeVisible();
 });

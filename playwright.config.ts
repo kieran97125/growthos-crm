@@ -16,7 +16,7 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
   webServer: {
-    command: "npm run dev -- --hostname 127.0.0.1 --port 3037",
+    command: "npm run dev -- --webpack --hostname 127.0.0.1 --port 3037",
     url: "http://127.0.0.1:3037/crm/acceptance",
     reuseExistingServer: false,
     env: {

@@ -36,7 +36,25 @@ test("canvas edits, positions and snapshots persist; restore uses the saved grap
   page,
 }) => {
   await page.goto("/crm/demo?studio=flows");
-  await page.locator('.react-flow__node[data-id="intent"]').click();
+  const node = page.locator('.react-flow__node[data-id="intent"]');
+  await expect(node).toBeVisible();
+  const before = await node.getAttribute("style");
+  const box = await node.boundingBox();
+  if (!box) throw new Error("Missing visible canvas node");
+  await page.mouse.move(box.x + box.width / 2, box.y + 28);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2 + 45, box.y + 50, { steps: 8 });
+  await page.mouse.up();
+  await expect(node).not.toHaveAttribute("style", before!);
+  const movedTransform = await node.evaluate(
+    (el) => getComputedStyle(el).transform,
+  );
+  await page.getByRole("button", { name: "關閉節點設定", exact: true }).click();
+  await node.focus();
+  await node.press("Enter");
+  await expect(
+    page.getByRole("textbox", { name: "節點名稱", exact: true }),
+  ).toBeVisible();
   await page
     .getByRole("textbox", { name: "節點名稱", exact: true })
     .fill("辨識客戶需要・版本測試");
@@ -64,6 +82,10 @@ test("canvas edits, positions and snapshots persist; restore uses the saved grap
   await expect(
     page.locator('.react-flow__node[data-id="intent"]'),
   ).toContainText("辨識客戶需要・版本測試");
+  await expect(page.locator('.react-flow__node[data-id="intent"]')).toHaveCSS(
+    "transform",
+    movedTransform,
+  );
 });
 
 test("native form preview collects intent without claiming a confirmed appointment", async ({

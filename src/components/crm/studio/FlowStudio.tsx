@@ -245,6 +245,8 @@ export default function FlowStudio({
     update(next);
   }
   function changeNodes(changes: NodeChange<CanvasNode>[]) {
+    const selection = changes.find((c) => c.type === "select" && c.selected);
+    if (selection?.type === "select") setSelectedId(selection.id);
     const relevant = changes.filter((c) => c.type === "position");
     if (!relevant.length) return;
     const moved = applyNodeChanges(relevant, nodes);

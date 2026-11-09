@@ -1900,6 +1900,8 @@
   display: flex;
 }
 .fh-dialog {
+  margin: auto;
+  inset: 0;
   border: 1px solid #e5dfee;
   border-radius: 12px;
   padding: 0;

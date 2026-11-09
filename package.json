@@ -7,13 +7,15 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:operations": "node --import tsx --test tests/operations.test.ts tests/conversations.test.ts",
+    "test:operations": "node --import tsx --test tests/operations.test.ts tests/conversations.test.ts tests/studio.test.ts",
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit",
     "verify:production-boundary": "node scripts/verify-production-boundary.mjs"
   },
   "dependencies": {
+    "@dagrejs/dagre": "3.1.3",
     "@supabase/supabase-js": "^2.105.4",
+    "@xyflow/react": "12.12.1",
     "libphonenumber-js": "1.13.15",
     "lucide-react": "1.70.0",
     "motion": "^12.40.0",

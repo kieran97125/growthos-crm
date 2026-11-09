@@ -92,6 +92,16 @@ export function WorkspaceDialogs({
                 title: "安排下一步",
                 body: "新增預約意向、稍後跟進，或者結束對話。按「模擬客戶來訊」可以試收訊息。",
               },
+              {
+                n: "04",
+                title: "設計同試跑 Flow",
+                body: "左邊按 Flow，可拖拉節點、改分支、配對範本參數。試跑會停喺 CS 核實，剔選測試條件後先預覽提醒。",
+              },
+              {
+                n: "05",
+                title: "試用 BOT 同 AI 建議",
+                body: "按 AI BOT 設定品牌知識及回覆模式，右邊試聊同轉真人。對話中按 AI 建議，可以準備草稿再自行修改。",
+              },
             ].map((s) => (
               <article key={s.n}>
                 <b>{s.n}</b>
@@ -598,9 +608,7 @@ export function WorkspaceDialogs({
             </div>
             <div className="fh-info-box">
               <ShieldCheck size={17} />
-              <p>
-                本 Demo 使用獨立資料及部署，沒有連接任何客戶正式系統。
-              </p>
+              <p>本 Demo 使用獨立資料及部署，沒有連接任何客戶正式系統。</p>
             </div>
             <button className="fh-button fh-reset" onClick={onReset}>
               <RefreshCw size={14} />

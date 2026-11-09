@@ -143,23 +143,27 @@ export const capabilities: Capability[] = [
     id: "CRM-012",
     name: "視覺化聊天與顧客旅程",
     phase: "P3 · 流程自動化",
-    state: "planned",
-    summary: "目標涵蓋觸發、條件分支、等待、標籤、轉人工與訊息節點。",
-    next: "以 @xyflow/react 建圖，獨立驗證圖結構及可持續執行嘅工作引擎。",
+    state: "partial",
+    summary:
+      "互動示範已有拖拉畫布、12 類節點、分支連線、自動排版、版本還原及實際路徑試跑；未有伺服器執行引擎。",
+    next: "接入持久事件、工作佇列、版本鎖、暫停／恢復及重試；預約提醒必須經 CS 核實。",
     acceptance:
       "處理循環、孤立節點、版本升級、暫停及待執行任務；頁面關閉後流程仍可完成。",
     source: "https://www.omnichat.ai/hk/chatbot/",
+    href: "/crm/demo?studio=flows",
   },
   {
     id: "CRM-013",
     name: "知識庫 AI 客服",
     phase: "P3 · AI 客服",
-    state: "blocked",
-    summary: "未接 AI 引擎；現有預存回覆明確標示為人工編寫。",
-    next: "品牌知識版本、引用、檢索、回答範圍、人工接手、模型用量與費用上限。",
+    state: "partial",
+    summary:
+      "BOT 工作室已有品牌知識編輯、來源及版本、三種模式、試聊與真人接管；對話助手可插入草稿。現時只用示範引擎，未接 AI 模型。",
+    next: "伺服器模型 adapter、品牌授權檢索、對話記憶、引用驗證、廣東話評測及用量上限。",
     acceptance:
       "無知識依據就轉人工；人工接手即停自動回覆；跨品牌檢索隔離、廣東話測試集與費用測試通過。",
     source: "https://docs.omnichat.ai/features/omni-ai-jia-gou-gong-neng",
+    href: "/crm/demo?studio=bot",
   },
   {
     id: "CRM-014",
@@ -202,6 +206,18 @@ export const capabilities: Capability[] = [
     next: "工作 idempotency、版本鎖、失敗復原、資料保留、匯出及刪除政策。",
     acceptance:
       "每次分派、合併、排程、批准與外發可追溯；故障復原不破壞原有資料。",
+  },
+  {
+    id: "CRM-019",
+    name: "WhatsApp 原生 Flow 表單",
+    phase: "P3 · 客戶自助收集",
+    state: "partial",
+    summary:
+      "已有手機表單互動預覽，可試填服務、分店及心儀時間；未建立或發布 Meta Flow。",
+    next: "接駁 WABA、建立及驗證 Flow JSON、資料交換與完成事件；提交只產生待核實意向。",
+    acceptance:
+      "表單完成不當作正式預約；簽章、事件去重、品牌範圍及真人交接全部通過。",
+    href: "/crm/demo?studio=flows",
   },
   {
     id: "CRM-018",

@@ -8,7 +8,7 @@ export default function SystemPage() {
       <div className="ops-workspace ops-scroll-page">
         <header className="ops-header">
           <div>
-            <p className="ops-eyebrow">PRODUCT SYSTEMS / 09 NOV 2026</p>
+            <p className="ops-eyebrow">PRODUCT SYSTEMS / 10 NOV 2026</p>
             <h1>CRM 功能藍圖</h1>
             <p className="ops-muted">
               Omnichat 功能拆解，配合 Growth OS 原生嘅查詢、預約同成效流程。

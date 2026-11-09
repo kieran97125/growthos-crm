@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { CrmShell } from "@/components/crm/CrmShell";
 import { CrmStatusBadge } from "@/components/crm/CrmStatusBadge";
+import { ReplyComposer } from "@/components/crm/ReplyComposer";
 import { formatDateTime, getLeadRows } from "@/lib/data/businessMetrics";
 import { toCrmLeadCase } from "@/lib/crm/leadOps";
 import {
@@ -149,6 +150,7 @@ export default async function CrmLeadDetailPage({
         </header>
 
         <div className="min-h-0 flex-1 overflow-auto p-3.5">
+          <div className="mb-4"><ReplyComposer customerName={leadCase.customerName} treatment={leadCase.treatmentOffer} /></div>
           <div className="grid gap-3.5 xl:grid-cols-[360px_1fr]">
             <div className="grid gap-3.5">
               <Panel title="Contact">

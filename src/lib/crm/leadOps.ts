@@ -67,6 +67,8 @@ export type CrmLeadCase = {
   status: CrmStatus;
   statusLabel: string;
   assignedCsLabel: string;
+  assignedTo: string | null;
+  nextFollowUpAt: string | null;
   nextFollowUpLabel: string;
   whatsappUrl: string | null;
   ctwa: CrmCtwaFields;
@@ -265,6 +267,8 @@ export function toCrmLeadCase(lead: LeadRow): CrmLeadCase {
     status,
     statusLabel: crmStatusLabel(status),
     assignedCsLabel: "未指派",
+    assignedTo: null,
+    nextFollowUpAt: null,
     nextFollowUpLabel: "未設定",
     whatsappUrl: whatsappLink(normalizedPhone || phone),
     ctwa,

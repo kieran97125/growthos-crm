@@ -420,6 +420,8 @@ export function applyCrmRecordToLeadCase(
     status: record.status,
     statusLabel: crmStatusLabel(record.status),
     assignedCsLabel: record.assigned_to || leadCase.assignedCsLabel,
+    assignedTo: record.assigned_to,
+    nextFollowUpAt: record.next_follow_up_at,
     nextFollowUpLabel: record.next_follow_up_at
       ? formatDateTime(record.next_follow_up_at)
       : leadCase.nextFollowUpLabel,

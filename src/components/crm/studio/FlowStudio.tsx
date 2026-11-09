@@ -145,9 +145,9 @@ export default function FlowStudio({
   const [selectedId, setSelectedId] = useState("");
   const [search, setSearch] = useState("");
   const [library, setLibrary] = useState(false);
-  const [modal, setModal] = useState<"simulate" | "versions" | "phone" | null>(
-    null,
-  );
+  const [modal, setModal] = useState<
+    "simulate" | "versions" | "phone" | "delete" | null
+  >(null);
   const [simulation, setSimulation] =
     useState<SimulationInput>(DEFAULT_SIMULATION);
   const [result, setResult] = useState<SimulationResult | null>(null);
@@ -158,6 +158,14 @@ export default function FlowStudio({
   const graph = useRef<ReactFlowInstance<CanvasNode>>(null);
   const flow = state.flows.find((f) => f.id === flowId) ?? state.flows[0];
   const selected = flow.nodes.find((n) => n.id === selectedId);
+  const protectedTrigger =
+    selected?.kind === "trigger" &&
+    flow.nodes.filter((n) => n.kind === "trigger").length === 1;
+  const connectedEdges = selected
+    ? flow.edges.filter(
+        (e) => e.source === selected.id || e.target === selected.id,
+      ).length
+    : 0;
   const issues = validateFlow(flow);
   const versions = state.versions.filter((v) => v.flow.id === flow.id);
   const nodes: CanvasNode[] = useMemo(
@@ -568,9 +576,26 @@ export default function FlowStudio({
         <header>
           <h2>{selected ? "節點設定" : "流程設定"}</h2>
           {selected && (
-            <button aria-label="關閉節點設定" onClick={() => setSelectedId("")}>
-              <X size={15} />
-            </button>
+            <div className="st-inspector-actions">
+              <button
+                className="st-delete-button"
+                disabled={protectedTrigger}
+                title={
+                  protectedTrigger ? "流程需要保留一個觸發事件" : "刪除所選節點"
+                }
+                onClick={() => setModal("delete")}
+              >
+                <Trash2 size={14} />
+                刪除節點
+              </button>
+              <button
+                className="st-inspector-close"
+                aria-label="關閉節點設定"
+                onClick={() => setSelectedId("")}
+              >
+                <X size={15} />
+              </button>
+            </div>
           )}
         </header>
         <div className="st-inspector-scroll">
@@ -587,6 +612,11 @@ export default function FlowStudio({
                   </small>
                 </div>
               </div>
+              {protectedTrigger && (
+                <p className="st-trigger-note">
+                  流程需要保留一個觸發事件，呢個起點不能刪除。
+                </p>
+              )}
               <div className="st-fields">
                 <label>
                   節點名稱
@@ -850,26 +880,6 @@ export default function FlowStudio({
                     ))}
                   </>
                 )}
-                {selected.kind !== "trigger" && (
-                  <button
-                    className="st-delete-button"
-                    onClick={() => {
-                      update({
-                        ...flow,
-                        nodes: flow.nodes.filter((n) => n.id !== selected.id),
-                        edges: flow.edges.filter(
-                          (e) =>
-                            e.source !== selected.id &&
-                            e.target !== selected.id,
-                        ),
-                      });
-                      setSelectedId("");
-                    }}
-                  >
-                    <Trash2 size={13} />
-                    移除此節點
-                  </button>
-                )}
               </div>
             </>
           ) : (
@@ -936,6 +946,48 @@ export default function FlowStudio({
           <p>不查即時名額・不改 POS 資料</p>
         </footer>
       </aside>
+      {modal === "delete" && selected && (
+        <Modal
+          title="刪除節點？"
+          subtitle="確認要移除嘅節點及相關連線。"
+          onClose={() => setModal(null)}
+        >
+          <div className="st-delete-confirm">
+            <strong>{selected.title}</strong>
+            <p>
+              會一併移除 {connectedEdges}{" "}
+              條相關連線，其餘節點會保留。刪除後可以重新連接流程。
+            </p>
+            <footer>
+              <button className="st-button" onClick={() => setModal(null)}>
+                取消
+              </button>
+              <button
+                className="st-button st-danger"
+                disabled={protectedTrigger}
+                onClick={() => {
+                  if (protectedTrigger) return;
+                  const title = selected.title;
+                  update({
+                    ...flow,
+                    nodes: flow.nodes.filter((n) => n.id !== selected.id),
+                    edges: flow.edges.filter(
+                      (e) =>
+                        e.source !== selected.id && e.target !== selected.id,
+                    ),
+                  });
+                  setSelectedId("");
+                  setModal(null);
+                  setNotice(`已刪除「${title}」及相關連線。`);
+                }}
+              >
+                <Trash2 size={14} />
+                確認刪除
+              </button>
+            </footer>
+          </div>
+        </Modal>
+      )}
       {notice && (
         <div className="st-notice" role="status">
           <Check size={14} />

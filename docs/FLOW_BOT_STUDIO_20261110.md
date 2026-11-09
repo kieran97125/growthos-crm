@@ -38,3 +38,9 @@ The existing private checkpoint review remains a proposal until reviewed/merged.
 ## Verification
 
 60 domain tests include graph cycles/orphans/branch handles, edited-route execution, independent new/existing review gates, all template mappings, missing approval/consent, service-window blocks, source status/expiry/brand isolation, human ownership, mode behavior, knowledge revisions and immutable version restoration. Browser acceptance adds real editor interactions, native form intent, knowledge edits, copilot drafts, desktop/mobile layouts and WCAG AA to the existing conversation/operations suite. Production build and configured auth/fixture boundaries remain required before publication.
+
+## Node deletion discoverability correction
+
+The delete action was below long node settings and disappeared for every trigger. It now stays in the fixed inspector header on desktop and mobile. The last trigger has a visible disabled action with an explanation; extra triggers can be removed. An app-owned confirmation names the node and linked-edge count before removing that node and its edges atomically from the local draft. Other nodes remain in place. Browser regression covers action visibility without scrolling, cancellation, linked-edge cleanup, reload persistence and last-trigger protection.
+
+Product Learning Sync checked again for this correction: canonical protocol/index/checkpoint plus `2026-09-01-app-owned-destructive-action-lifecycle.md` and `2026-07-17-alyssa-crm-regression-acceptance.md`. Apply discoverable placement, app-owned confirmation and responsive acceptance only. Production authorization, durable audit and scheduled-job cleanup remain existing system cards; no client implementation or data is imported. The canonical checkpoint review proposal records the scoped decision and release evidence.

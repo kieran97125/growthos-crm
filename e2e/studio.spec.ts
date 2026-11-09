@@ -1,6 +1,47 @@
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
+for (const mobile of [false, true]) {
+  test(`node deletion stays visible, confirms linked edges and preserves the last trigger (${mobile ? "mobile" : "desktop"})`, async ({
+    page,
+  }, info) => {
+    if (mobile) await page.setViewportSize({ width: 390, height: 600 });
+    await page.goto("/crm/demo?studio=flows");
+    await page.locator('.react-flow__node[data-id="remind"]').click();
+    const remove = page.getByRole("button", { name: "刪除節點", exact: true });
+    await expect(remove).toBeInViewport();
+    await page.screenshot({
+      path: info.outputPath(`node-delete-${mobile ? "mobile" : "desktop"}.png`),
+    });
+    await remove.click();
+    const dialog = page.getByRole("dialog", {
+      name: "刪除節點？",
+      exact: true,
+    });
+    await expect(dialog).toContainText("範本預約提醒");
+    await expect(dialog).toContainText("1 條相關連線");
+    await dialog.getByRole("button", { name: "取消", exact: true }).click();
+    await expect(page.locator(".react-flow__node")).toHaveCount(8);
+    await remove.click();
+    await dialog.getByRole("button", { name: "確認刪除", exact: true }).click();
+    await expect(page.locator(".react-flow__node")).toHaveCount(7);
+    await expect(page.locator(".react-flow__edge")).toHaveCount(6);
+    await expect(
+      page.locator('.react-flow__node[data-id="review"]'),
+    ).toBeVisible();
+    await page.reload();
+    await expect(
+      page.locator('.react-flow__node[data-id="remind"]'),
+    ).toHaveCount(0);
+    await page.locator('.react-flow__node[data-id="start"]').click();
+    await expect(remove).toBeVisible();
+    await expect(remove).toBeDisabled();
+    await expect(page.locator(".st-trigger-note")).toContainText(
+      "起點不能刪除",
+    );
+  });
+}
+
 test("Flow uses actual graph, waits for review and validates reminder conditions", async ({
   page,
 }, info) => {

@@ -21,6 +21,9 @@ records only. They are not the CRM product identity.
 - `/crm` - LeadOps inbox.
 - `/crm/leads/[leadId]` - lead detail workspace.
 - `/crm/settings` - read-only WhatsApp channel settings foundation.
+- `/crm/campaigns` - brand-filtered audience preview with recipient exclusion evidence; no sending.
+- `/crm/automations` - scoped follow-up rule simulation; no record mutations.
+- `/crm/system` - 18 product system cards with implementation state, dependencies, acceptance and official sources.
 - `/login` - shared admin password gate.
 - `/logout` - clears the admin session cookie.
 
@@ -67,5 +70,16 @@ deployments should use the Growth OS CRM names.
 - `docs/CRM_SCHEMA_PROPOSAL.md`
 - `docs/CRM_PHASE2_SCHEMA.sql`
 - `docs/CRM_PHASE2_APPLY.sql`
+- `docs/OMNICHAT_PARITY_REVIEW_20261109.md` - verified Omnichat capability mapping, current code audit and staged architecture.
 
 These are documentation/review artifacts. Do not apply them automatically.
+
+## Operations verification
+
+Run `npm run test:operations`, `npm run typecheck`, `npm run lint`, `npm run test:e2e`, `npm run build`, and `npm run verify:production-boundary`.
+
+The operating inbox now provides working search and combinable filters, overdue queues and URL-preserved views. Lead detail includes human-authored saved-reply drafts with explicit variable validation. Campaign and workflow pages use the current read model, limited to at most 500 current-month leads; they are not complete contact audiences or connected message streams.
+
+The legacy read model has no verified client scope, marketing-consent ledger, provider connection or approved-template evidence. Campaign eligibility therefore remains zero. No provider sending, external AI, new write endpoint, database migration or live-activation flag is introduced. The current shared-admin access model still requires the tenant/brand membership work recorded in `CRM-001` before multi-tenant activation.
+
+Browser acceptance uses explicitly synthetic fixtures at `/crm/acceptance` only in development with `CRM_ACCEPTANCE_FIXTURES=true`. In a production build the route always returns 404, even if that test flag is set. Run `npx playwright install --with-deps chromium` before browser acceptance; a local Chromium can be selected with `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`.

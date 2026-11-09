@@ -1,34 +1,77 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import {
+  ArrowUpRight,
+  Building2,
+  CircleHelp,
+  GitBranch,
+  Home,
+  Inbox,
+  Layers3,
+  Radio,
+  Send,
+  UsersRound,
+  type LucideIcon,
+} from "lucide-react";
 
 type CrmSidebarKey =
   | "home"
+  | "leads"
   | "inbox"
-  | "contacts"
-  | "bookings"
-  | "quick-replies"
-  | "ai-assist"
-  | "brand-knowledge"
-  | "reports"
+  | "campaigns"
+  | "automations"
+  | "system"
   | "settings";
-
-const sidebarItems: Array<{
+const items: {
   key: CrmSidebarKey;
   label: string;
+  sub: string;
   href: string;
-  enabled: boolean;
-}> = [
-  { key: "home", label: "Home", href: "/", enabled: true },
-  { key: "inbox", label: "Inbox", href: "/crm", enabled: true },
-  { key: "contacts", label: "Contacts", href: "/crm", enabled: false },
-  { key: "bookings", label: "Bookings", href: "/crm", enabled: false },
-  { key: "quick-replies", label: "Quick Replies", href: "/crm", enabled: false },
-  { key: "ai-assist", label: "AI Assist", href: "/crm", enabled: false },
-  { key: "brand-knowledge", label: "Brand Knowledge", href: "/crm", enabled: false },
-  { key: "reports", label: "Reports", href: "/crm", enabled: false },
-  { key: "settings", label: "Settings", href: "/crm/settings", enabled: true },
+  icon: LucideIcon;
+}[] = [
+  {
+    key: "inbox",
+    label: "訊息收件匣",
+    sub: "Inbox",
+    href: "/crm",
+    icon: Inbox,
+  },
+  {
+    key: "leads",
+    label: "Lead 管理",
+    sub: "Leads",
+    href: "/crm/leads",
+    icon: UsersRound,
+  },
+  {
+    key: "campaigns",
+    label: "受眾與推播",
+    sub: "Campaigns",
+    href: "/crm/campaigns",
+    icon: Send,
+  },
+  {
+    key: "automations",
+    label: "跟進自動化",
+    sub: "Workflows",
+    href: "/crm/automations",
+    icon: GitBranch,
+  },
+  {
+    key: "system",
+    label: "CRM 功能藍圖",
+    sub: "Systems",
+    href: "/crm/system",
+    icon: Layers3,
+  },
+  {
+    key: "settings",
+    label: "渠道設定",
+    sub: "Connections",
+    href: "/crm/settings",
+    icon: Radio,
+  },
 ];
-
 export function CrmShell({
   children,
   active = "inbox",
@@ -37,77 +80,49 @@ export function CrmShell({
   active?: CrmSidebarKey;
 }) {
   return (
-    <main className="min-h-screen bg-[#f5f6f8] text-[#1f2933]">
-      <div className="flex min-h-screen">
-        <aside className="hidden w-[208px] shrink-0 border-r border-[#dfe4ea] bg-[#111827] text-white lg:flex lg:flex-col">
-          <div className="border-b border-white/10 px-4 py-3">
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#9ca3af]">
-              Growth OS
-            </p>
-            <h1 className="mt-1 text-base font-bold">FollowHub CRM</h1>
-          </div>
-          <nav className="flex-1 space-y-1 px-2.5 py-3">
-            {sidebarItems.map((item) =>
-              item.enabled ? (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  className={`flex h-9 items-center rounded-lg px-3 text-[13px] font-semibold transition ${
-                    item.key === active
-                      ? "bg-white text-[#111827]"
-                      : "text-[#d1d5db] hover:bg-white/10 hover:text-white"
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              ) : (
-                <span
-                  key={item.label}
-                  className="flex h-9 cursor-not-allowed items-center justify-between rounded-lg px-3 text-[13px] font-semibold text-[#6b7280]"
-                >
-                  {item.label}
-                  <span className="text-[9px] uppercase tracking-[0.12em] text-[#4b5563]">
-                    Soon
-                  </span>
-                </span>
-              )
-            )}
-          </nav>
-          <div className="border-t border-white/10 p-2.5">
+    <main className="ops-shell">
+      <aside className="ops-sidebar">
+        <Link href="/" className="ops-brand" aria-label="Growth OS CRM 首頁">
+          <span className="ops-brand-mark">
+            <Building2 size={19} />
+          </span>
+          <span className="ops-sidebar-copy">
+            <strong>FollowHub</strong>
+            <small>GROWTH OS / CRM</small>
+          </span>
+        </Link>
+        <div className="ops-sidebar-label">WORKSPACE</div>
+        <nav aria-label="CRM 主導航">
+          {items.map(({ key, label, sub, href, icon: Icon }) => (
             <Link
-              href="/"
-              className="block rounded-lg px-3 py-2 text-[12px] font-semibold text-[#d1d5db] transition hover:bg-white/10 hover:text-white"
+              key={key}
+              href={href}
+              aria-current={active === key ? "page" : undefined}
+              title={label}
+              className={active === key ? "is-active" : ""}
             >
-              CRM Home
-            </Link>
-          </div>
-        </aside>
-
-        <aside className="flex w-[64px] shrink-0 flex-col items-center border-r border-[#dfe4ea] bg-[#111827] py-3 text-white lg:hidden">
-          <Link
-            href="/crm"
-            className="grid h-9 w-9 place-items-center rounded-lg bg-white text-[12px] font-black text-[#111827]"
-            title="CRM Inbox"
-          >
-            C
-          </Link>
-          <div className="mt-4 grid gap-2">
-            {["In", "Ct", "Bk", "QR", "AI"].map((label, index) => (
-              <span
-                key={label}
-                className={`grid h-8 w-8 place-items-center rounded-lg text-[10px] font-bold ${
-                  index === 0 ? "bg-white text-[#111827]" : "bg-white/8 text-[#9ca3af]"
-                }`}
-                title={index === 0 ? "Inbox" : "Coming soon"}
-              >
+              <Icon size={18} strokeWidth={1.7} />
+              <span className="ops-sidebar-copy">
                 {label}
+                <small>{sub}</small>
               </span>
-            ))}
+              {active === key ? <span className="ops-nav-dot" /> : null}
+            </Link>
+          ))}
+        </nav>
+        <div className="ops-sidebar-bottom">
+          <div className="ops-sidebar-caption">
+            <CircleHelp size={17} />
+            <span className="ops-sidebar-copy">讓每個查詢，有下一步。</span>
           </div>
-        </aside>
-
-        <section className="min-w-0 flex-1">{children}</section>
-      </div>
+          <Link href="/" title="CRM 首頁">
+            <Home size={17} />
+            <span className="ops-sidebar-copy">CRM 首頁</span>
+            <ArrowUpRight size={14} />
+          </Link>
+        </div>
+      </aside>
+      <section className="ops-main">{children}</section>
     </main>
   );
 }

@@ -599,7 +599,7 @@ export function WorkspaceDialogs({
             <div className="fh-info-box">
               <ShieldCheck size={17} />
               <p>
-                本 Demo 與智威特正式系統獨立，沒有連接其資料、用戶、渠道或設定。
+                本 Demo 使用獨立資料及部署，沒有連接任何客戶正式系統。
               </p>
             </div>
             <button className="fh-button fh-reset" onClick={onReset}>

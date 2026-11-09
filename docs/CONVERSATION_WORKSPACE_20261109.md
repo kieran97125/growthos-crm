@@ -7,7 +7,7 @@ The main CS task is reading and answering a customer conversation. The previous 
 - `/crm`: honest connection-required conversation workspace. No fake provider connection or customer messages.
 - `/crm/leads`: existing authenticated LeadOps table, filters and safe write boundaries.
 - `/crm/demo`: explicitly synthetic interactive workspace with its own versioned local browser store.
-- Independent hosted demo: a new Site project, not the SmartVolt project. No database, connector or live messaging configuration copied from any customer installation.
+- Independent hosted demo: a new Site project, separate from any existing customer project. No database, connector or live messaging configuration copied from any customer installation.
 - Portable React modules are shared verbatim with the demo host. Domain model and schema, per-mount storage, conversation list, customer profile, reusable UI primitives and dialogs are separate modules.
 
 ## Usable flows

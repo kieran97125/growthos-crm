@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-html-link-for-pages -- Portable workspace also runs outside Next.js; links use full document navigation. */
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
@@ -48,7 +47,12 @@ import {
   type Queue,
 } from "./model";
 import { useDemoWorkspace } from "./useDemoWorkspace";
-import { Avatar, ChannelIcon, IconButton } from "./WorkspacePrimitives";
+import {
+  Avatar,
+  ChannelIcon,
+  IconButton,
+  WorkspaceLink,
+} from "./WorkspacePrimitives";
 import { ConversationList } from "./ConversationList";
 import { CustomerProfile } from "./CustomerProfile";
 import { WorkspaceDialogs } from "./WorkspaceDialogs";
@@ -286,7 +290,7 @@ export function ConversationWorkspace({
       className={`fh-app ${mobileChat ? "fh-mobile-chat" : ""} ${profileOpen ? "fh-profile-open" : ""}`}
     >
       <header className="fh-topbar">
-        <a className="fh-wordmark" href={empty ? "/crm" : "/"}>
+        <WorkspaceLink className="fh-wordmark" href={empty ? "/crm" : "/"}>
           <span className="fh-logo">
             <MessageSquare size={21} fill="currentColor" />
             <span />
@@ -295,7 +299,7 @@ export function ConversationWorkspace({
             Follow<span>Hub</span>
           </strong>
           <span className="fh-wordmark-sub">CRM</span>
-        </a>
+        </WorkspaceLink>
         <div className="fh-workspace-name">
           <span className="fh-workspace-dot" />
           {empty ? "CRM" : "Nova Group"}{" "}
@@ -933,16 +937,19 @@ export function ConversationWorkspace({
           </p>
           {empty ? (
             <div>
-              <a className="fh-button fh-primary" href="/crm/settings">
+              <WorkspaceLink
+                className="fh-button fh-primary"
+                href="/crm/settings"
+              >
                 設定通訊渠道
                 <ArrowRight size={15} />
-              </a>
-              <a className="fh-button" href="/crm/demo">
+              </WorkspaceLink>
+              <WorkspaceLink className="fh-button" href="/crm/demo">
                 體驗互動示範
-              </a>
-              <a className="fh-button" href="/crm/leads">
+              </WorkspaceLink>
+              <WorkspaceLink className="fh-button" href="/crm/leads">
                 查看 Lead 管理
-              </a>
+              </WorkspaceLink>
             </div>
           ) : (
             <button

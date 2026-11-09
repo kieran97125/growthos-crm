@@ -1,7 +1,7 @@
 /* Conversation-first workspace. Portable React UI, scoped to .fh-app. */
 .fh-app {
   --fh-ink: #22263b;
-  --fh-muted: #74798e;
+  --fh-muted: #656477;
   --fh-line: #e9ebf2;
   --fh-accent: #6254d9;
   --fh-tint: #f0edff;
@@ -80,7 +80,7 @@
   background: #e2ddff;
 }
 .fh-app ::placeholder {
-  color: #9297a8;
+  color: #5a5e69;
 }
 .fh-app ::-webkit-scrollbar {
   width: 5px;
@@ -124,7 +124,7 @@
 .fh-wordmark-sub {
   font-size: 9px;
   border: 1px solid #ded9fc;
-  color: #7663ba;
+  color: #65539f;
   border-radius: 4px;
   padding: 0 4px;
   margin-left: 0;
@@ -133,7 +133,7 @@
 }
 .fh-logo {
   position: relative;
-  color: #6757de;
+  color: #5b4dc6;
   height: 30px;
   display: grid;
   align-items: center;
@@ -170,7 +170,7 @@
   border-radius: 50%;
 }
 .fh-workspace-name > svg {
-  color: #b5b8c7;
+  color: #5c5e67;
   margin: 0 3px;
 }
 .fh-topbar-right {
@@ -185,7 +185,7 @@
   align-items: center;
   gap: 6px;
   background: #f3f1ff;
-  color: #6a58bf;
+  color: #6251b1;
   border: 1px solid #e6e1ff;
   border-radius: 5px;
   font-size: 10px;
@@ -203,7 +203,7 @@
   align-items: center;
   gap: 6px;
   font-size: 11px !important;
-  color: #6f7487 !important;
+  color: #5b5f6e !important;
 }
 .fh-guide-button:hover {
   color: #5145ad !important;
@@ -219,7 +219,7 @@
   display: grid;
   place-items: center;
   background: #ede6dd;
-  color: #8a694d;
+  color: #765941;
   border-radius: 50%;
   font-size: 12px;
   font-weight: 700;
@@ -255,15 +255,15 @@
   align-items: center;
   justify-content: center;
   gap: 5px;
-  color: #85879e;
+  color: #5d5e6e;
   font-size: 9px;
 }
 .fh-rail button:hover {
   background: #eeecf8;
-  color: #6554c3;
+  color: #5d4eb5;
 }
 .fh-rail button.is-active {
-  color: #6755d6;
+  color: #5b4cbf;
   background: #eae6fc;
 }
 .fh-rail button.is-active i {
@@ -313,7 +313,7 @@
 .fh-queue-heading > span {
   font-size: 8px;
   letter-spacing: 1.6px;
-  color: #a2a4b6;
+  color: #5d5e69;
   display: block;
   margin-top: 5px;
 }
@@ -328,7 +328,7 @@
   padding: 7px 8px;
 }
 .fh-brand-symbol {
-  color: #8073bd;
+  color: #615690;
   display: flex;
 }
 .fh-brand-select select {
@@ -341,7 +341,7 @@
   outline: none;
 }
 .fh-section-label {
-  color: #9699ac;
+  color: #5d5f6b;
   font-size: 10px;
   padding: 0 10px;
   margin-bottom: 9px;
@@ -360,31 +360,31 @@
   min-height: 37px;
   padding: 8px 10px;
   border-radius: 6px;
-  color: #6e7288;
+  color: #5a5e6f;
   font-size: 11px;
   white-space: nowrap;
 }
 .fh-queue-list button > svg {
-  color: #979aae;
+  color: #5e606c;
 }
 .fh-queue-list button b {
   margin-left: auto;
   font-size: 10px;
   font-weight: 500;
-  color: #8a8da1;
+  color: #5d5f6c;
   min-width: 16px;
   text-align: right;
 }
 .fh-queue-list button.is-active {
   background: #ede9ff;
-  color: #6551bd;
+  color: #614eb6;
   font-weight: 600;
 }
 .fh-queue-list button.is-active > svg {
-  color: #7861dc;
+  color: #624fb6;
 }
 .fh-queue-list button.is-active b {
-  color: #6e59cb;
+  color: #624fb5;
 }
 .fh-queue-list button:hover {
   background: #f1effb;
@@ -408,7 +408,7 @@
   font-size: 11px;
   padding: 8px 10px;
   border-radius: 6px;
-  color: #73778a;
+  color: #5a5e6d;
 }
 .fh-channel-list > button > i {
   width: 5px;
@@ -451,7 +451,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #8e91a3;
+  color: #5c5e6a;
   font-size: 10px;
 }
 .fh-queue-bottom > div:first-child > span:last-child {
@@ -476,27 +476,27 @@
   place-items: center;
   border-radius: 50%;
   background: #e7e0f4;
-  color: #78679b;
+  color: #665784;
   font-size: 9px;
   margin-left: -5px;
 }
 .fh-team-stack > span:first-child {
   margin-left: 0;
   background: #ede5db;
-  color: #967c61;
+  color: #6d5a46;
 }
 .fh-team-stack > span:nth-child(3) {
   background: #dceae9;
-  color: #6f9390;
+  color: #4a6361;
 }
 .fh-team-stack > button {
-  color: #9295aa;
+  color: #5e606e;
   background: #f2f3f8;
 }
 .fh-queue-bottom > small {
   display: block;
   font-size: 9px;
-  color: #a9abba;
+  color: #5e5f67;
   margin-top: 18px;
   white-space: nowrap;
 }
@@ -526,7 +526,7 @@
 .fh-list-heading h1 > span {
   font-size: 10px;
   font-weight: 600;
-  color: #847baf;
+  color: #605980;
   background: #f0edf8;
   border-radius: 5px;
   padding: 1px 6px;
@@ -539,15 +539,15 @@
   width: 29px;
   height: 29px;
   border-radius: 5px;
-  color: #9296aa !important;
+  color: #5a5d6a !important;
   padding: 0;
 }
 .fh-icon-button:hover {
   background: #f0eef9 !important;
-  color: #6553bf !important;
+  color: #6150b8 !important;
 }
 .fh-icon-button.is-active {
-  color: #8771da !important;
+  color: #6252a0 !important;
   background: #f0ebff !important;
 }
 .fh-search {
@@ -559,7 +559,7 @@
   border: 1px solid #eceef4;
   border-radius: 6px;
   padding: 0 10px;
-  color: #969bb0;
+  color: #5d606e;
 }
 .fh-conversations > .fh-search {
   margin: 0 17px 16px;
@@ -584,7 +584,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 19px 12px;
-  color: #9398ac;
+  color: #5b5e6b;
   font-size: 10px;
 }
 .fh-list-toolbar > span {
@@ -604,7 +604,7 @@
   outline: 0;
   appearance: none;
   padding-right: 14px;
-  color: #82869d;
+  color: #5a5e6e;
   font-size: 10px;
 }
 .fh-list-toolbar label > svg {
@@ -655,7 +655,7 @@
   align-items: center;
   justify-content: center;
   background: #f0e2d8;
-  color: #a97f5f;
+  color: #775841;
   font-size: 13px;
   font-weight: 600;
   letter-spacing: -0.3px;
@@ -663,23 +663,23 @@
 }
 .fh-avatar-0 {
   background: #e6e2f4;
-  color: #8879ad;
+  color: #63577f;
 }
 .fh-avatar-1 {
   background: #e9e1d8;
-  color: #9a7e5c;
+  color: #705b42;
 }
 .fh-avatar-2 {
   background: #e1e8ec;
-  color: #6f899a;
+  color: #4d606c;
 }
 .fh-avatar-3 {
   background: #e4ebe3;
-  color: #7d9573;
+  color: #52644c;
 }
 .fh-avatar-4 {
   background: #efe1e8;
-  color: #ad7b94;
+  color: #7a5568;
 }
 .fh-avatar-small {
   width: 32px;
@@ -721,11 +721,11 @@
 .fh-row-top > time {
   font-size: 9px;
   margin-left: auto;
-  color: #a0a4b7;
+  color: #5c5e6a;
   flex-shrink: 0;
 }
 .fh-row-preview {
-  color: #969aab;
+  color: #5d606b;
   font-size: 11px;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -736,7 +736,7 @@
   font-weight: 750;
 }
 .fh-conversation-row.is-unread .fh-row-preview {
-  color: #64697f;
+  color: #585d70;
 }
 .fh-row-meta {
   display: flex;
@@ -748,20 +748,20 @@
 .fh-brand-pill {
   padding: 1px 5px;
   border-radius: 3px;
-  color: #9593a5;
+  color: #605f6b;
   background: #f1f1f6;
   font-size: 8px;
   white-space: nowrap;
 }
 .fh-conversation-row.is-selected .fh-brand-pill {
   background: #e7e3f6;
-  color: #9a8ac1;
+  color: #64597e;
 }
 .fh-priority-small {
   display: flex;
   align-items: center;
   gap: 3px;
-  color: #c98780;
+  color: #7e524f;
   font-size: 8px;
 }
 .fh-priority-small > span {
@@ -777,12 +777,12 @@
   width: 15px;
   height: 15px;
   background: #f2f3f7;
-  color: #9a9fb2;
+  color: #5c5f6b;
   border-radius: 50%;
   font-size: 8px;
 }
 .fh-row-meta > svg {
-  color: #a99acb;
+  color: #665c7a;
 }
 .fh-unread-count {
   display: grid;
@@ -803,7 +803,7 @@
   height: 36px;
   flex-shrink: 0;
   font-size: 9px;
-  color: #aaadbd;
+  color: #5e6069;
   background: #fff;
 }
 .fh-list-empty {
@@ -813,11 +813,11 @@
   align-items: center;
   flex-direction: column;
   gap: 12px;
-  color: #a2a4b7;
+  color: #5d5e6a;
 }
 .fh-list-empty strong {
   font-size: 12px;
-  color: #73778f;
+  color: #5a5e70;
 }
 .fh-list-empty p {
   font-size: 11px;
@@ -828,12 +828,12 @@
   border: 1px solid #e4dff6 !important;
   border-radius: 5px;
   font-size: 11px;
-  color: #7561b9;
+  color: #64529f;
 }
 .fh-loading {
   padding: 40px;
   text-align: center;
-  color: #a4a6b9;
+  color: #5e606b;
   font-size: 12px;
 }
 .fh-chat {
@@ -869,7 +869,7 @@
   font-size: 8px;
   padding: 0 4px;
   border: 1px solid #ebe5d8;
-  color: #b4a17c;
+  color: #685c46;
   background: #fdfbf6;
   border-radius: 3px;
   font-weight: 500;
@@ -879,7 +879,7 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  color: #979bad;
+  color: #5e606c;
   margin-top: 4px;
 }
 .fh-chat-person .fh-channel {
@@ -892,7 +892,7 @@
   height: 8px;
 }
 .fh-chat-person > p > span:not(.fh-channel) {
-  color: #c0c2cd;
+  color: #5f6066;
   margin: 0 2px;
 }
 .fh-chat-actions {
@@ -903,7 +903,7 @@
 }
 .fh-resolve {
   border: 1px solid #ded8f5 !important;
-  color: #8d7ac2 !important;
+  color: #67588e !important;
   border-radius: 5px;
   display: flex;
   align-items: center;
@@ -918,7 +918,7 @@
   background: #f3f0ff;
 }
 .fh-resolve.is-resolved {
-  color: #4b987d !important;
+  color: #336a56 !important;
   border-color: #d3e8df !important;
   background: #f4faf7;
 }
@@ -932,7 +932,7 @@
   min-height: 37px;
   border-bottom: 1px solid #f0f1f6;
   font-size: 9px;
-  color: #9a9dae;
+  color: #5c5e68;
   flex-shrink: 0;
 }
 .fh-conversation-context > span {
@@ -966,7 +966,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  color: #9484bc;
+  color: #64587f;
   font-size: 9px;
   white-space: nowrap;
 }
@@ -984,7 +984,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #aaaebe;
+  color: #5e606a;
   font-size: 9px;
   gap: 12px;
   margin: 0 auto 11px;
@@ -1003,7 +1003,7 @@
   gap: 5px;
   justify-content: center;
   font-size: 8px;
-  color: #c0c2ce;
+  color: #5f6066;
   margin-bottom: 26px;
 }
 .fh-message {
@@ -1023,7 +1023,7 @@
 }
 .fh-message-author {
   font-size: 9px;
-  color: #a7aabb;
+  color: #5c5e68;
   margin-bottom: 6px;
 }
 .fh-message-outgoing .fh-message-author {
@@ -1035,7 +1035,7 @@
   border: 1px solid #ebedf3;
   border-radius: 0 10px 10px 10px;
   padding: 11px 13px;
-  color: #656a82;
+  color: #595e73;
   font-size: 12px;
   line-height: 1.85;
   overflow-wrap: anywhere;
@@ -1049,14 +1049,14 @@
 .fh-message-outgoing .fh-bubble {
   background: #eeebff;
   border-color: #e7e2fc;
-  color: #70639e;
+  color: #64578c;
   border-radius: 10px 0 10px 10px;
 }
 .fh-message-meta {
   display: flex;
   gap: 4px;
   align-items: center;
-  color: #b2b5c6;
+  color: #5f606a;
   font-size: 8px;
   margin-top: 5px;
   padding: 0 1px;
@@ -1065,11 +1065,11 @@
   justify-content: flex-end;
 }
 .fh-message-outgoing .fh-message-meta > svg {
-  color: #a69ad5;
+  color: #60587c;
 }
 .fh-message-meta > span {
   font-size: 7px;
-  color: #b7b1cd;
+  color: #625e6e;
   margin-left: 1px;
 }
 .fh-quote-action {
@@ -1081,7 +1081,7 @@
   height: 24px;
   display: grid;
   place-items: center;
-  color: #a9a0c6 !important;
+  color: #625c73 !important;
   border-radius: 4px;
   background: #f3f0fb !important;
 }
@@ -1099,7 +1099,7 @@
   justify-content: center;
   gap: 8px;
   font-size: 8px;
-  color: #b5b7c5;
+  color: #5c5e66;
   margin: 21px 15px;
   line-height: 1.7;
   text-align: center;
@@ -1110,7 +1110,7 @@
 }
 .fh-event > time {
   font-size: 8px;
-  color: #c4c6d0;
+  color: #5d5e63;
 }
 .fh-internal-note {
   margin: 23px 0 22px;
@@ -1119,7 +1119,7 @@
   border: 1px solid #f0e8d3;
   border-radius: 6px;
   max-width: 100%;
-  color: #b5a171;
+  color: #685c40;
 }
 .fh-internal-note > header {
   display: flex;
@@ -1133,19 +1133,19 @@
 }
 .fh-internal-note > header > span {
   margin-left: 2px;
-  color: #c0b08c;
+  color: #675e49;
   font-size: 8px;
 }
 .fh-internal-note > header > time {
   margin-left: auto;
-  color: #ccbea1;
+  color: #655e4e;
   font-size: 8px;
 }
 .fh-internal-note > p {
   font-size: 11px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  color: #ad9a71;
+  color: #685c43;
   line-height: 1.85;
 }
 .fh-bubble blockquote {
@@ -1159,11 +1159,11 @@
 }
 .fh-bubble blockquote strong {
   font-size: 9px;
-  color: #8b7bb8;
+  color: #665987;
 }
 .fh-bubble blockquote p {
   font-size: 10px;
-  color: #a59bbd;
+  color: #635c71;
   max-height: 40px;
   overflow: hidden;
 }
@@ -1192,14 +1192,14 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  color: #a4a6b9;
+  color: #5e606b;
   font-size: 10px;
   height: 38px;
   position: relative;
   padding: 0 1px;
 }
 .fh-composer-tabs button.is-active {
-  color: #8b76c1;
+  color: #66558d;
 }
 .fh-composer-tabs button.is-active:after {
   content: "";
@@ -1211,7 +1211,7 @@
   background: #baa9e3;
 }
 .fh-composer.is-note .fh-composer-tabs button.is-active {
-  color: #b29b5e;
+  color: #6b5c35;
 }
 .fh-composer.is-note .fh-composer-tabs button.is-active:after {
   background: #d7c292;
@@ -1219,7 +1219,7 @@
 .fh-composer-tabs > span {
   margin-left: auto;
   font-size: 8px;
-  color: #b8bbca;
+  color: #5e6068;
   white-space: nowrap;
 }
 .fh-composer textarea {
@@ -1231,12 +1231,12 @@
   display: block;
   width: 100%;
   min-height: 82px;
-  color: #77758c;
+  color: #5e5c6e;
   font-size: 12px;
   line-height: 1.8;
 }
 .fh-composer textarea::placeholder {
-  color: #b3b6c8;
+  color: #5b5d67;
 }
 .fh-composer textarea:focus-visible {
   outline: 0;
@@ -1259,7 +1259,7 @@
 .fh-composer-tools .fh-icon-button {
   width: 27px;
   height: 27px;
-  color: #aaa9bd !important;
+  color: #5e5e69 !important;
 }
 .fh-quick-trigger {
   display: flex;
@@ -1268,13 +1268,13 @@
   height: 27px;
   padding: 3px 7px !important;
   font-size: 10px !important;
-  color: #aaa0bf !important;
+  color: #625c6e !important;
   border-radius: 4px;
 }
 .fh-quick-trigger:hover,
 .fh-quick-trigger.is-active {
   background: #f4f1fc !important;
-  color: #8a75b8 !important;
+  color: #69588c !important;
 }
 .fh-send-controls {
   display: flex;
@@ -1283,7 +1283,7 @@
 }
 .fh-send-controls > span {
   font-size: 8px;
-  color: #bfc0ce;
+  color: #5e5f66;
   white-space: nowrap;
 }
 .fh-send {
@@ -1316,7 +1316,7 @@
   height: 31px;
   flex-shrink: 0;
   font-size: 7px;
-  color: #b8bac9;
+  color: #5e5f67;
   padding: 0 20px;
 }
 .fh-demo-footer > span:first-child {
@@ -1334,11 +1334,11 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  color: #ada2c5;
+  color: #645d72;
   font-size: 8px;
 }
 .fh-demo-footer button:hover {
-  color: #806ca9;
+  color: #69588b;
 }
 .fh-popover-anchor {
   position: relative;
@@ -1350,7 +1350,7 @@
   border: 1px solid #e9e4f1;
   box-shadow: 0 9px 30px #3b315d1a;
   border-radius: 8px;
-  color: #79718a;
+  color: #635d71;
   text-align: left;
 }
 .fh-snooze-menu {
@@ -1364,7 +1364,7 @@
   font-weight: 600;
   display: block;
   padding: 5px 8px 9px;
-  color: #686079;
+  color: #645c74;
 }
 .fh-snooze-menu > button {
   display: flex;
@@ -1414,15 +1414,15 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  color: #817098;
+  color: #665878;
 }
 .fh-quick-picker > button small {
   font-size: 9px;
-  color: #b8acc6;
+  color: #625b6a;
 }
 .fh-quick-picker > button p {
   font-size: 10px;
-  color: #ada2bb;
+  color: #645d6c;
   margin-top: 4px;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -1454,7 +1454,7 @@
   background: #f8f5ff;
   border-left: 2px solid #c0afdf;
   border-radius: 3px;
-  color: #ac9bca;
+  color: #635875;
 }
 .fh-quote-preview > div {
   min-width: 0;
@@ -1465,7 +1465,7 @@
 }
 .fh-quote-preview p {
   font-size: 10px;
-  color: #b8a9ca;
+  color: #625a6c;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1487,7 +1487,7 @@
   align-items: center;
   gap: 7px;
   font-size: 12px;
-  color: #8e9b96;
+  color: #58605d;
 }
 .fh-profile {
   display: flex;
@@ -1508,7 +1508,7 @@
 .fh-profile-header > h2 {
   font-size: 12px;
   font-weight: 600;
-  color: #77768a;
+  color: #5e5d6d;
 }
 .fh-profile-header > div {
   display: flex;
@@ -1532,12 +1532,12 @@
 .fh-contact-summary h3 {
   font-size: 15px;
   font-weight: 650;
-  color: #626275;
+  color: #5e5e70;
   line-height: 1.5;
 }
 .fh-contact-summary > p {
   font-size: 9px;
-  color: #b3b2c0;
+  color: #5f5f67;
   margin-top: 5px;
   display: flex;
   align-items: center;
@@ -1545,7 +1545,7 @@
   gap: 6px;
 }
 .fh-contact-status {
-  color: #a799bd;
+  color: #645b71;
 }
 .fh-contact-summary > div {
   display: flex;
@@ -1557,7 +1557,7 @@
 .fh-id-chip {
   font-size: 8px;
   background: #f5f5f9;
-  color: #b0aebf;
+  color: #5e5c66;
   padding: 2px 5px;
   border-radius: 3px;
 }
@@ -1566,10 +1566,10 @@
   align-items: center;
   gap: 4px;
   font-size: 9px;
-  color: #b1a4c6;
+  color: #625a6e;
 }
 .fh-contact-summary > div > button:hover {
-  color: #8f7aac;
+  color: #68587e;
 }
 .fh-profile-section {
   padding: 16px 19px;
@@ -1584,7 +1584,7 @@
 }
 .fh-section-title h3 {
   font-size: 10px;
-  color: #8e899f;
+  color: #605c6b;
   font-weight: 600;
   display: flex;
   align-items: center;
@@ -1593,14 +1593,14 @@
 .fh-section-title .fh-icon-button {
   width: 20px;
   height: 20px;
-  color: #b5adc6 !important;
+  color: #605c6a !important;
 }
 .fh-contact-field {
   display: flex;
   align-items: center;
   gap: 10px;
   margin-top: 11px;
-  color: #b9b4c8;
+  color: #5f5c67;
   min-height: 32px;
 }
 .fh-contact-field > div {
@@ -1612,21 +1612,21 @@
 }
 .fh-contact-field small {
   font-size: 8px;
-  color: #c0bacd;
+  color: #635f6a;
 }
 .fh-contact-field span {
   font-size: 11px;
-  color: #9b92ad;
+  color: #645e70;
   overflow-wrap: anywhere;
 }
 .fh-contact-field .fh-muted {
   font-size: 10px;
-  color: #c9c1d2;
+  color: #635f68;
 }
 .fh-contact-field .fh-icon-button {
   width: 18px;
   height: 18px;
-  color: #c5bed0 !important;
+  color: #625e67 !important;
 }
 .fh-owner-select {
   display: flex;
@@ -1644,7 +1644,7 @@
   height: 21px;
   border-radius: 50%;
   background: #eae4f2;
-  color: #b1a0c0;
+  color: #665c6f;
   font-size: 9px;
 }
 .fh-owner-select > select {
@@ -1654,7 +1654,7 @@
   background: none;
   font-size: 10px;
   outline: 0;
-  color: #aa9ab9;
+  color: #665c6f;
 }
 .fh-tags {
   display: flex;
@@ -1666,7 +1666,7 @@
   align-items: center;
   gap: 4px;
   background: #f5f1fd;
-  color: #b0a2c6;
+  color: #665d73;
   border-radius: 4px;
   font-size: 9px;
   padding: 3px 6px;
@@ -1674,11 +1674,11 @@
 }
 .fh-tag-1 {
   background: #f1f5f9;
-  color: #a7b3c1;
+  color: #585f67;
 }
 .fh-tag-2 {
   background: #faf3ec;
-  color: #c0af97;
+  color: #675d4f;
 }
 .fh-tag > button {
   display: grid;
@@ -1702,7 +1702,7 @@
   flex-direction: column;
   gap: 8px;
   background: #fefcff !important;
-  color: #b7a9c6 !important;
+  color: #625a6a !important;
 }
 .fh-booking-card:hover {
   border-color: #cbbce4 !important;
@@ -1714,7 +1714,7 @@
   align-items: center;
   gap: 4px;
   background: #fbf3e8;
-  color: #c4ad87;
+  color: #695c46;
   width: max-content;
   border-radius: 3px;
   padding: 2px 5px;
@@ -1727,7 +1727,7 @@
 }
 .fh-booking-state.is-confirmed {
   background: #eff8f3;
-  color: #93b3a0;
+  color: #506358;
 }
 .fh-booking-state.is-confirmed > span {
   background: #91b49e;
@@ -1735,14 +1735,14 @@
 .fh-booking-card > strong {
   font-size: 10px;
   font-weight: 600;
-  color: #a696b7;
+  color: #64596e;
 }
 .fh-booking-card > span:not(.fh-booking-state) {
   font-size: 9px;
   display: flex;
   align-items: center;
   gap: 5px;
-  color: #bcb1c9;
+  color: #645e6b;
 }
 .fh-booking-card > small {
   border-top: 1px solid #f1ecf6;
@@ -1751,7 +1751,7 @@
   align-items: center;
   justify-content: space-between;
   font-size: 8px;
-  color: #bdadcf;
+  color: #655c6f;
 }
 .fh-add-booking {
   display: flex;
@@ -1762,7 +1762,7 @@
   border-radius: 5px;
   width: 100%;
   padding: 11px !important;
-  color: #bbadca !important;
+  color: #645c6c !important;
   font-size: 10px !important;
 }
 .fh-add-booking:hover {
@@ -1771,7 +1771,7 @@
 .fh-customer-note {
   font-size: 10px;
   line-height: 1.9;
-  color: #b3a9c0;
+  color: #635e6b;
   background: #faf8fd;
   border-radius: 4px;
   padding: 9px 10px;
@@ -1783,7 +1783,7 @@
   align-items: center;
   gap: 6px;
   font-size: 9px;
-  color: #c0b8ce;
+  color: #635e6a;
   margin-top: 8px;
 }
 .fh-profile-footer {
@@ -1792,7 +1792,7 @@
   align-items: center;
   justify-content: center;
   gap: 5px;
-  color: #d0c9db;
+  color: #635f68;
   font-size: 8px;
   border-top: 1px solid #f4f1f7;
   flex-shrink: 0;
@@ -1820,21 +1820,21 @@
   height: 90px;
   display: grid;
   place-items: center;
-  color: #c5b8e1;
+  color: #625a6f;
   background: #f2edfb;
   border-radius: 25px;
   border: 1px solid #e8e0f4;
 }
 .fh-no-conversation h2 {
   font-size: 22px;
-  color: #8b80a1;
+  color: #625970;
   font-weight: 600;
 }
 .fh-no-conversation > p {
   font-size: 12px;
   line-height: 1.9;
   max-width: 360px;
-  color: #b1a8bf;
+  color: #625d6a;
 }
 .fh-no-conversation > div {
   display: flex;
@@ -1850,7 +1850,7 @@
   border: 1px solid #e1dbec !important;
   border-radius: 6px;
   background: white !important;
-  color: #9685ad !important;
+  color: #655975 !important;
   padding: 8px 13px !important;
   font-size: 11px !important;
   min-height: 34px;
@@ -1890,12 +1890,12 @@
   max-width: calc(100vw - 32px);
 }
 .fh-toast > svg {
-  color: #bdb3d4;
+  color: #615b6d;
   flex-shrink: 0;
 }
 .fh-toast > button {
   margin-left: 10px;
-  color: #bcb1cd;
+  color: #645e6e;
   padding: 0;
   display: flex;
 }
@@ -1937,15 +1937,15 @@
 .fh-dialog-inner > header h2 {
   font-size: 17px;
   font-weight: 650;
-  color: #6e5e82;
+  color: #6a5a7d;
 }
 .fh-dialog-inner > header p {
   font-size: 11px;
-  color: #aea0bd;
+  color: #645c6d;
   margin-top: 5px;
 }
 .fh-dialog-inner > header .fh-icon-button {
-  color: #bcaecc !important;
+  color: #645c6d !important;
 }
 .fh-form {
   padding: 22px 24px;
@@ -1959,7 +1959,7 @@
   flex-direction: column;
   gap: 7px;
   font-size: 11px;
-  color: #a293b3;
+  color: #655b6f;
 }
 .fh-form input,
 .fh-form textarea,
@@ -1971,7 +1971,7 @@
   background: white;
   outline: 0;
   padding: 9px 10px;
-  color: #8a799e;
+  color: #695b78;
   font-size: 12px;
   min-width: 0;
   line-height: 1.7;
@@ -1985,7 +1985,7 @@
   border-color: #bca7d9;
 }
 .fh-form input::placeholder {
-  color: #cdc2d7;
+  color: #625c67;
 }
 .fh-form > footer {
   display: flex;
@@ -2018,11 +2018,11 @@
   border-radius: 6px;
   padding: 12px;
   font-size: 10px;
-  color: #b4a4c2;
+  color: #645a6c;
   line-height: 1.8;
 }
 .fh-info-box > svg {
-  color: #bdadd0;
+  color: #655c6f;
   flex-shrink: 0;
   margin-top: 2px;
 }
@@ -2042,18 +2042,18 @@
   border: 1px solid #e5d8f4;
   display: grid;
   place-items: center;
-  color: #b09bcc;
+  color: #665876;
   border-radius: 13px;
   flex-shrink: 0;
 }
 .fh-guide-hero strong {
   font-size: 14px;
-  color: #9a86ac;
+  color: #685a74;
   font-weight: 600;
 }
 .fh-guide-hero p {
   font-size: 10px;
-  color: #bdafcb;
+  color: #655d6c;
   margin-top: 7px;
 }
 .fh-guide > article {
@@ -2065,17 +2065,17 @@
 .fh-guide > article > b {
   font-size: 10px;
   letter-spacing: 0.5px;
-  color: #bda6d4;
+  color: #655871;
   font-weight: 500;
 }
 .fh-guide h3 {
   font-size: 12px;
-  color: #9d89b0;
+  color: #665872;
   font-weight: 600;
 }
 .fh-guide article p {
   font-size: 11px;
-  color: #b8a8c7;
+  color: #665d6f;
   line-height: 1.85;
   margin-top: 5px;
 }
@@ -2096,11 +2096,11 @@
   padding: 6px 9px !important;
   border-radius: 5px;
   border: 1px solid #e8dff0 !important;
-  color: #b19fc1 !important;
+  color: #665b6f !important;
 }
 .fh-tag-option.is-active {
   background: #f0e8fa;
-  color: #a187ba !important;
+  color: #685679 !important;
   border-color: #dacbea !important;
 }
 .fh-inline-form {
@@ -2143,11 +2143,11 @@
 .fh-contact-table strong {
   font-size: 12px;
   font-weight: 600;
-  color: #9a85b0;
+  color: #685977;
 }
 .fh-contact-table small {
   font-size: 10px;
-  color: #bca9cc;
+  color: #645a6d;
 }
 .fh-contact-table-tags {
   margin-left: auto;
@@ -2155,7 +2155,7 @@
   gap: 5px;
 }
 .fh-contact-table > button > svg {
-  color: #d3c3df;
+  color: #645c6b;
 }
 .fh-reply-library {
   padding: 6px 24px 21px;
@@ -2171,12 +2171,12 @@
 }
 .fh-reply-library h3 {
   font-size: 12px;
-  color: #9e84b5;
+  color: #6a587a;
   font-weight: 600;
 }
 .fh-reply-library code {
   font-size: 9px;
-  color: #bfaaca;
+  color: #665a6c;
   background: #f7f0fb;
   padding: 2px 5px;
   border-radius: 3px;
@@ -2184,7 +2184,7 @@
 .fh-reply-library article p {
   font-size: 11px;
   line-height: 1.9;
-  color: #b5a0c5;
+  color: #685c72;
   padding: 10px 0 14px;
   white-space: pre-wrap;
 }
@@ -2202,7 +2202,7 @@
   width: 35px;
   height: 35px;
   background: #ede3f6;
-  color: #b098c7;
+  color: #6a5a79;
   display: grid;
   place-items: center;
   border-radius: 50%;
@@ -2221,18 +2221,18 @@
 }
 .fh-team-panel article strong {
   font-size: 11px;
-  color: #ab91be;
+  color: #6b5a77;
 }
 .fh-team-panel article p {
   font-size: 9px;
-  color: #c1adce;
+  color: #675c6e;
   margin-top: 3px;
 }
 .fh-team-panel article > b {
   font-size: 18px;
   line-height: 1;
   font-weight: 500;
-  color: #b9a2ca;
+  color: #675970;
   margin-left: auto;
   text-align: center;
 }
@@ -2240,7 +2240,7 @@
   display: block;
   font-size: 8px;
   font-weight: 400;
-  color: #d2bfdf;
+  color: #645a6b;
   margin-top: 6px;
   white-space: nowrap;
 }
@@ -2271,20 +2271,20 @@
 .fh-setting-row strong {
   font-size: 11px;
   font-weight: 600;
-  color: #ac91bf;
+  color: #6b5a78;
 }
 .fh-setting-row small {
   font-size: 9px;
-  color: #c6b0d3;
+  color: #665a6c;
 }
 .fh-setting-row b {
   font-size: 11px;
   font-weight: 500;
-  color: #bca3cf;
+  color: #685a74;
 }
 .fh-neutral-chip {
   font-size: 9px;
-  color: #c0acd0;
+  color: #675b6f;
   background: #f7f0fc;
   padding: 3px 7px;
   border-radius: 4px;
@@ -2294,30 +2294,30 @@
   margin: 20px 0;
 }
 .fh-reset {
-  color: #c68d97 !important;
+  color: #78535a !important;
 }
 /* Increase contrast consistently; soft surfaces remain quiet while text is readable. */
 .fh-app {
-  --fh-muted: #73758c;
+  --fh-muted: #656477;
 }
 .fh-app .fh-row-preview {
-  color: #7d8297;
+  color: #5a5e6e;
 }
 .fh-app .fh-row-top > time {
-  color: #83889e;
+  color: #5b5f6e;
 }
 .fh-app .fh-list-toolbar,
 .fh-app .fh-list-toolbar select {
-  color: #757c91;
+  color: #585e6e;
 }
 .fh-app .fh-conversation-context {
-  color: #7d8198;
+  color: #5a5e6e;
 }
 .fh-app .fh-conversation-context button {
-  color: #75619b;
+  color: #685589;
 }
 .fh-app .fh-message-author {
-  color: #7f849c;
+  color: #5c6071;
 }
 .fh-app .fh-bubble {
   color: #51576e;
@@ -2327,81 +2327,81 @@
   color: #65558f;
 }
 .fh-app .fh-message-meta {
-  color: #888da4;
+  color: #5b5f6e;
 }
 .fh-app .fh-internal-note > p {
-  color: #897649;
+  color: #6c5d37;
 }
 .fh-app .fh-internal-note > header {
-  color: #9b8555;
+  color: #6c5d3a;
 }
 .fh-app .fh-profile-header h2,
 .fh-app .fh-section-title h3 {
-  color: #777087;
+  color: #625c6e;
 }
 .fh-app .fh-contact-summary h3 {
   color: #5e566c;
 }
 .fh-app .fh-contact-summary > p {
-  color: #9c92a6;
+  color: #655e6c;
 }
 .fh-app .fh-contact-field small {
-  color: #a59aaf;
+  color: #635c69;
 }
 .fh-app .fh-contact-field span {
-  color: #8b7b9d;
+  color: #665972;
 }
 .fh-app .fh-contact-field .fh-muted {
-  color: #a79aaf;
+  color: #645c69;
 }
 .fh-app .fh-owner-select select {
-  color: #877096;
+  color: #6a5876;
 }
 .fh-app .fh-tag {
-  color: #927da9;
+  color: #6a5a7c;
 }
 .fh-app .fh-booking-card > strong {
-  color: #8a739d;
+  color: #695677;
 }
 .fh-app .fh-booking-card > span:not(.fh-booking-state) {
-  color: #a28fb3;
+  color: #695c74;
 }
 .fh-app .fh-booking-card > small {
-  color: #a38ab8;
+  color: #6a5978;
 }
 .fh-app .fh-booking-state {
-  color: #a48c60;
+  color: #6e5e3f;
 }
 .fh-app .fh-customer-note {
-  color: #9a87ae;
+  color: #685a75;
 }
 .fh-app .fh-source > p {
-  color: #a593b6;
+  color: #675b71;
 }
 .fh-app .fh-composer textarea {
-  color: #81718d;
+  color: #66596f;
 }
 .fh-app .fh-composer-tabs button {
-  color: #9c8daa;
+  color: #655b6e;
 }
 .fh-app .fh-composer-tabs button.is-active {
-  color: #8b6fa9;
+  color: #6e5786;
 }
 .fh-app .fh-dialog h2 {
   color: #5c456f;
 }
 .fh-app .fh-dialog p,
 .fh-app .fh-dialog label {
-  color: #9277a4;
+  color: #6a5678;
 }
 .fh-app .fh-dialog h3,
 .fh-app .fh-dialog strong {
-  color: #7d5b97;
+  color: #73538b;
 }
 .fh-app .fh-dialog input,
 .fh-app .fh-dialog textarea,
 .fh-app .fh-dialog select {
-  color: #7c5c91;
+  color: #725486;
 }
 /* Small operational type requires readable contrast, including secondary fields. */
 .fh-app .fh-section-label,
@@ -2426,7 +2426,7 @@
 .fh-app .fh-demo-footer,
 .fh-app .fh-demo-footer button,
 .fh-app .fh-source > p {
-  color: #73758b;
+  color: #5a5c6e;
 }
 .fh-app .fh-row-owner {
   background: #eaeaf2;
@@ -2436,31 +2436,31 @@
 }
 .fh-app .fh-chat-person > p,
 .fh-app .fh-chat-person > p > span:not(.fh-channel) {
-  color: #74788d;
+  color: #5b5e6f;
 }
 .fh-app .fh-queue-heading > span {
-  color: #838298;
+  color: #5f5e6e;
 }
 .fh-app .fh-internal-note > p,
 .fh-app .fh-internal-note > header,
 .fh-app .fh-internal-note > header > span,
 .fh-app .fh-internal-note > header > time {
-  color: #8a743f;
+  color: #715f33;
 }
 .fh-app .fh-composer-tabs > span,
 .fh-app .fh-send-controls > span {
-  color: #858399;
+  color: #615f6f;
 }
 .fh-app .fh-composer textarea {
   color: #4f4864;
 }
 .fh-app .fh-composer textarea::placeholder {
-  color: #9290a5;
+  color: #5e5d6b;
 }
 .fh-app .fh-profile-header h2,
 .fh-app .fh-section-title h3,
 .fh-app .fh-contact-field small {
-  color: #79728b;
+  color: #635e72;
 }
 .fh-app .fh-contact-summary h3 {
   color: #494358;
@@ -2474,33 +2474,33 @@
 .fh-app .fh-id-chip,
 .fh-app .fh-customer-note,
 .fh-app .fh-profile-footer {
-  color: #736581;
+  color: #665972;
 }
 .fh-app .fh-tag {
-  color: #7d6499;
+  color: #6a5483;
   background: #f0eaf9;
 }
 .fh-app .fh-tag-1 {
-  color: #65738d;
+  color: #525e74;
   background: #edf1f7;
 }
 .fh-app .fh-tag-2 {
-  color: #8c7350;
+  color: #6e5a3e;
   background: #f7f1e7;
 }
 .fh-app .fh-booking-card > strong {
-  color: #756086;
+  color: #6c587c;
 }
 .fh-app .fh-booking-card > span:not(.fh-booking-state),
 .fh-app .fh-booking-card > small,
 .fh-app .fh-add-booking {
-  color: #8b759e !important;
+  color: #6a5878 !important;
 }
 .fh-app .fh-booking-state {
-  color: #90713c;
+  color: #765d31;
 }
 .fh-app .fh-booking-state.is-confirmed {
-  color: #587c65;
+  color: #486652;
 }
 .fh-app .fh-dialog-inner > header p,
 .fh-app .fh-dialog p,
@@ -2509,7 +2509,7 @@
 .fh-app .fh-dialog b,
 .fh-app .fh-dialog code,
 .fh-app .fh-neutral-chip {
-  color: #7c658e;
+  color: #6a557a;
 }
 .fh-app .fh-dialog h2 {
   color: #4e3d61;
@@ -2524,22 +2524,22 @@
   color: #645070;
 }
 .fh-app .fh-dialog .fh-info-box {
-  color: #8a739d;
+  color: #695677;
 }
 .fh-app .fh-dialog .fh-contact-table small {
-  color: #8c779e;
+  color: #6a5a78;
 }
 .fh-app .fh-quick-trigger {
-  color: #8e7aa6 !important;
+  color: #68587a !important;
 }
 .fh-app .fh-no-conversation > p {
-  color: #8d7d9b;
+  color: #675a70;
 }
 .fh-app .fh-icon-button {
-  color: #898598 !important;
+  color: #605d6a !important;
 }
 .fh-app .fh-button {
-  color: #7e6593 !important;
+  color: #6b557e !important;
 }
 .fh-app .fh-button.fh-primary {
   color: white !important;
@@ -2550,11 +2550,11 @@
   background: #8064b7 !important;
 }
 .fh-app .fh-quick-picker > button > span {
-  color: #776089;
+  color: #6e587f;
 }
 .fh-app .fh-quick-picker > button p,
 .fh-app .fh-quick-picker > button small {
-  color: #917c9f;
+  color: #6a5a74;
 }
 @media (min-width: 1700px) {
   .fh-app {

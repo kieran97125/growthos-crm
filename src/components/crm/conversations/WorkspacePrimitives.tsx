@@ -18,6 +18,7 @@ export function ChannelIcon({
   return (
     <span
       className={`fh-channel fh-channel-${channel}`}
+      role="img"
       aria-label={channelNames[channel]}
     >
       <Icon size={size} strokeWidth={2} />
@@ -110,5 +111,22 @@ export function Modal({
         {children}
       </div>
     </dialog>
+  );
+}
+
+// Native navigation adapter keeps the workspace independent of its host router.
+export function WorkspaceLink({
+  href,
+  className,
+  children,
+}: {
+  href: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <a href={href} className={className}>
+      {children}
+    </a>
   );
 }

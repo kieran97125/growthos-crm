@@ -7,6 +7,7 @@ import {
 } from "@/lib/demo/ai-contract";
 import { acceptRequest, cookieName, readSession } from "@/lib/demo/access";
 import { suggestReply, detectIntent } from "@/components/crm/studio/engine";
+import { gatewayConfigured } from "@/lib/demo/gateway";
 export const runtime = "nodejs";
 export const maxDuration = 45;
 const json = (body: unknown, status = 200) =>
@@ -48,10 +49,7 @@ export async function POST(req: NextRequest) {
   )
     return json({ ...policy, engine: "policy" });
   const model = process.env.AI_GATEWAY_MODEL;
-  if (
-    !model ||
-    !(process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN)
-  )
+  if (!model || !gatewayConfigured())
     return json(
       {
         error: "AI 模型尚未接通，可改用清楚標示嘅示範引擎。",

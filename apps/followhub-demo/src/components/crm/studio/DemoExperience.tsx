@@ -65,8 +65,8 @@ export default function DemoExperience({
       .toReversed()
       .find((b) => b.conversationId === cv.id && b.status !== "cancelled"),
     campaign = d.state.broadcasts.campaigns.find((c) => c.id === r?.campaignId);
-  async function reply(body: string, demo = false) {
-    if (cv.owner) {
+  async function reply(body: string, demo = false, assist = false) {
+    if (cv.owner && !assist) {
       setNotice("同事已接管，BOT 暫停自動回覆。");
       return;
     }
@@ -85,7 +85,7 @@ export default function DemoExperience({
         withinWindow: true,
         humanOwned: !!cv.owner,
         businessHours: true,
-        assist: profile.mode === "assist",
+        assist: assist || profile.mode === "assist",
       },
       demo,
     );
@@ -404,6 +404,22 @@ export default function DemoExperience({
               開啟客服收件匣
               <ArrowRight size={14} />
             </button>
+            <button
+              className="bc-button xp-full"
+              style={{ marginTop: 10 }}
+              disabled={ai.busy}
+              onClick={() =>
+                void reply(
+                  messages.toReversed().find((m) => m.kind === "incoming")
+                    ?.body ?? "你好",
+                  false,
+                  true,
+                )
+              }
+            >
+              <Sparkles size={14} />
+              {ai.busy ? "AI 準備中…" : "生成 AI 回覆建議"}
+            </button>
             <ol className="xp-stages">
               <li className="is-complete">
                 <span>
@@ -520,6 +536,7 @@ export default function DemoExperience({
                     void reply(
                       messages.toReversed().find((m) => m.kind === "incoming")
                         ?.body ?? "你好",
+                      true,
                       true,
                     )
                   }

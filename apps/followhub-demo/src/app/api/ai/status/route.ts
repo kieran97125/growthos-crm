@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookieName, readSession } from "@/lib/demo/access";
+import { gatewayConfigured } from "@/lib/demo/gateway";
 export const runtime = "nodejs";
 export async function GET(req: NextRequest) {
-  const configured =
-    !!process.env.AI_GATEWAY_MODEL &&
-    !!(process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN);
+  const configured = gatewayConfigured();
   const unlocked = !!readSession(req.cookies.get(cookieName)?.value);
   return NextResponse.json(
     {

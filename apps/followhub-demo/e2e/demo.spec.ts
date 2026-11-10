@@ -66,8 +66,9 @@ test("broadcast → customer reply → pending intake → staff confirmation →
   await expect(
     page.locator(".bc-metrics article").filter({ hasText: "人手到店" }),
   ).toContainText("1");
+  await page.getByText("事件明細 · 可追溯來源", { exact: true }).click();
   await expect(
-    page.getByText("人手示範記錄", { exact: false }).first(),
+    page.getByText("同事人手示範記錄", { exact: false }).first(),
   ).toBeVisible();
   await page.screenshot({
     path: info.outputPath("broadcast-performance.png"),

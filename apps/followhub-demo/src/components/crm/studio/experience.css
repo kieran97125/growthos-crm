@@ -736,3 +736,32 @@
     animation: none;
   }
 }
+
+.xp-draft {
+  margin-top: 16px;
+  padding: 15px;
+  border: 1px solid #dfd7ec;
+  border-radius: 8px;
+  background: #faf8ff;
+}
+.xp-draft label {
+  display: grid;
+  gap: 8px;
+  font-size: 11px;
+  color: #50415f;
+}
+.xp-draft textarea {
+  width: 100%;
+  border: 1px solid #ddd5e8;
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 12px;
+  line-height: 1.9;
+  resize: vertical;
+}
+.xp-draft > div {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  margin-top: 12px;
+}

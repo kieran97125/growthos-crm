@@ -111,6 +111,7 @@ export default function BroadcastStudio({
             .join(" | "),
         };
       }),
+      { escapeFormulae: true },
     );
     const url = URL.createObjectURL(
         new Blob(["\ufeff" + text], { type: "text/csv;charset=utf-8;" }),
@@ -374,7 +375,7 @@ export default function BroadcastStudio({
                   <h2>{c.name}</h2>
                   <p>
                     {c.launchedAt
-                      ? "已發送嘅內容及名單快照會保留，新增推播可重新選擇條件。"
+                      ? "已發送嘅內容及實際收件人名單會保留，新增推播可重新選擇條件。"
                       : "先檢查對象同範本，符合條件先可以開始。"}
                   </p>
                 </div>

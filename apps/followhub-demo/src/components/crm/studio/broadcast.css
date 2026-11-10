@@ -763,3 +763,10 @@
     padding: 17px;
   }
 }
+
+/* Avoid low-contrast intermediate frames when a primary action becomes an export action. */
+.fh-app .bc-button:not(:disabled) {
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}

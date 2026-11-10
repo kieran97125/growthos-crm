@@ -60,7 +60,7 @@ export function AIConnectButton() {
         }}
       >
         <span className={ai.status === "ready" ? "is-ready" : ""} />
-        {ai.status === "ready" ? "AI 已啟用" : "啟用 AI"}
+        {ai.status === "ready" ? "AI 體驗已解鎖" : "啟用 AI"}
         <Sparkles size={13} />
       </button>
       {open && (
@@ -74,9 +74,7 @@ export function AIConnectButton() {
               <Bot size={27} />
             </span>
             <h3>
-              {ai.status === "ready"
-                ? "已啟用真實 AI 回覆"
-                : "啟用真實 AI 回覆"}
+              {ai.status === "ready" ? "已解鎖 AI 體驗" : "啟用真實 AI 回覆"}
             </h3>
             <p>
               會將你選取嘅對話及有效品牌知識交予 AI 準備建議。唔會連接真實
@@ -150,7 +148,9 @@ export function AIConnectButton() {
                 )}
               </form>
             )}
-            <small>只授權當前瀏覽器一小時，金鑰不會存入前端。</small>
+            <small>
+              只授權當前瀏覽器一小時，金鑰不會存入前端。模型仍需帳戶已啟用及有可用額度。
+            </small>
           </div>
         </Modal>
       )}

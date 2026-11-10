@@ -186,3 +186,26 @@ for (const view of ["experience", "broadcasts", "inbox", "flows"])
     ).toEqual([]);
     await page.screenshot({ path: info.outputPath(`${view}-mobile.png`) });
   });
+
+test("demonstration suggestion is reviewed in a draft before explicit sending", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByLabel("客戶體驗訊息", { exact: true }).fill("舒緩護理幾錢？");
+  await page
+    .getByRole("button", { name: "傳送客戶體驗訊息", exact: true })
+    .click();
+  const before = await page.locator(".xp-messages article").count();
+  await page.getByRole("button", { name: "使用示範引擎", exact: true }).click();
+  await expect(page.locator(".st-assistant-result")).toContainText("示範引擎");
+  await page.getByRole("button", { name: "插入回覆草稿", exact: true }).click();
+  await expect(page.getByLabel("客服回覆草稿", { exact: true })).toBeVisible();
+  expect(await page.locator(".xp-messages article").count()).toBe(before);
+  await page
+    .getByLabel("客服回覆草稿", { exact: true })
+    .fill("已核實示範收費 HK$480，正式安排由同事核實。");
+  await page.getByRole("button", { name: "傳送示範回覆", exact: true }).click();
+  await expect(page.locator(".xp-messages")).toContainText(
+    "已核實示範收費 HK$480",
+  );
+});

@@ -36,7 +36,7 @@ npm run build
 
 Root `/?view=inbox`, `flows`, `bot`, `broadcasts`, and `experience` select an initial workspace. The experience centre is the default. Each view shares the same browser state.
 
-Create `.env.local` from `.env.example`. On Vercel set server-only `AI_GATEWAY_MODEL` and a dedicated random `DEMO_ACCESS_CODE`; enable project OIDC. No provider key is needed with working Vercel AI Gateway OIDC access and account credit. For local OIDC use a fresh token from this project's Vercel environment; never copy a client project's credentials. Model availability must be verified after deployment.
+Create `.env.local` from `.env.example`. On Vercel set server-only `AI_GATEWAY_MODEL` and a dedicated random `DEMO_ACCESS_CODE`; enable project OIDC. No provider key is needed with working Vercel AI Gateway OIDC access and account credit. For local OIDC use a fresh token from this project's Vercel environment; never copy a client project's credentials. Model availability must be verified after deployment. The deployed live-model smoke test on 2026-11-10 authenticated successfully but Gateway returned HTTP 403 requiring a verified payment method on the account. Real AI generation remains blocked by account activation; it must not be described as verified working. The UI reports this activation requirement and offers an explicitly labelled deterministic engine. No card, credit purchase or client provider key was added.
 
 The Vercel project root is `apps/followhub-demo`, framework Next.js, Node 24. `git.deploymentEnabled:false` prevents automatic deployments of unrelated repository changes; deploy a tested explicit Git branch/commit. Project-level Vercel protection is retained unless separately authorized.
 
@@ -48,15 +48,16 @@ The Vercel project root is `apps/followhub-demo`, framework Next.js, Node 24. `g
 
 ## System cards for delivery beyond the demo
 
-| Card                                 | Status                                   | Completion condition                                                                                           |
-| ------------------------------------ | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| CHANNEL-01 Official WhatsApp         | Waiting for a dedicated demo WABA        | Dedicated number, approved templates, signed webhooks and real receipt reconciliation; no client account reuse |
-| DELIVERY-01 Durable campaign jobs    | Designed; not enabled                    | Persistent outbox, per-recipient idempotency, retry/stop, suppression recheck and delivery receipt ledger      |
-| REMINDER-01 Background reminders     | Preview available                        | Durable scheduler with HKT execution, booking-version invalidation and cancellation guards                     |
-| IDENTITY-01 Multi-company operation  | Isolated demo only                       | Tenant-scoped persistence, roles, audit, retention and recovery; provider choice remains open                  |
-| AI-01 Production controls            | Server route and demo access implemented | Distributed rate/cost limits, curated knowledge publishing, evaluation suite and human handoff monitoring      |
-| REPORT-01 Real performance           | Demo events auditable                    | Verified provider receipts, approved attribution windows and separately reconciled booking/arrival outcomes    |
-| REPORT-02 Revenue and messaging cost | Unknown by design                        | Verified financial records and provider charge source, without assuming a POS connection                       |
+| Card                                 | Status                                                | Completion condition                                                                                           |
+| ------------------------------------ | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| CHANNEL-01 Official WhatsApp         | Waiting for a dedicated demo WABA                     | Dedicated number, approved templates, signed webhooks and real receipt reconciliation; no client account reuse |
+| DELIVERY-01 Durable campaign jobs    | Designed; not enabled                                 | Persistent outbox, per-recipient idempotency, retry/stop, suppression recheck and delivery receipt ledger      |
+| REMINDER-01 Background reminders     | Preview available                                     | Durable scheduler with HKT execution, booking-version invalidation and cancellation guards                     |
+| IDENTITY-01 Multi-company operation  | Isolated demo only                                    | Tenant-scoped persistence, roles, audit, retention and recovery; provider choice remains open                  |
+| AI-00 Live model activation          | Blocked by Vercel account payment-method verification | Account owner activates Gateway; rerun grounded response and multi-turn memory checks                          |
+| AI-01 Production controls            | Server route and demo access implemented              | Distributed rate/cost limits, curated knowledge publishing, evaluation suite and human handoff monitoring      |
+| REPORT-01 Real performance           | Demo events auditable                                 | Verified provider receipts, approved attribution windows and separately reconciled booking/arrival outcomes    |
+| REPORT-02 Revenue and messaging cost | Unknown by design                                     | Verified financial records and provider charge source, without assuming a POS connection                       |
 
 ## Product Learning Sync checked
 

@@ -6,7 +6,12 @@ import {
   createAppState,
   type AppState,
 } from "../src/lib/demo/state";
-import { audience, metrics, type Campaign } from "../src/lib/demo/campaigns";
+import {
+  audience,
+  metrics,
+  recipientStatus,
+  type Campaign,
+} from "../src/lib/demo/campaigns";
 const at = Date.UTC(2026, 10, 10, 5);
 function setup() {
   const s = createAppState(at),
@@ -371,4 +376,16 @@ test("zero denominator metrics remain unknown and reset clears all modules toget
   assert.equal(reset.broadcasts.campaigns.length, 0);
   assert.equal(reset.broadcasts.events.length, 0);
   assert.equal(appSchema.safeParse(reset).success, true);
+});
+
+test("late delivery events do not overwrite a verified business outcome", () => {
+  const { s: initial, r } = intake();
+  let s = booking(initial, "confirmed", at + 3);
+  s = appReducer(s, {
+    type: "receipt",
+    recipientId: r.id,
+    kind: "read",
+    at: at + 4,
+  });
+  assert.equal(recipientStatus(s.broadcasts, r), "booked");
 });

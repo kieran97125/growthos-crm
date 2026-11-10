@@ -219,7 +219,23 @@ export function recipientEvents(b: Broadcasts, r: Recipient) {
     .sort((a, z) => a.at - z.at);
 }
 export function recipientStatus(b: Broadcasts, r: Recipient): ReceiptKind {
-  return recipientEvents(b, r).at(-1)?.kind ?? "sent";
+  const events = recipientEvents(b, r);
+  if (events.some((e) => e.kind === "optout")) return "optout";
+  const outcome = events
+    .filter((e) =>
+      ["booked", "cancelled", "arrived", "missed"].includes(e.kind),
+    )
+    .at(-1);
+  if (outcome) return outcome.kind;
+  for (const kind of [
+    "replied",
+    "read",
+    "delivered",
+    "failed",
+    "sent",
+  ] as const)
+    if (events.some((e) => e.kind === kind)) return kind;
+  return "sent";
 }
 export function metrics(b: Broadcasts, campaignId: string) {
   const rows = b.recipients.filter((r) => r.campaignId === campaignId),

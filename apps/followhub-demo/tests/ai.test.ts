@@ -1,3 +1,4 @@
+import { gatewayFailure } from "../src/lib/demo/gateway-failure";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -120,4 +121,22 @@ test("origin validation uses request host and rejects foreign/missing origins", 
   assert.equal(sameOrigin(req("http://127.0.0.1:3038")), true);
   assert.equal(sameOrigin(req("https://evil.example")), false);
   assert.equal(sameOrigin(req(null)), false);
+});
+
+test("Gateway activation and quota failures are actionable without exposing raw provider data", () => {
+  assert.equal(
+    gatewayFailure(new Error("AI Gateway requires a valid credit card on file"))
+      .code,
+    "gateway_activation_required",
+  );
+  assert.equal(
+    gatewayFailure(new Error("insufficient credits")).code,
+    "gateway_quota",
+  );
+  assert.equal(
+    gatewayFailure(new Error("private provider diagnostic")).error.includes(
+      "private",
+    ),
+    false,
+  );
 });

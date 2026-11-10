@@ -62,6 +62,7 @@ import {
   Avatar,
   ChannelIcon,
   IconButton,
+  Modal,
   WorkspaceLink,
 } from "./WorkspacePrimitives";
 import { ConversationList } from "./ConversationList";
@@ -100,6 +101,7 @@ export function ConversationWorkspace({
     mode === "demo" ? initialView : "inbox",
   );
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
   const [queue, setQueue] = useState<Queue>("all");
   const [query, setQuery] = useState("");
   const [brand, setBrand] = useState("all");
@@ -301,13 +303,12 @@ export function ConversationWorkspace({
     setNotice("已模擬一則客戶新訊息");
   }
   function handleReset() {
-    if (
-      !window.confirm("重設會清除呢個瀏覽器嘅示範回覆、備註及預約。確定重設？")
-    )
-      return;
+    setResetOpen(true);
+  }
+  function resetDemo() {
+    setResetOpen(false);
     dispatch({ type: "reset", state: createDemoState(actionTime()) });
     setDrafts({});
-    studio.dispatch({ type: "reset" });
     setQueue("all");
     setQuery("");
     setBrand("all");
@@ -1167,6 +1168,29 @@ export function ConversationWorkspace({
             />
           )}
         </Suspense>
+      )}
+      {resetOpen && (
+        <Modal
+          title="重設所有示範資料？"
+          subtitle="會清除此瀏覽器嘅推播、成效事件、對話改動、預約、Flow 版本及品牌知識設定，並還原虛構示範資料。"
+          onClose={() => setResetOpen(false)}
+        >
+          <div
+            style={{
+              padding: 24,
+              display: "flex",
+              gap: 12,
+              justifyContent: "flex-end",
+            }}
+          >
+            <button className="fh-button" onClick={() => setResetOpen(false)}>
+              取消
+            </button>
+            <button className="fh-button fh-primary" onClick={resetDemo}>
+              確認重設所有 Demo 資料
+            </button>
+          </div>
+        </Modal>
       )}
       {assistantOpen && selected && contact && (
         <AssistantDialog

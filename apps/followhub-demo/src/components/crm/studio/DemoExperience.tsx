@@ -38,6 +38,7 @@ export default function DemoExperience({
     [form, setForm] = useState(false),
     [notice, setNotice] = useState(""),
     [answer, setAnswer] = useState<LiveAnswer | null>(null),
+    [replyDraft, setReplyDraft] = useState<string | null>(null),
     [checked, setChecked] = useState(false),
     [consent, setConsent] = useState(true),
     [approved, setApproved] = useState(true),
@@ -261,6 +262,7 @@ export default function DemoExperience({
                   setSelected(e.target.value);
                   d.dispatch({ type: "active-recipient", id: null });
                   setAnswer(null);
+                  setReplyDraft(null);
                   setNotice("");
                   setChecked(false);
                 }}
@@ -425,6 +427,21 @@ export default function DemoExperience({
               <Sparkles size={14} />
               {ai.busy ? "AI 準備中…" : "生成 AI 回覆建議"}
             </button>
+            <button
+              className="bc-text-button"
+              style={{ marginTop: 10 }}
+              disabled={ai.busy}
+              onClick={() =>
+                void reply(
+                  messages.toReversed().find((m) => m.kind === "incoming")
+                    ?.body ?? "你好",
+                  true,
+                  true,
+                )
+              }
+            >
+              使用示範引擎
+            </button>
             <ol className="xp-stages">
               <li className="is-complete">
                 <span>
@@ -555,26 +572,59 @@ export default function DemoExperience({
                 {notice}
               </p>
             )}
+            {replyDraft !== null && (
+              <div className="xp-draft">
+                <label>
+                  客服回覆草稿
+                  <textarea
+                    aria-label="客服回覆草稿"
+                    rows={4}
+                    maxLength={1500}
+                    value={replyDraft}
+                    onChange={(e) => setReplyDraft(e.target.value)}
+                  />
+                </label>
+                <div>
+                  <button
+                    className="bc-button"
+                    onClick={() => setReplyDraft(null)}
+                  >
+                    捨棄草稿
+                  </button>
+                  <button
+                    className="bc-button bc-primary"
+                    disabled={!replyDraft.trim()}
+                    onClick={() => {
+                      d.dispatch({
+                        type: "inbox",
+                        action: {
+                          type: "message",
+                          conversationId: cv.id,
+                          message: {
+                            id: uid(),
+                            conversationId: cv.id,
+                            kind: "outgoing",
+                            body: replyDraft,
+                            author: "Mia · 示範",
+                            at: actionTime(),
+                            replyTo: null,
+                          },
+                        },
+                      });
+                      setReplyDraft(null);
+                      setNotice("示範回覆已加入對話。");
+                    }}
+                  >
+                    傳送示範回覆
+                  </button>
+                </div>
+              </div>
+            )}
             {answer && (
               <AssistantResultCard
                 result={answer}
                 onInsert={(text) => {
-                  d.dispatch({
-                    type: "inbox",
-                    action: {
-                      type: "message",
-                      conversationId: cv.id,
-                      message: {
-                        id: uid(),
-                        conversationId: cv.id,
-                        kind: "outgoing",
-                        body: text,
-                        author: "Mia · 示範",
-                        at: actionTime(),
-                        replyTo: null,
-                      },
-                    },
-                  });
+                  setReplyDraft(text);
                   setAnswer(null);
                 }}
               />

@@ -1,3 +1,4 @@
+import { gatewayFailure } from "@/lib/demo/gateway-failure";
 import { sameOrigin } from "@/lib/demo/access";
 import { NextRequest, NextResponse } from "next/server";
 import { generateText, Output } from "ai";
@@ -108,13 +109,6 @@ export async function POST(req: NextRequest) {
               .replace(/(?:sk-|Bearer |eyJ)[A-Za-z0-9_.-]+/g, "[redacted]")
           : "unknown",
     });
-    return json(
-      {
-        error:
-          "AI 服務暫未完成回覆。可能涉及連線、模型額度或回答格式；你可以重試，或明確改用示範引擎。",
-        code: "gateway_unavailable",
-      },
-      502,
-    );
+    return json(gatewayFailure(error), 503);
   }
 }

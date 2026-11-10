@@ -49,3 +49,14 @@ export function acceptRequest(id: string, now = Date.now()) {
   limits.set(id, { at: now, count: 1 });
   return true;
 }
+
+export function sameOrigin(req: Request) {
+  const origin = req.headers.get("origin"),
+    host = req.headers.get("host");
+  if (!origin || !host) return false;
+  try {
+    return origin === new URL(`${new URL(req.url).protocol}//${host}`).origin;
+  } catch {
+    return false;
+  }
+}

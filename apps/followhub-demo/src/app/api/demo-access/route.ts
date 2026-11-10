@@ -1,3 +1,4 @@
+import { sameOrigin } from "@/lib/demo/access";
 import { NextRequest, NextResponse } from "next/server";
 import {
   acceptRequest,
@@ -7,7 +8,7 @@ import {
 } from "@/lib/demo/access";
 export const runtime = "nodejs";
 export async function POST(req: NextRequest) {
-  if (req.headers.get("origin") !== req.nextUrl.origin)
+  if (!sameOrigin(req))
     return NextResponse.json(
       { error: "請由 Demo 網頁操作。" },
       { status: 403 },

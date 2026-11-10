@@ -8,6 +8,7 @@ import {
 } from "../src/lib/demo/ai-contract";
 import {
   validCode,
+  sameOrigin,
   issueSession,
   readSession,
   acceptRequest,
@@ -109,4 +110,14 @@ test("per-instance request limiter bounds repeated calls", () => {
   for (let i = 0; i < 12; i++) assert.equal(acceptRequest(id, now), true);
   assert.equal(acceptRequest(id, now), false);
   assert.equal(acceptRequest(id, now + 60001), true);
+});
+
+test("origin validation uses request host and rejects foreign/missing origins", () => {
+  const req = (origin: string | null) =>
+    new Request("http://localhost:3038/api/assistant", {
+      headers: { host: "127.0.0.1:3038", ...(origin ? { origin } : {}) },
+    });
+  assert.equal(sameOrigin(req("http://127.0.0.1:3038")), true);
+  assert.equal(sameOrigin(req("https://evil.example")), false);
+  assert.equal(sameOrigin(req(null)), false);
 });

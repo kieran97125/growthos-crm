@@ -1,3 +1,4 @@
+import { sameOrigin } from "@/lib/demo/access";
 import { NextRequest, NextResponse } from "next/server";
 import { generateText, Output } from "ai";
 import {
@@ -16,8 +17,7 @@ const json = (body: unknown, status = 200) =>
     headers: { "Cache-Control": "private, no-store" },
   });
 export async function POST(req: NextRequest) {
-  if (req.headers.get("origin") !== req.nextUrl.origin)
-    return json({ error: "請由 Demo 網頁操作。" }, 403);
+  if (!sameOrigin(req)) return json({ error: "請由 Demo 網頁操作。" }, 403);
   const session = readSession(req.cookies.get(cookieName)?.value);
   if (!session)
     return json(

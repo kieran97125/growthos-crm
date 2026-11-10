@@ -292,7 +292,12 @@ export default function DemoExperience({
                 </div>
                 <span className="xp-channel-label">Demo</span>
               </header>
-              <div className="xp-messages" role="log" aria-label="客戶體驗對話">
+              <div
+                className="xp-messages"
+                tabIndex={0}
+                role="log"
+                aria-label="客戶體驗對話"
+              >
                 <small>測試 WhatsApp 對話 · 未連接真實號碼</small>
                 {messages.slice(-10).map((m) => (
                   <article

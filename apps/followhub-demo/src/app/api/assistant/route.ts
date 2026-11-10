@@ -97,6 +97,16 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("assistant_gateway_failure", {
       type: error instanceof Error ? error.name : "unknown",
+      status:
+        error && typeof error === "object" && "statusCode" in error
+          ? error.statusCode
+          : undefined,
+      message:
+        error instanceof Error
+          ? error.message
+              .slice(0, 600)
+              .replace(/(?:sk-|Bearer |eyJ)[A-Za-z0-9_.-]+/g, "[redacted]")
+          : "unknown",
     });
     return json(
       {

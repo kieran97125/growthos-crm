@@ -16,7 +16,7 @@ Product decision: 2026-11-11. SmartVolt CRM is a standalone company CRM SaaS. Ki
 
 ## Current execution boundary
 
-Dedicated database `smartvolt-crm-pos` (`dcnvuccvdvlpmpvkhuoc`, Singapore) is healthy and has the tenant, purchased-product, immutable POS ledger and ledger read-model migrations installed. Production has the dedicated URL, publishable key and canonical app URL configured. The server secret has not been supplied; company login remains disabled. There are no hosted Auth users or provisioned companies. Hosted email/password/session refresh/revocation acceptance remains pending; no working login or live service is implied.
+Dedicated database `smartvolt-crm-pos` (`dcnvuccvdvlpmpvkhuoc`, Singapore) is healthy and has the tenant, purchased-product, immutable POS ledger and ledger read-model migrations installed. Production has the dedicated URL, publishable key, canonical app URL and server secret configured. `SMARTVOLT_SUPABASE_SECRET_KEY` is stored as a Production-only Vercel Secret (`sensitive`), never committed or printed. The unchanged approved application commit `9c0648a66d0f5bf359c9d25b8343b35ed6860a17` was redeployed as `dpl_9z5psRaNpdXxHpUTajqosjzw4Vjn` on 2026-11-12 (Hong Kong). The login form is enabled and anonymous workspace/ledger requests return 401 with private/no-store headers. There are still no hosted Auth users or provisioned companies. These checks confirm credential configuration and Auth routing, not authenticated private database reads/writes; owner login, session refresh/revocation and company acceptance remain pending.
 
 Live WhatsApp/Instagram/Messenger transport, verified provider templates/receipts, reminder scheduler, real AI model execution, self-service member invitations, subscription payments and large-volume paginated read models are pending system cards. Real-company send/simulated inbound/receipt/reset commands are rejected. Existing KiesTECH and Alyssa deployments and databases are untouched.
 
@@ -39,7 +39,7 @@ For browsers: `npx playwright install --with-deps chromium`, then `npm run test:
 ## Dedicated activation
 
 1. Reuse the dedicated SmartVolt project; do not recreate it or reapply historical migrations. Local migration filenames and SQL now match its exact installed history. The superseded standalone POS patch was consolidated in the installed purchased-product migration.
-2. Complete the four server-only values in `.env.example` on the dedicated deployment by supplying `SMARTVOLT_SUPABASE_SECRET_KEY` through the secret environment field. No fallback to generic or other-product variables exists. Never commit or send the secret in chat.
+2. The four server-only values in `.env.example` are configured on the dedicated Production deployment; the server key is a Secret scoped only to Production. No fallback to generic or other-product variables exists. Keep rotations in the dedicated project's secret settings and redeploy afterward. Never commit or send the secret in chat.
 3. Create and confirm the owner Auth identity through the dedicated project's administrative flow. Configure an owner recovery process and canonical Auth redirects before inviting employees.
 4. Provision a company using an already confirmed owner identity (the command sends no email):
    `node --env-file=.env.local --import tsx scripts/provision-company.ts OWNER_USER_UUID 'Company' 'Brand' 'Owner name' crm,pos`

@@ -67,7 +67,7 @@ export default function LedgerView({
         )}
         <button type="submit">查閱帳簿</button>
       </form>
-      <div className="sv-ledger-metrics" aria-label="所選訂單摘要">
+      <div className="sv-ledger-metrics" role="group" aria-label="所選訂單摘要">
         {[
           ["訂單總額", money(page.totals.orderedCents)],
           ["已登記收款", money(page.totals.paidCents)],

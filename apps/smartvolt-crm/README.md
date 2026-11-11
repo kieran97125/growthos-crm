@@ -34,7 +34,7 @@ npm run build
 npm run dev
 ```
 
-For browsers: `npx playwright install --with-deps chromium`, then `npm run test:e2e`. `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` optionally selects an installed Chromium; CI uses the pinned Playwright browser.
+For browsers: `npx playwright install --with-deps chromium`, then `npm run test:e2e`. `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` optionally selects an installed Chromium. GitHub CI uses the official runner's preinstalled Chrome and records its version; other runners use the pinned Playwright browser with a bounded installation. All browser, accessibility and screenshot checks remain required.
 
 ## Dedicated activation
 

@@ -7,6 +7,9 @@ on:
     paths: ['apps/smartvolt-crm/**', '.github/workflows/smartvolt-crm.yml']
 permissions:
   contents: read
+concurrency:
+  group: smartvolt-${{ github.head_ref || github.ref_name }}-${{ github.event_name }}
+  cancel-in-progress: true
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -26,7 +29,8 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
-      - run: npx playwright install --with-deps chromium
+      - name: Select and record acceptance browser
+        run: bash ../../scripts/select-ci-browser.sh
       - run: npm run test:e2e
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()

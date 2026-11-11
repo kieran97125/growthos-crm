@@ -1,3 +1,4 @@
+import { managerCommands } from "@/lib/pos/model";
 import type { NextRequest } from "next/server";
 import { loadCompany } from "@/lib/saas/server";
 import { applyCompanyCommand, mutationSchema } from "@/lib/saas/workspace";
@@ -39,7 +40,11 @@ export async function POST(request: NextRequest, context: Context) {
       p_expected: command.revision,
       p_command_id: command.commandId,
       p_payload: next,
-      p_kind: command.command.type,
+      p_kind:
+        command.command.type === "pos" &&
+        managerCommands.has(command.command.command.kind)
+          ? "pos-admin"
+          : command.command.type,
     });
     if (error?.message.includes("revision_conflict"))
       return json(

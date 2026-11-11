@@ -10,6 +10,7 @@ import {
   type FormEvent,
 } from "react";
 import {
+  Store,
   Bot,
   Workflow,
   Sparkles,
@@ -75,22 +76,29 @@ import { useStudioStore } from "../studio/useStudioStore";
 import { AssistantDialog } from "../studio/AssistantDialog";
 import { StudioLoading } from "../studio/StudioUI";
 import "./workspace.css";
+import "../../pos/pos.css";
 import "../studio/studio.css";
+const PosWorkspace = lazy(() => import("../../pos/PosWorkspace"));
+import type { PosOpenContext } from "../../pos/PosWorkspace";
 const FlowStudio = lazy(() => import("../studio/FlowStudio"));
 const BotStudio = lazy(() => import("../studio/BotStudio"));
 const BroadcastStudio = lazy(() => import("../studio/BroadcastStudio"));
 const DemoExperience = lazy(() => import("../studio/DemoExperience"));
 export type WorkspaceView =
-  "inbox" | "flows" | "bot" | "broadcasts" | "experience";
+  "inbox" | "flows" | "bot" | "broadcasts" | "experience" | "pos";
 
 export function ConversationWorkspace({
   mode = "demo",
   initialNow,
   initialView = "inbox",
+  initialContact,
+  initialConversation,
 }: {
   mode?: "demo" | "connected-empty";
   initialNow?: number;
   initialView?: WorkspaceView;
+  initialContact?: string;
+  initialConversation?: string;
 }) {
   const identity = useIdentity();
   const BRANDS = identity.scope.brands;
@@ -104,13 +112,15 @@ export function ConversationWorkspace({
   const [view, setView] = useState<WorkspaceView>(
     mode === "demo" ? initialView : "inbox",
   );
+  const [posOpened, setPosOpened] = useState(initialView === "pos");
+  const [posContext, setPosContext] = useState<PosOpenContext | null>(null);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
   const [queue, setQueue] = useState<Queue>("all");
   const [query, setQuery] = useState("");
   const [brand, setBrand] = useState("all");
   const [channel, setChannel] = useState("all");
-  const [selectedId, setSelectedId] = useState("c1");
+  const [selectedId, setSelectedId] = useState(initialConversation ?? "c1");
   const [mobileChat, setMobileChat] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [queueOpen, setQueueOpen] = useState(false);
@@ -138,6 +148,10 @@ export function ConversationWorkspace({
   const rows = selectConversations(state, { ...filters, queue });
   const selected =
     state.conversations.find((c) => c.id === selectedId) ?? rows[0];
+  const initialPosContact = state.contacts.find((c) => c.id === initialContact);
+  const initialPosBrand = state.conversations.find(
+    (c) => c.contactId === initialContact,
+  )?.brandId;
   const contact = state.contacts.find((c) => c.id === selected?.contactId);
   const messages = state.messages.filter(
     (m) => m.conversationId === selected?.id,
@@ -180,6 +194,21 @@ export function ConversationWorkspace({
       ...current,
       [selected.id]: { ...draft, [composerMode]: value },
     }));
+  }
+  function openPOS(contactId?: string, brandId?: string) {
+    setPosOpened(true);
+    setView("pos");
+    setProfileOpen(false);
+    setPanel(null);
+    if (contactId && brandId)
+      setPosContext({ contactId, brandId, token: crypto.randomUUID() });
+  }
+  function returnCRM(contactId?: string, brandId?: string) {
+    const cv = state.conversations.find(
+      (c) => c.contactId === contactId && (!brandId || c.brandId === brandId),
+    );
+    if (cv) openConversation(cv.id);
+    else setView("inbox");
   }
   function openConversation(id: string) {
     setView("inbox");
@@ -282,6 +311,10 @@ export function ConversationWorkspace({
   }
   function handleStartBooking() {
     if (!selected || !contact) return;
+    if (booking?.id.startsWith("pos-book-")) {
+      openPOS(contact.id, selected.brandId);
+      return;
+    }
     setBookingDraft(
       booking ?? {
         id: uid(),
@@ -374,15 +407,17 @@ export function ConversationWorkspace({
           <span className="fh-muted">工作空間</span>
           <ChevronRight size={12} />
           <span>
-            {view === "flows"
-              ? "Flow Studio"
-              : view === "bot"
-                ? "AI BOT Studio"
-                : view === "broadcasts"
-                  ? "推播與成效"
-                  : view === "experience"
-                    ? "體驗中心"
-                    : "客服中心"}
+            {view === "pos"
+              ? "POS 營運工作台"
+              : view === "flows"
+                ? "Flow Studio"
+                : view === "bot"
+                  ? "AI BOT Studio"
+                  : view === "broadcasts"
+                    ? "推播與成效"
+                    : view === "experience"
+                      ? "體驗中心"
+                      : "客服中心"}
           </span>
         </div>
         <div className="fh-topbar-right">
@@ -420,6 +455,17 @@ export function ConversationWorkspace({
           <span>訊息</span>
           <i />
         </button>
+        {!empty && (
+          <button
+            aria-label="POS 營運工作台"
+            title="POS 營運工作台"
+            className={view === "pos" ? "is-active" : ""}
+            onClick={() => openPOS()}
+          >
+            <Store size={21} />
+            <span>POS</span>
+          </button>
+        )}
         {!empty && (
           <>
             <button
@@ -1110,6 +1156,7 @@ export function ConversationWorkspace({
                 setPanel={setPanel}
                 setNotice={setNotice}
                 handleStartBooking={handleStartBooking}
+                onOpenPos={() => openPOS(contact.id, selected.brandId)}
               />
             </>
           ) : (
@@ -1159,7 +1206,7 @@ export function ConversationWorkspace({
             </section>
           )}
         </>
-      ) : (
+      ) : view === "pos" ? null : (
         <Suspense fallback={<StudioLoading />}>
           {view === "flows" ? (
             <FlowStudio
@@ -1192,6 +1239,26 @@ export function ConversationWorkspace({
             />
           )}
         </Suspense>
+      )}
+      {posOpened && ready && (
+        <div className="sv-pos-slot" hidden={view !== "pos"}>
+          <Suspense fallback={<StudioLoading />}>
+            <PosWorkspace
+              active={view === "pos"}
+              context={
+                posContext ??
+                (initialPosContact && initialPosBrand
+                  ? {
+                      contactId: initialPosContact.id,
+                      brandId: initialPosBrand,
+                      token: "initial",
+                    }
+                  : null)
+              }
+              onCRM={returnCRM}
+            />
+          </Suspense>
+        </div>
       )}
       {resetOpen && (
         <Modal

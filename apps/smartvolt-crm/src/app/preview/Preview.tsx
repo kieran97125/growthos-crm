@@ -22,7 +22,15 @@ const companies = [
     brandNames: ["Harbour Studio", "Harbour Care"],
   },
 ];
-export default function Preview({ view }: { view: WorkspaceView }) {
+export default function Preview({
+  view,
+  contact,
+  conversation,
+}: {
+  view: WorkspaceView;
+  contact?: string;
+  conversation?: string;
+}) {
   const [createdAt] = useState(() => Date.now());
   const [companyId, setCompany] = useState(companies[0].id);
   const company = companies.find((c) => c.id === companyId)!;
@@ -34,6 +42,7 @@ export default function Preview({ view }: { view: WorkspaceView }) {
   };
   const initial = createAppState(createdAt);
   initial.scope = scope;
+  if (initial.pos) initial.pos.companyId = companyId;
   initial.inbox.contacts.forEach((c) => {
     c.clientId = companyId;
   });
@@ -73,7 +82,11 @@ export default function Preview({ view }: { view: WorkspaceView }) {
           storageKey={`smartvolt:preview:${companyId}:v1`}
         >
           <AIProvider>
-            <ConversationWorkspace initialView={view} />
+            <ConversationWorkspace
+              initialView={view}
+              initialContact={contact}
+              initialConversation={conversation}
+            />
           </AIProvider>
         </DemoProvider>
       </PreviewIdentity>

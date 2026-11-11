@@ -1,3 +1,4 @@
+import { PosError } from "@/lib/pos/engine";
 import { NextResponse, type NextRequest } from "next/server";
 import { ZodError } from "zod";
 import { AccessError } from "./identity";
@@ -18,6 +19,7 @@ export function sameOrigin(request: NextRequest) {
     throw new AccessError("請由公司 CRM 網頁操作。");
 }
 export function failure(error: unknown) {
+  if (error instanceof PosError) return json({ error: error.message }, 400);
   if (error instanceof AccessError)
     return json({ error: error.message }, error.status);
   if (error instanceof ZodError)

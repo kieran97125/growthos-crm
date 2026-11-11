@@ -1,6 +1,9 @@
+import { emptyPos, posCommandSchema } from "@/lib/pos/model";
+import { applyPosCommand } from "@/lib/pos/engine";
 import { z } from "zod";
 import {
   appReducer,
+  synchronizePosBookings,
   appSchema,
   createAppState,
   type AppState,
@@ -62,6 +65,15 @@ const studioAction = z.discriminatedUnion("type", [
   z.object({ type: z.literal("restore-version"), versionId: id, at }),
 ]);
 export const commandSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("pos"), command: posCommandSchema }),
+  z.object({
+    type: z.literal("customer-create"),
+    id: z.string().min(1).max(60),
+    brandId: id,
+    name: z.string().min(1).max(80),
+    phone: z.string().max(40),
+    at,
+  }),
   z.object({ type: z.literal("inbox"), action: inboxAction }),
   z.object({ type: z.literal("studio"), action: studioAction }),
   z.object({
@@ -100,6 +112,7 @@ export function createCompanyState(scope: CompanyScope): AppState {
   return appSchema.parse({
     version: 1,
     scope,
+    pos: emptyPos(scope.companyId),
     inbox: {
       version: 2,
       contacts: [],
@@ -151,6 +164,23 @@ export function applyCompanyCommand(
   if (!checked.success)
     throw new AccessError("此操作未啟用或資料不完整，改動未有儲存。", 400);
   const command = checked.data;
+  if (command.type === "pos") {
+    const pos = applyPosCommand(state.pos, command.command, {
+      companyId: state.scope.companyId,
+      brandIds: state.scope.brands.map((b) => b.id),
+      staffIds: state.scope.team.map((t) => t.id),
+      contacts: state.inbox.contacts,
+      conversations: state.inbox.conversations,
+      actor,
+      now,
+    });
+    return appSchema.parse(synchronizePosBookings({ ...state, pos }));
+  }
+  if (command.type === "customer-create") {
+    if (!state.scope.brands.some((b) => b.id === command.brandId))
+      throw new AccessError("品牌不屬於此公司。");
+    command.at = now;
+  }
   if (
     ["studio", "campaign-save", "campaign-pause", "import"].includes(
       command.type,
@@ -160,6 +190,14 @@ export function applyCompanyCommand(
     throw new AccessError("此操作需要公司管理員權限。");
   if (command.type === "inbox") {
     const a = command.action;
+    if (
+      a.type === "booking" &&
+      state.pos?.appointments.some((p) => p.crmBookingId === a.booking.id)
+    )
+      throw new AccessError(
+        "請喺 POS 管理此預約，確保時段同收款記錄一致。",
+        409,
+      );
     if (a.type === "message") {
       if (a.message.kind !== "note")
         throw new AccessError("通訊渠道尚未接通；訊息未有傳送。", 409);

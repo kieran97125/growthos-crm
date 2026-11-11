@@ -1,3 +1,7 @@
+import { posSchema } from "@/lib/pos/model";
+import { applyPosCommand } from "@/lib/pos/engine";
+import type { PosCommand } from "@/lib/pos/model";
+import { seedPos } from "@/lib/pos/seed";
 import { scopeSchema } from "@/lib/saas/identity";
 import { z } from "zod";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
@@ -28,6 +32,7 @@ export const appSchema = z
   .object({
     version: z.literal(1),
     scope: scopeSchema.optional(),
+    pos: posSchema.optional(),
     inbox: stateSchema,
     studio: studioSchema,
     broadcasts: broadcastsSchema,
@@ -73,6 +78,31 @@ export const appSchema = z
         ctx.addIssue({
           code: "custom",
           message: "Invalid flow assignment scope",
+        });
+    }
+    if (s.pos) {
+      const company = s.scope?.companyId ?? DEMO_CLIENT;
+      const brands = new Set(
+        (s.scope?.brands ?? [{ id: "nova-studio" }, { id: "nova-care" }]).map(
+          (b) => b.id,
+        ),
+      );
+      if (
+        s.pos.companyId !== company ||
+        [
+          ...s.pos.catalog,
+          ...s.pos.resources,
+          ...s.pos.appointments,
+          ...s.pos.orders,
+          ...s.pos.entitlements,
+        ].some((r) => !brands.has(r.brandId)) ||
+        [...s.pos.appointments, ...s.pos.orders, ...s.pos.entitlements].some(
+          (r) => !s.inbox.contacts.some((c) => c.id === r.contactId),
+        )
+      )
+        ctx.addIssue({
+          code: "custom",
+          message: "Invalid POS company/customer scope",
         });
     }
     const b = s.broadcasts,
@@ -132,10 +162,29 @@ export function createAppState(now: number): AppState {
     version: 1,
     inbox,
     studio: createStudioState(),
+    pos: seedPos(
+      DEMO_CLIENT,
+      [
+        { id: "nova-studio", name: "Nova Studio" },
+        { id: "nova-care", name: "Nova Care" },
+      ],
+      inbox.contacts,
+      inbox.conversations,
+      now,
+    ),
     broadcasts: seedBroadcasts(inbox, now),
   };
 }
 export type AppAction =
+  | { type: "pos"; command: PosCommand }
+  | {
+      type: "customer-create";
+      id: string;
+      brandId: string;
+      name: string;
+      phone: string;
+      at: number;
+    }
   | { type: "inbox"; action: InboxAction }
   | { type: "studio"; action: StudioAction }
   | { type: "campaign-save"; campaign: Campaign }
@@ -220,10 +269,88 @@ export function appReducer(
   a: AppAction,
   actor = "同事",
 ): AppState {
+  if (a.type === "pos") {
+    const next = {
+      ...s,
+      pos: applyPosCommand(s.pos, a.command, {
+        companyId: s.scope?.companyId ?? DEMO_CLIENT,
+        brandIds: (
+          s.scope?.brands ?? [{ id: "nova-studio" }, { id: "nova-care" }]
+        ).map((b) => b.id),
+        staffIds: (
+          s.scope?.team ?? [{ id: "me" }, { id: "iris" }, { id: "ken" }]
+        ).map((t) => t.id),
+        contacts: s.inbox.contacts,
+        conversations: s.inbox.conversations,
+        actor: { name: actor, role: "owner" },
+        now: Date.now(),
+      }),
+    };
+    return synchronizePosBookings(next);
+  }
+  if (a.type === "customer-create") {
+    const phone = parsePhoneNumberFromString(a.phone, "HK");
+    if (
+      !phone?.isValid() ||
+      !a.name.trim() ||
+      s.inbox.contacts.some((c) => c.id === a.id) ||
+      s.inbox.conversations.some(
+        (cv) =>
+          cv.brandId === a.brandId &&
+          s.inbox.contacts.find((c) => c.id === cv.contactId)?.phone ===
+            phone.number,
+      )
+    )
+      return s;
+    const contact: Contact = {
+      id: a.id,
+      clientId: s.scope?.companyId ?? DEMO_CLIENT,
+      name: a.name.trim(),
+      initials: a.name.slice(0, 2),
+      phone: phone.number,
+      email: "",
+      company: "",
+      tags: ["到店登記"],
+      source: "POS 到店",
+      createdAt: a.at,
+      note: "",
+    };
+    return {
+      ...s,
+      inbox: {
+        ...s.inbox,
+        contacts: [...s.inbox.contacts, contact],
+        conversations: [
+          ...s.inbox.conversations,
+          {
+            id: `pos-${a.id}`,
+            clientId: contact.clientId,
+            brandId: a.brandId,
+            contactId: a.id,
+            channel: "whatsapp",
+            status: "open",
+            owner: null,
+            priority: false,
+            pinned: false,
+            unread: 0,
+            snoozedUntil: null,
+            subject: "到店客戶跟進",
+            updatedAt: a.at,
+          },
+        ],
+      },
+    };
+  }
   if (a.type === "reset") return createAppState(a.at);
   if (a.type === "studio")
     return { ...s, studio: studioReducer(s.studio, a.action) };
   if (a.type === "inbox") {
+    const inboxAction = a.action;
+    if (
+      inboxAction.type === "booking" &&
+      s.pos?.appointments.some((p) => p.crmBookingId === inboxAction.booking.id)
+    )
+      return s;
     let n = { ...s, inbox: demoReducer(s.inbox, a.action, actor) };
     if (a.action.type === "booking") {
       const b = a.action.booking,
@@ -548,4 +675,32 @@ export function appReducer(
     return n;
   }
   return s;
+}
+
+export function synchronizePosBookings(s: AppState): AppState {
+  if (!s.pos) return s;
+  const byId = new Map(s.inbox.bookings.map((b) => [b.id, b]));
+  for (const a of s.pos.appointments) {
+    const old = byId.get(a.crmBookingId);
+    byId.set(a.crmBookingId, {
+      id: a.crmBookingId,
+      conversationId: a.conversationId,
+      contactId: a.contactId,
+      service: a.serviceName,
+      branch:
+        s.pos.resources.find((r) => r.id === a.resourceId)?.name ?? "店內",
+      date: new Date(a.startsAt + 8 * 3600000).toISOString().slice(0, 10),
+      time: new Date(a.startsAt + 8 * 3600000).toISOString().slice(11, 16),
+      fee: `HK$${a.priceCents / 100}`,
+      guests: a.guests,
+      customerConfirmed: old?.customerConfirmed ?? false,
+      status:
+        a.status === "cancelled"
+          ? "cancelled"
+          : a.status === "pending"
+            ? "pending"
+            : "confirmed",
+    });
+  }
+  return { ...s, inbox: { ...s.inbox, bookings: [...byId.values()] } };
 }

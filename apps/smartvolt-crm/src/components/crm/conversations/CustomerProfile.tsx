@@ -11,6 +11,7 @@ import { Avatar, IconButton } from "./WorkspacePrimitives";
 import { uid, actionTime } from "./events";
 import type { Panel } from "./types";
 import {
+  Store,
   ArrowRight,
   CalendarDays,
   Clock3,
@@ -37,6 +38,7 @@ export function CustomerProfile({
   setPanel,
   setNotice,
   handleStartBooking,
+  onOpenPos,
 }: {
   selected: Conversation;
   contact: Contact;
@@ -46,6 +48,7 @@ export function CustomerProfile({
   setPanel: (v: Panel) => void;
   setNotice: (v: string) => void;
   handleStartBooking: () => void;
+  onOpenPos: () => void;
 }) {
   const identity = useIdentity();
   const TEAM = identity.scope.team;
@@ -94,6 +97,11 @@ export function CustomerProfile({
             </button>
           </div>
         </section>
+        <button className="sv-profile-pos" onClick={onOpenPos}>
+          <Store size={15} />
+          開啟客戶 POS
+          <ArrowRight size={14} />
+        </button>
         <section className="fh-profile-section">
           <div className="fh-section-title">
             <h3>聯絡資料</h3>

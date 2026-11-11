@@ -13,7 +13,9 @@ import {
   createAppState,
   type AppState,
   type AppAction,
+  synchronizePosBookings,
 } from "./state";
+import { seedPos } from "@/lib/pos/seed";
 export type Snapshot = {
   state: AppState;
   ready: boolean;
@@ -41,9 +43,20 @@ function createStore(initialState?: AppState, storageKey = APP_STORAGE) {
         if (
           p.success &&
           p.data.scope?.companyId === initialState?.scope?.companyId
-        )
+        ) {
           state = p.data;
-        else storage = "舊資料未通過驗證，已開啟全新 Demo";
+          if (!state.pos && state.scope)
+            state = synchronizePosBookings({
+              ...state,
+              pos: seedPos(
+                state.scope.companyId,
+                state.scope.brands,
+                state.inbox.contacts,
+                state.inbox.conversations,
+                Date.now(),
+              ),
+            });
+        } else storage = "舊資料未通過驗證，已開啟全新 Demo";
       }
     } catch {
       storage = "本機資料未能讀取；請保留此頁面";
@@ -58,6 +71,7 @@ function createStore(initialState?: AppState, storageKey = APP_STORAGE) {
           ? (() => {
               const seed = createAppState(a.at);
               seed.scope = initialState.scope;
+              if (seed.pos) seed.pos.companyId = initialState.scope.companyId;
               seed.inbox.contacts.forEach((c) => {
                 c.clientId = initialState.scope!.companyId;
               });

@@ -34,9 +34,13 @@ export default async function CompanyPage({
       );
     throw error;
   }
-  const view: WorkspaceView = ["inbox", "flows", "bot", "broadcasts"].includes(
-    query.view ?? "",
-  )
+  const view: WorkspaceView = [
+    "inbox",
+    "flows",
+    "bot",
+    "broadcasts",
+    "pos",
+  ].includes(query.view ?? "")
     ? (query.view as WorkspaceView)
     : "inbox";
   return (
@@ -46,7 +50,11 @@ export default async function CompanyPage({
       actor={company.actor}
     >
       <AIProvider>
-        <ConversationWorkspace initialView={view} />
+        <ConversationWorkspace
+          initialView={view}
+          initialContact={query.contact}
+          initialConversation={query.conversation}
+        />
       </AIProvider>
     </CompanyProvider>
   );

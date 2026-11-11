@@ -20,10 +20,10 @@ before(async () => {
   await db.exec(
     `create role anon; create role authenticated; create role service_role bypassrls; create schema auth; create table auth.users(id uuid primary key); create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$; grant usage on schema auth,public to authenticated,service_role; grant execute on function auth.uid() to authenticated;`,
   );
-  const file = readdirSync("supabase/migrations").find((f) =>
-    f.endsWith("smartvolt_standalone_tenants.sql"),
-  )!;
-  await db.exec(readFileSync(`supabase/migrations/${file}`, "utf8"));
+  for (const file of readdirSync("supabase/migrations")
+    .filter((f) => f.endsWith(".sql"))
+    .sort())
+    await db.exec(readFileSync(`supabase/migrations/${file}`, "utf8"));
   await db.query("insert into auth.users values($1),($2)", [ua, ub]);
   await db.exec("set role service_role");
   for (const [company, user] of [
@@ -152,5 +152,48 @@ test("company identity cannot be reassigned through a valid revision", async () 
     () => commit(a, ua, 1, randomUUID(), state(b, ub)),
     /invalid_company_scope/,
   );
+  await db.exec("reset role");
+});
+test("POS command families preserve database membership restrictions and admin-only refunds/settings", async () => {
+  await db.exec("set role service_role");
+  await db.query(
+    "update public.sv_memberships set role='agent' where company_id=$1",
+    [b],
+  );
+  const doc = (
+    await db.query<{ payload: unknown; revision: number }>(
+      "select payload,revision from public.sv_workspaces where company_id=$1",
+      [b],
+    )
+  ).rows[0];
+  const submit = (kind: string, rev: number) =>
+    db.query("select public.sv_commit_workspace($1,$2,$3,$4,$5::jsonb,$6)", [
+      b,
+      ub,
+      rev,
+      randomUUID(),
+      JSON.stringify(doc.payload),
+      kind,
+    ]);
+  await assert.rejects(
+    () => submit("pos-admin", doc.revision),
+    /manager_required/,
+  );
+  await submit("pos", doc.revision);
+  await submit("customer-create", Number(doc.revision) + 1);
+  await db.query(
+    "update public.sv_memberships set role='owner' where company_id=$1",
+    [b],
+  );
+  await submit("pos-admin", Number(doc.revision) + 2);
+  await db.exec("reset role");
+});
+test("new company provisioning includes concrete cards for acquiring, ledger, classes, stock and attribution", async () => {
+  await db.exec("set role service_role");
+  const { rows } = await db.query<{ id: string }>(
+    "select id from public.sv_system_cards where company_id=$1 and id like 'pos-%'",
+    [a],
+  );
+  assert.equal(rows.length, 5);
   await db.exec("reset role");
 });

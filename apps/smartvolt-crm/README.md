@@ -13,12 +13,15 @@ Product decision: 2026-11-11. SmartVolt CRM is a standalone company CRM SaaS. Ki
 - Browser roles have no raw operational table or privileged-function grants; all operational tables also enable RLS.
 - A separate `/preview` with two explicitly fictional companies, browser-only edits and no live transport.
 - Company settings show team roles and explicit system cards for every unfinished activation/development area.
+- Dedicated-company WhatsApp connection setup and normalized live inbox: signed inbound, manual text replies, receipt reconciliation, keyset pagination and encrypted credentials. Provider activation remains a separate acceptance stage.
 
 ## Current execution boundary
 
 Dedicated database `smartvolt-crm-pos` (`dcnvuccvdvlpmpvkhuoc`, Singapore) is healthy and has the tenant, purchased-product, immutable POS ledger and ledger read-model migrations installed. Production has the dedicated URL, publishable key, canonical app URL and server secret configured. `SMARTVOLT_SUPABASE_SECRET_KEY` is stored as a Production-only Vercel Secret (`sensitive`), never committed or printed. The unchanged approved application commit `9c0648a66d0f5bf359c9d25b8343b35ed6860a17` was redeployed as `dpl_9z5psRaNpdXxHpUTajqosjzw4Vjn` on 2026-11-12 (Hong Kong). The login form is enabled and anonymous workspace/ledger requests return 401 with private/no-store headers. There are still no hosted Auth users or provisioned companies. These checks confirm credential configuration and Auth routing, not authenticated private database reads/writes; owner login, session refresh/revocation and company acceptance remain pending.
 
-Live WhatsApp/Instagram/Messenger transport, verified provider templates/receipts, reminder scheduler, real AI model execution, self-service member invitations, subscription payments and large-volume paginated read models are pending system cards. Real-company send/simulated inbound/receipt/reset commands are rejected. Existing KiesTECH and Alyssa deployments and databases are untouched.
+The WhatsApp transport migration `20261111182900_smartvolt_whatsapp_transport.sql` is now installed on the dedicated project. Its six normalized tables have RLS and deny browser access; private provider events and commands are immutable. The separate production-only `SMARTVOLT_WHATSAPP_ENCRYPTION_KEY` is configured as a Vercel Secret. The new inbox and setup source must be released and accepted against a real Owner, company, registered phone, subscriptions, inbound and delivery receipts before claiming a live connection. See [activation and acceptance](docs/whatsapp-activation.md).
+
+The original bounded workspace rejects external sends, simulated inbound/receipts and reset commands. Actual transport uses only the new authenticated WhatsApp routes and durable send claims. Instagram/Messenger, approved provider templates, reminder scheduling, real AI execution, member invitations, billing and remaining aggregate normalization retain explicit system cards. Existing KiesTECH and Alyssa deployments and databases are untouched.
 
 The first persistence slice is a bounded, validated company aggregate (100 contacts, 3,000 messages, 4 MB) with commands and transactional revisions. It supports coherent operations and recovery; it is not the final large-volume message store. The `domain-projections` card tracks normalization/pagination before customer-scale rollout. Membership/configuration edits must update identity and company scope atomically in the later admin slice.
 
@@ -39,7 +42,7 @@ For browsers: `npx playwright install --with-deps chromium`, then `npm run test:
 ## Dedicated activation
 
 1. Reuse the dedicated SmartVolt project; do not recreate it or reapply historical migrations. Local migration filenames and SQL now match its exact installed history. The superseded standalone POS patch was consolidated in the installed purchased-product migration.
-2. The four server-only values in `.env.example` are configured on the dedicated Production deployment; the server key is a Secret scoped only to Production. No fallback to generic or other-product variables exists. Keep rotations in the dedicated project's secret settings and redeploy afterward. Never commit or send the secret in chat.
+2. Core Supabase/app values and the WhatsApp master encryption key in `.env.example` are configured on the dedicated Production deployment; both private keys are Secrets scoped only to Production. No fallback to generic or other-product variables exists. Plan credential re-encryption before changing the WhatsApp master key; changing it alone makes saved connections unreadable. Redeploy after configuration changes. Never commit or send secrets in chat.
 3. Create and confirm the owner Auth identity through the dedicated project's administrative flow. Configure an owner recovery process and canonical Auth redirects before inviting employees.
 4. Provision a company using an already confirmed owner identity (the command sends no email):
    `node --env-file=.env.local --import tsx scripts/provision-company.ts OWNER_USER_UUID 'Company' 'Brand' 'Owner name' crm,pos`
@@ -48,6 +51,8 @@ For browsers: `npx playwright install --with-deps chromium`, then `npm run test:
 ## Tooling choices
 
 `@supabase/ssr` and `@supabase/supabase-js` are exactly pinned for dedicated cookie-auth/session handling and database access. `@electric-sql/pglite` executes the real PostgreSQL migration, privileges, RLS and transaction functions in isolated tests. The exact Supabase CLI generates migration names. Existing React Flow, Dagre, Zod, phone parsing, icons and Playwright are retained because the copied interaction patterns depend on them.
+
+WhatsApp uses Node's native crypto and fixed-host fetch adapter, with no additional runtime SDK. `esbuild` 0.28.2 is an explicit development dependency for isolated browser acceptance of the real inbox/setup controllers; it adds no production fixture route or authentication exception.
 
 ## Product Learning Sync checked
 

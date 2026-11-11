@@ -232,6 +232,11 @@ export function CompanyProvider({
           <div className="sv-company-toolbar">
             <span>{state.scope!.companyName}</span>
             <Link href="/">切換公司</Link>
+            {products.includes("crm") && (
+              <Link href={`/company/${state.scope!.companyId}/crm/whatsapp`}>
+                WhatsApp 收件匣
+              </Link>
+            )}
             <Link href={`/company/${state.scope!.companyId}/settings`}>
               公司設定
             </Link>

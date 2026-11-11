@@ -6,7 +6,11 @@ export async function proxy(request: NextRequest) {
   const config = saasConfig();
   let response = NextResponse.next({ request });
   response.headers.set("Cache-Control", "private, no-store");
-  if (!config || request.nextUrl.pathname.startsWith("/preview"))
+  if (
+    !config ||
+    request.nextUrl.pathname.startsWith("/preview") ||
+    request.nextUrl.pathname.startsWith("/api/webhooks/whatsapp/")
+  )
     return response;
   const client = createServerClient(config.url, config.key, {
     cookieOptions: {
@@ -31,6 +35,7 @@ export async function proxy(request: NextRequest) {
     },
   });
   await client.auth.getUser();
+  response.headers.set("Cache-Control", "private, no-store");
   return response;
 }
 export const config = {

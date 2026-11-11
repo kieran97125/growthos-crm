@@ -57,6 +57,26 @@ export default async function CompanySettings({
           </Link>
         )}
       </section>
+      {access.products.includes("crm") && (
+        <section className="sv-settings-section">
+          <h2>WhatsApp 客戶服務</h2>
+          <p>接收真實查詢、手動覆客，同追蹤 Meta 回傳嘅訊息狀態。</p>
+          <div className="sv-settings-plan">
+            <Link
+              className="sv-secondary"
+              href={`/company/${companyId}/crm/whatsapp`}
+            >
+              開啟 WhatsApp 收件匣 →
+            </Link>
+            <Link
+              className="sv-secondary"
+              href={`/company/${companyId}/settings/whatsapp`}
+            >
+              管理 WhatsApp 接駁 →
+            </Link>
+          </div>
+        </section>
+      )}
       {members && (
         <section className="sv-settings-section">
           <h2>團隊權限</h2>

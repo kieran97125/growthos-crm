@@ -1,0 +1,36 @@
+name: SmartVolt independent CRM
+on:
+  pull_request:
+    paths: ['apps/smartvolt-crm/**', '.github/workflows/smartvolt-crm.yml']
+  push:
+    branches: ['feat/smartvolt-standalone-saas-20261111']
+    paths: ['apps/smartvolt-crm/**', '.github/workflows/smartvolt-crm.yml']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/smartvolt-crm
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/smartvolt-crm/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: smartvolt-browser-evidence
+          path: apps/smartvolt-crm/test-results/
+          retention-days: 7

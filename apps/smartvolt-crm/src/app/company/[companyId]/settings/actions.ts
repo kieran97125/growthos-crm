@@ -38,11 +38,13 @@ export async function updateMember(
       return {
         error: error.message.includes("revision_conflict")
           ? "資料已更新，請重新載入再確認改動。"
-          : error.message.includes("seat_limit")
-            ? "已達公司席位上限。"
-            : error.message.includes("owner_protected")
-              ? "擁有人帳戶受保護。"
-              : "未能更新員工權限；改動未有儲存。",
+          : error.message.includes("member_reassignment_required")
+            ? "此同事仍有對話或流程版本指派，請先聯絡管理員處理交接；未有更改存取權。"
+            : error.message.includes("seat_limit")
+              ? "已達公司席位上限。"
+              : error.message.includes("owner_protected")
+                ? "擁有人帳戶受保護。"
+                : "未能更新員工權限；改動未有儲存。",
         success: "",
       };
     revalidatePath(`/company/${p.companyId}/settings`);

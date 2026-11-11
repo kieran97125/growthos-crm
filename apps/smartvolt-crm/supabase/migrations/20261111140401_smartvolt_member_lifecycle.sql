@@ -26,6 +26,12 @@ begin
  if not found then raise exception 'workspace_missing';end if;
  if exists(select 1 from public.sv_commands where company_id=p_company and command_id=p_command_id and actor_id=p_actor and kind='member:update') then return doc.revision;end if;
  if doc.revision<>p_expected then raise exception 'revision_conflict';end if;
+ -- Retiring an assigned identity must not leave an invalid persisted workspace.
+ if p_status<>'active' and (
+  exists(select 1 from jsonb_array_elements(doc.payload#>'{inbox,conversations}') c where c->>'owner'=p_target::text) or
+  exists(select 1 from jsonb_array_elements(doc.payload#>'{studio,flows}') f cross join lateral jsonb_array_elements(f->'nodes') n where n->>'kind'='handoff' and n#>>'{config,owner}'=p_target::text) or
+  exists(select 1 from jsonb_array_elements(doc.payload#>'{studio,versions}') v cross join lateral jsonb_array_elements(v#>'{flow,nodes}') n where n->>'kind'='handoff' and n#>>'{config,owner}'=p_target::text)
+ ) then raise exception 'member_reassignment_required';end if;
  if p_status='active' and target.status<>'active' and (select count(*) from public.sv_memberships where company_id=p_company and status in ('active','invited')) >= (select seat_limit from public.sv_companies where id=p_company) then raise exception 'seat_limit';end if;
  update public.sv_memberships set role=p_role,status=p_status,display_name=btrim(p_name) where company_id=p_company and user_id=p_target;
  insert into public.sv_member_events(company_id,command_id,actor_id,target_id,previous,current) values(p_company,p_command_id,p_actor,p_target,jsonb_build_object('role',target.role,'status',target.status,'display_name',target.display_name),jsonb_build_object('role',p_role,'status',p_status,'display_name',btrim(p_name)));

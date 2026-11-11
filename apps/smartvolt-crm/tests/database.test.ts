@@ -402,6 +402,28 @@ test("member management is owner-only, protects owners and updates scope with an
       (m) => m.id === agent && m.name === "Updated",
     ),
   );
+  const assigned = structuredClone(rows[0].payload);
+  const handoff = assigned.studio.flows[0].nodes.find(
+    (n) => n.kind === "handoff",
+  );
+  assert.ok(handoff && handoff.kind === "handoff");
+  handoff.config.owner = agent;
+  await db.exec("reset role");
+  await db.query(
+    "update public.sv_workspaces set payload=$2::jsonb where company_id=$1",
+    [company, JSON.stringify(assigned)],
+  );
+  await db.exec("set role service_role");
+  await assert.rejects(
+    () => update(owner, agent, 1, "viewer", "suspended"),
+    /member_reassignment_required/,
+  );
+  await db.exec("reset role");
+  await db.query(
+    "update public.sv_workspaces set payload=$2::jsonb where company_id=$1",
+    [company, JSON.stringify(rows[0].payload)],
+  );
+  await db.exec("set role service_role");
   await update(owner, agent, 1, "viewer", "suspended");
   const { rows: after } = await db.query<{ payload: ReturnType<typeof state> }>(
     "select payload from public.sv_workspaces where company_id=$1",

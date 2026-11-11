@@ -31,6 +31,13 @@ export default function PosCalendar({
     <div className="sv-calendar" data-active={active}>
       <FullCalendar
         controller={controller}
+        class="sv-fc"
+        eventClass="sv-calendar-event"
+        buttonClass="sv-fc-button"
+        toolbarClass="sv-fc-toolbar"
+        toolbarTitleClass="sv-fc-title"
+        dayHeaderClass="sv-fc-day-header"
+        slotLaneClass="sv-fc-slot"
         plugins={[timeGridPlugin, interactionPlugin, themePlugin]}
         locale={zhTw}
         initialView="timeGridDay"
@@ -79,19 +86,13 @@ export default function PosCalendar({
             title: `${customerName(a.contactId)} · ${a.serviceName} · ${statusLabels[a.status]}`,
             start: new Date(a.startsAt).toISOString(),
             end: new Date(a.endsAt).toISOString(),
-            backgroundColor:
+            color:
               a.status === "pending"
                 ? "#fffaeb"
                 : ["checked_in", "completed"].includes(a.status)
                   ? "#edf9f3"
                   : "#edf3ff",
-            borderColor:
-              a.status === "pending"
-                ? "#cf9a21"
-                : ["checked_in", "completed"].includes(a.status)
-                  ? "#27916a"
-                  : "#4169dc",
-            textColor:
+            contrastColor:
               a.status === "pending"
                 ? "#76550e"
                 : ["checked_in", "completed"].includes(a.status)

@@ -149,7 +149,7 @@ test("calendar renders real appointments; new appointment checks capacity and pr
 }, info) => {
   await start(page);
   await tab(page, "預約日曆");
-  await expect(page.locator(".fc-timegrid-event")).toHaveCount(5);
+  await expect(page.locator(".sv-calendar-event")).toHaveCount(5);
   await page.screenshot({
     path: info.outputPath("smartvolt-pos-calendar.png"),
     fullPage: true,

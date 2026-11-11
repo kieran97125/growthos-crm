@@ -1,0 +1,503 @@
+import { z } from "zod";
+import { parsePhoneNumberFromString } from "libphonenumber-js";
+import {
+  createDemoState,
+  demoReducer,
+  stateSchema,
+  DEMO_CLIENT,
+  type Action as InboxAction,
+  type Booking,
+  type Contact,
+} from "@/components/crm/conversations/model";
+import {
+  createStudioState,
+  studioReducer,
+  studioSchema,
+  type StudioAction,
+} from "@/components/crm/studio/model";
+import {
+  audience,
+  broadcastsSchema,
+  campaignSchema,
+  seedBroadcasts,
+  type Campaign,
+  type ReceiptKind,
+} from "./campaigns";
+export const appSchema = z
+  .object({
+    version: z.literal(1),
+    inbox: stateSchema,
+    studio: studioSchema,
+    broadcasts: broadcastsSchema,
+  })
+  .superRefine((s, ctx) => {
+    const b = s.broadcasts,
+      unique = (ids: string[]) => new Set(ids).size === ids.length;
+    const bad =
+      !unique(b.campaigns.map((c) => c.id)) ||
+      !unique(b.templates.map((t) => t.id)) ||
+      !unique(b.profiles.map((p) => `${p.brandId}:${p.contactId}`)) ||
+      !unique(b.events.map((e) => e.id)) ||
+      !unique(b.recipients.map((r) => r.id)) ||
+      b.profiles.some(
+        (p) =>
+          !s.inbox.conversations.some(
+            (c) => c.contactId === p.contactId && c.brandId === p.brandId,
+          ),
+      ) ||
+      b.campaigns.some(
+        (c) =>
+          !b.templates.some(
+            (t) => t.id === c.templateId && t.brandId === c.brandId,
+          ),
+      ) ||
+      b.recipients.some(
+        (r) =>
+          !b.campaigns.some(
+            (c) =>
+              c.id === r.campaignId &&
+              s.inbox.conversations.some(
+                (cv) =>
+                  cv.id === r.conversationId &&
+                  cv.contactId === r.contactId &&
+                  cv.brandId === c.brandId,
+              ),
+          ) ||
+          (r.bookingId &&
+            !s.inbox.bookings.some(
+              (k) =>
+                k.id === r.bookingId && k.conversationId === r.conversationId,
+            )),
+      ) ||
+      b.events.some(
+        (e) =>
+          !b.recipients.some(
+            (r) => r.id === e.recipientId && r.campaignId === e.campaignId,
+          ),
+      ) ||
+      (b.activeRecipientId !== null &&
+        !b.recipients.some((r) => r.id === b.activeRecipientId));
+    if (bad)
+      ctx.addIssue({ code: "custom", message: "Invalid campaign lineage" });
+  });
+export type AppState = z.infer<typeof appSchema>;
+export const APP_STORAGE = "followhub:standalone-demo:v1";
+export function createAppState(now: number): AppState {
+  const inbox = createDemoState(now);
+  return {
+    version: 1,
+    inbox,
+    studio: createStudioState(),
+    broadcasts: seedBroadcasts(inbox, now),
+  };
+}
+export type AppAction =
+  | { type: "inbox"; action: InboxAction }
+  | { type: "studio"; action: StudioAction }
+  | { type: "campaign-save"; campaign: Campaign }
+  | { type: "campaign-launch"; id: string; at: number }
+  | { type: "campaign-pause"; id: string }
+  | { type: "receipt"; recipientId: string; kind: ReceiptKind; at: number }
+  | {
+      type: "customer-message";
+      conversationId: string;
+      body: string;
+      id: string;
+      at: number;
+      recipientId?: string;
+    }
+  | {
+      type: "intake";
+      conversationId: string;
+      service: string;
+      branch: string;
+      date: string;
+      time: string;
+      id: string;
+      at: number;
+      recipientId?: string;
+    }
+  | {
+      type: "consent";
+      contactId: string;
+      brandId: string;
+      granted: boolean;
+      at: number;
+    }
+  | {
+      type: "import";
+      brandId: "nova-studio" | "nova-care";
+      rows: { name: string; phone: string }[];
+      at: number;
+    }
+  | { type: "active-recipient"; id: string | null }
+  | { type: "reset"; at: number };
+function validDateTime(date: string, time: string) {
+  const parsed = new Date(`${date}T${time}:00+08:00`);
+  return (
+    Number.isFinite(+parsed) &&
+    new Date(+parsed + 8 * 3600000).toISOString().slice(0, 16) ===
+      `${date}T${time}`
+  );
+}
+function event(
+  s: AppState,
+  recipientId: string,
+  kind: ReceiptKind,
+  at: number,
+  detail = "",
+) {
+  const r = s.broadcasts.recipients.find((r) => r.id === recipientId);
+  if (!r) return s;
+  const lifecycle = ["booked", "cancelled", "arrived", "missed"].includes(kind);
+  const id = `${r.id}:${kind}${lifecycle ? `:${at}` : ""}`;
+  if (s.broadcasts.events.some((e) => e.id === id)) return s;
+  return {
+    ...s,
+    broadcasts: {
+      ...s.broadcasts,
+      events: [
+        ...s.broadcasts.events,
+        {
+          id,
+          campaignId: r.campaignId,
+          recipientId: r.id,
+          kind,
+          at,
+          source: "demo" as const,
+          detail,
+        },
+      ],
+    },
+  };
+}
+export function appReducer(s: AppState, a: AppAction): AppState {
+  if (a.type === "reset") return createAppState(a.at);
+  if (a.type === "studio")
+    return { ...s, studio: studioReducer(s.studio, a.action) };
+  if (a.type === "inbox") {
+    let n = { ...s, inbox: demoReducer(s.inbox, a.action) };
+    if (a.action.type === "booking") {
+      const b = a.action.booking,
+        r = n.broadcasts.recipients.find((r) => r.bookingId === b.id);
+      const previous = s.inbox.bookings.find((k) => k.id === b.id);
+      if (r && b.status === "confirmed" && previous?.status !== "confirmed")
+        n = event(n, r.id, "booked", a.action.at, "由同事於預約跟進核實");
+      if (r && b.status === "cancelled" && previous?.status !== "cancelled")
+        n = event(n, r.id, "cancelled", a.action.at, "由同事取消預約");
+    }
+    return n;
+  }
+  if (a.type === "campaign-save") {
+    const p = campaignSchema.safeParse(a.campaign),
+      old = s.broadcasts.campaigns.find((c) => c.id === a.campaign.id);
+    if (
+      !p.success ||
+      old?.launchedAt ||
+      (!old && s.broadcasts.campaigns.length >= 30)
+    )
+      return s;
+    return {
+      ...s,
+      broadcasts: {
+        ...s.broadcasts,
+        campaigns: [
+          ...s.broadcasts.campaigns.filter((c) => c.id !== a.campaign.id),
+          p.data,
+        ],
+      },
+    };
+  }
+  if (a.type === "campaign-pause")
+    return {
+      ...s,
+      broadcasts: {
+        ...s.broadcasts,
+        campaigns: s.broadcasts.campaigns.map((c) =>
+          c.id === a.id ? { ...c, status: "paused" } : c,
+        ),
+      },
+    };
+  if (a.type === "campaign-launch") {
+    const c = s.broadcasts.campaigns.find((c) => c.id === a.id);
+    if (!c || c.status === "completed") return s;
+    const eligible = audience(s.inbox, s.broadcasts, c, a.at).filter(
+      (r) => !r.reasons.length,
+    );
+    if (!eligible.length) return s;
+    let n = s;
+    for (const row of eligible) {
+      const id = `${c.id}:${row.contact.id}`;
+      if (n.broadcasts.recipients.some((r) => r.id === id)) continue;
+      n = {
+        ...n,
+        inbox: demoReducer(n.inbox, {
+          type: "message",
+          conversationId: row.conversation.id,
+          message: {
+            id: `${id}:message`,
+            conversationId: row.conversation.id,
+            kind: "outgoing",
+            body: row.body,
+            author: "推播 · 示範",
+            at: a.at,
+            replyTo: null,
+          },
+        }),
+        broadcasts: {
+          ...n.broadcasts,
+          recipients: [
+            ...n.broadcasts.recipients,
+            {
+              id,
+              campaignId: c.id,
+              contactId: row.contact.id,
+              conversationId: row.conversation.id,
+              sentAt: a.at,
+              body: row.body,
+              bookingId: null,
+            },
+          ],
+        },
+      };
+      n = event(n, id, "sent", a.at, "只加入 Demo 收件匣，未呼叫 WhatsApp");
+    }
+    return {
+      ...n,
+      broadcasts: {
+        ...n.broadcasts,
+        campaigns: n.broadcasts.campaigns.map((row) =>
+          row.id === a.id
+            ? { ...row, status: "completed", launchedAt: a.at }
+            : row,
+        ),
+      },
+    };
+  }
+  if (a.type === "active-recipient")
+    return { ...s, broadcasts: { ...s.broadcasts, activeRecipientId: a.id } };
+  if (a.type === "receipt") {
+    const r = s.broadcasts.recipients.find((r) => r.id === a.recipientId);
+    if (!r) return s;
+    const has = (k: ReceiptKind) =>
+      s.broadcasts.events.some((e) => e.recipientId === r.id && e.kind === k);
+    if (
+      a.kind === "failed" &&
+      (has("delivered") || has("read") || has("replied"))
+    )
+      return s;
+    if (["delivered", "read"].includes(a.kind) && has("failed")) return s;
+    if (
+      ["arrived", "missed"].includes(a.kind) &&
+      (!r.bookingId ||
+        s.inbox.bookings.find((b) => b.id === r.bookingId)?.status !==
+          "confirmed")
+    )
+      return s;
+    if (!["delivered", "read", "failed", "arrived", "missed"].includes(a.kind))
+      return s;
+    let n = s;
+    if (a.kind === "read") n = event(n, r.id, "delivered", a.at, "測試回執");
+    return event(
+      n,
+      r.id,
+      a.kind,
+      a.at,
+      ["arrived", "missed"].includes(a.kind)
+        ? "同事人手示範記錄"
+        : "由使用者觸發測試回執",
+    );
+  }
+  if (a.type === "customer-message") {
+    const cv = s.inbox.conversations.find((c) => c.id === a.conversationId),
+      contact = s.inbox.contacts.find((c) => c.id === cv?.contactId);
+    if (!cv || !contact || !a.body.trim() || a.body.length > 2000) return s;
+    let n = {
+      ...s,
+      inbox: demoReducer(s.inbox, {
+        type: "message",
+        conversationId: cv.id,
+        message: {
+          id: a.id,
+          conversationId: cv.id,
+          kind: "incoming",
+          body: a.body,
+          author: contact.name,
+          at: a.at,
+          replyTo: null,
+        },
+      }),
+    };
+    const r = s.broadcasts.recipients.find(
+      (r) => r.id === a.recipientId && r.conversationId === cv.id,
+    );
+    if (r) {
+      n = event(n, r.id, "delivered", a.at);
+      n = event(n, r.id, "replied", a.at, a.body.slice(0, 150));
+    }
+    if (/(^stop$|退訂|取消訂閱|唔好再send|唔想再收)/i.test(a.body.trim())) {
+      n = {
+        ...n,
+        broadcasts: {
+          ...n.broadcasts,
+          profiles: n.broadcasts.profiles.map((p) =>
+            p.contactId === contact.id && p.brandId === cv.brandId
+              ? {
+                  ...p,
+                  consent: "withdrawn",
+                  suppressed: true,
+                  consentAt: a.at,
+                  consentSource: "客戶在體驗對話退訂",
+                }
+              : p,
+          ),
+        },
+      };
+      if (r) n = event(n, r.id, "optout", a.at, "客戶主動退訂");
+    }
+    return n;
+  }
+  if (a.type === "intake") {
+    const cv = s.inbox.conversations.find((c) => c.id === a.conversationId);
+    if (
+      !cv ||
+      a.service.length > 100 ||
+      a.branch.length > 100 ||
+      !validDateTime(a.date, a.time) ||
+      !a.service.trim() ||
+      !a.branch.trim() ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(a.date) ||
+      !/^\d{2}:\d{2}$/.test(a.time) ||
+      s.inbox.bookings.some((b) => b.id === a.id)
+    )
+      return s;
+    const booking: Booking = {
+      id: a.id,
+      conversationId: cv.id,
+      contactId: cv.contactId,
+      service: a.service,
+      branch: a.branch,
+      date: a.date,
+      time: a.time,
+      guests: 1,
+      customerConfirmed: true,
+      status: "pending",
+    };
+    const r = s.broadcasts.recipients.find(
+      (r) =>
+        r.id === a.recipientId &&
+        r.conversationId === cv.id &&
+        s.broadcasts.events.some(
+          (e) => e.recipientId === r.id && e.kind === "replied",
+        ),
+    );
+    return {
+      ...s,
+      inbox: demoReducer(s.inbox, {
+        type: "booking",
+        booking,
+        at: a.at,
+        eventId: `${a.id}:event`,
+      }),
+      broadcasts: {
+        ...s.broadcasts,
+        recipients: s.broadcasts.recipients.map((row) =>
+          row.id === r?.id ? { ...row, bookingId: booking.id } : row,
+        ),
+      },
+    };
+  }
+  if (a.type === "consent")
+    return {
+      ...s,
+      broadcasts: {
+        ...s.broadcasts,
+        profiles: s.broadcasts.profiles.map((p) =>
+          p.contactId === a.contactId && p.brandId === a.brandId
+            ? {
+                ...p,
+                consent: a.granted ? "granted" : "withdrawn",
+                suppressed: !a.granted,
+                consentAt: a.at,
+                consentSource: "使用者設定嘅示範同意",
+              }
+            : p,
+        ),
+      },
+    };
+  if (a.type === "import") {
+    let n = s;
+    for (const raw of a.rows.slice(0, 50)) {
+      const parsed = parsePhoneNumberFromString(raw.phone, "HK");
+      if (!parsed?.isValid()) continue;
+      const row = { ...raw, phone: parsed.number };
+      if (
+        n.inbox.contacts.length >= 100 ||
+        !row.name.trim() ||
+        n.inbox.conversations.some(
+          (cv) =>
+            cv.brandId === a.brandId &&
+            n.inbox.contacts.find((c) => c.id === cv.contactId)?.phone ===
+              row.phone,
+        )
+      )
+        continue;
+      const id = `import-${a.at}-${n.inbox.contacts.length}`;
+      const contact: Contact = {
+        id,
+        clientId: DEMO_CLIENT,
+        name: row.name.trim().slice(0, 80),
+        initials: row.name.slice(0, 2),
+        phone: row.phone,
+        email: "",
+        company: "",
+        tags: ["CSV 匯入"],
+        source: "Demo CSV 匯入",
+        createdAt: a.at,
+        note: "",
+      };
+      n = {
+        ...n,
+        inbox: {
+          ...n.inbox,
+          contacts: [...n.inbox.contacts, contact],
+          conversations: [
+            ...n.inbox.conversations,
+            {
+              id: `c-${id}`,
+              clientId: DEMO_CLIENT,
+              brandId: a.brandId,
+              contactId: id,
+              channel: "whatsapp",
+              status: "open",
+              owner: null,
+              priority: false,
+              pinned: false,
+              unread: 0,
+              snoozedUntil: null,
+              subject: "匯入聯絡人",
+              updatedAt: a.at,
+            },
+          ],
+        },
+        broadcasts: {
+          ...n.broadcasts,
+          profiles: [
+            ...n.broadcasts.profiles,
+            {
+              contactId: id,
+              brandId: a.brandId,
+              customerType: "new",
+              consent: "unknown",
+              consentSource: "",
+              consentAt: null,
+              suppressed: false,
+            },
+          ],
+        },
+      };
+    }
+    return n;
+  }
+  return s;
+}

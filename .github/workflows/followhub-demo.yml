@@ -1,0 +1,40 @@
+name: KiesTECH standalone verification
+on:
+  push:
+    branches: [demo/standalone-workspace-20261110]
+  pull_request:
+    paths: [apps/followhub-demo/**, .github/workflows/followhub-demo.yml]
+permissions:
+  contents: read
+concurrency:
+  group: followhub-demo-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+jobs:
+  standalone:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/followhub-demo
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/followhub-demo/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: followhub-demo-evidence
+          path: apps/followhub-demo/test-results/
+          retention-days: 7

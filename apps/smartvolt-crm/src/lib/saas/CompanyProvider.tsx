@@ -10,14 +10,25 @@ import {
 } from "@/lib/demo/state";
 import { BRANDS, TEAM } from "@/components/crm/conversations/model";
 import { applyCompanyCommand } from "./workspace";
+import {
+  projectWorkspace,
+  requireCommandProduct,
+  type Product,
+} from "./products";
 import type { Actor, CompanyScope } from "./identity";
 
-type Identity = { scope: CompanyScope; actor: Actor; connected: boolean };
+type Identity = {
+  scope: CompanyScope;
+  actor: Actor;
+  connected: boolean;
+  products: Product[];
+};
 const IdentityContext = createContext<Identity | null>(null);
 export function useIdentity(): Identity {
   return (
     useContext(IdentityContext) ?? {
       connected: false,
+      products: [],
       scope: {
         companyId: "followhub-demo-only",
         companyName: "Nova Group",
@@ -31,14 +42,17 @@ export function useIdentity(): Identity {
 export function PreviewIdentity({
   children,
   scope,
+  products,
 }: {
   children: ReactNode;
   scope: CompanyScope;
+  products: Product[];
 }) {
   return (
     <IdentityContext.Provider
       value={{
         scope,
+        products,
         actor: { id: "me", name: "Mia", role: "owner" },
         connected: false,
       }}
@@ -48,7 +62,12 @@ export function PreviewIdentity({
   );
 }
 
-function createCompanyStore(initial: AppState, revision: number, actor: Actor) {
+function createCompanyStore(
+  initial: AppState,
+  revision: number,
+  actor: Actor,
+  products: Product[],
+) {
   let saved = initial,
     currentRevision = revision;
   let snapshot: Snapshot = {
@@ -87,9 +106,9 @@ function createCompanyStore(initial: AppState, revision: number, actor: Actor) {
       queue.shift();
       snapshot = {
         ...snapshot,
-        state: queue.reduce(
-          (s, p) => appReducer(s, p.action, actor.name),
-          saved,
+        state: projectWorkspace(
+          queue.reduce((s, p) => appReducer(s, p.action, actor.name), saved),
+          products,
         ),
         storage: queue.length ? "正在儲存改動…" : "已儲存至公司工作空間",
         now: Date.now(),
@@ -122,11 +141,18 @@ function createCompanyStore(initial: AppState, revision: number, actor: Actor) {
         return;
       }
       try {
-        const next = applyCompanyCommand(snapshot.state, action, actor);
+        requireCommandProduct(products, action);
+        const next = applyCompanyCommand(
+          snapshot.state,
+          action,
+          actor,
+          Date.now(),
+          products,
+        );
         queue.push({ id: crypto.randomUUID(), action });
         snapshot = {
           ...snapshot,
-          state: next,
+          state: projectWorkspace(next, products),
           storage: "正在儲存改動…",
           now: Date.now(),
         };
@@ -185,17 +211,21 @@ export function CompanyProvider({
   state,
   revision,
   actor,
+  products,
   children,
 }: {
   state: AppState;
   revision: number;
   actor: Actor;
+  products: Product[];
   children: ReactNode;
 }) {
-  const [store] = useState(() => createCompanyStore(state, revision, actor));
+  const [store] = useState(() =>
+    createCompanyStore(state, revision, actor, products),
+  );
   return (
     <IdentityContext.Provider
-      value={{ scope: state.scope!, actor, connected: true }}
+      value={{ scope: state.scope!, actor, products, connected: true }}
     >
       <WorkspaceContext.Provider value={store}>
         <div className="sv-company-shell">

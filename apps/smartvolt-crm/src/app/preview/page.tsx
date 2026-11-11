@@ -8,6 +8,7 @@ export default async function PreviewPage({
     studio?: string;
     contact?: string;
     conversation?: string;
+    plan?: string;
   }>;
 }) {
   const q = await searchParams;
@@ -23,6 +24,11 @@ export default async function PreviewPage({
     ? (input as WorkspaceView)
     : "inbox";
   return (
-    <Preview view={view} contact={q.contact} conversation={q.conversation} />
+    <Preview
+      view={view}
+      plan={q.plan}
+      contact={q.contact}
+      conversation={q.conversation}
+    />
   );
 }

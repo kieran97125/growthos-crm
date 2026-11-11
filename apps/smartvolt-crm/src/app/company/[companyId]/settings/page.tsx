@@ -38,6 +38,20 @@ export default async function CompanySettings({
       <span className="sv-eyebrow">COMPANY SETTINGS</span>
       <h1>{access.company.name}</h1>
       <p>你目前嘅角色：{access.actor.role}。所有設定只適用於此公司。</p>
+      <section className="sv-settings-section">
+        <h2>公司產品方案</h2>
+        <div className="sv-settings-plan">
+          {access.products.map((p) => (
+            <article key={p}>
+              <strong>{p.toUpperCase()}</strong>
+              <span>已購買 · 可使用</span>
+            </article>
+          ))}
+        </div>
+        <p>
+          購買方案由 SaaS 營運方管理；員工角色只決定已購買產品內嘅操作權限。
+        </p>
+      </section>
       {members && (
         <section className="sv-settings-section">
           <h2>團隊權限</h2>

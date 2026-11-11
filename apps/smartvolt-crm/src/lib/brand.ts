@@ -1,7 +1,7 @@
 /** Platform identity only; client workspace identities belong to their own scope. */
 export const BRAND = {
   name: "SmartVolt",
-  title: "SmartVolt CRM · 客戶對話工作台",
+  title: "SmartVolt · CRM 與 POS",
   auditFilename: "smartvolt-campaign-audit.csv",
   colors: {
     royal: "#2457e7",

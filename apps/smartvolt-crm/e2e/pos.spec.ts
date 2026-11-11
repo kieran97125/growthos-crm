@@ -44,18 +44,16 @@ test("CRM and POS reciprocal entries retain customer, draft and cart context", a
   const composer = page.locator(".fh-composer textarea");
   await composer.fill("返到 CRM 繼續跟進");
   const name = await page.locator(".fh-contact-summary h3").innerText();
-  await page.getByRole("button", { name: "開啟客戶 POS" }).click();
+  await page.getByRole("button", { name: "切換至 POS" }).click();
   await expect(page.getByLabel("收銀客戶", { exact: true })).toContainText(
     name,
   );
   await page.locator(".sv-product-service").first().click();
   await expect(page.locator(".sv-cart-line")).toHaveCount(1);
-  await page.getByRole("button", { name: "返回 CRM", exact: true }).click();
+  await page.getByRole("button", { name: "切換至 CRM", exact: true }).click();
   await expect(composer).toHaveValue("返到 CRM 繼續跟進");
   await expect(page.locator(".fh-contact-summary h3")).toHaveText(name);
-  await page
-    .getByRole("button", { name: "POS 營運工作台", exact: true })
-    .click();
+  await page.getByRole("button", { name: "切換至 POS", exact: true }).click();
   await expect(page.locator(".sv-cart-line")).toHaveCount(1);
   await page.screenshot({
     path: info.outputPath("smartvolt-pos-cashier-desktop.png"),
@@ -139,9 +137,17 @@ test("appointments check in, redeem once, reverse with reason and return the rig
     fullPage: true,
   });
   await page
-    .getByRole("button", { name: "客戶 CRM", exact: true })
+    .getByRole("button", { name: "客戶資料", exact: true })
     .first()
     .click();
+  await expect(
+    page.getByRole("dialog", { name: "POS 客戶資料", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "關閉視窗" })
+    .click();
+  await page.getByRole("button", { name: "切換至 CRM", exact: true }).click();
   await expect(page.locator(".fh-contact-summary h3")).toHaveText(name);
 });
 test("calendar renders real appointments; new appointment checks capacity and projects into CRM", async ({

@@ -31,8 +31,15 @@ before(async () => {
     [b, ub],
   ])
     await db.query(
-      "select public.sv_provision_company($1,$2,$3,$4,$5::jsonb)",
-      [company, company, user, "Owner", JSON.stringify(state(company, user))],
+      "select public.sv_provision_company($1,$2,$3,$4,$5::jsonb,$6::text[])",
+      [
+        company,
+        company,
+        user,
+        "Owner",
+        JSON.stringify(state(company, user)),
+        ["crm", "pos"],
+      ],
     );
   await db.exec("reset role");
 });
@@ -52,9 +59,9 @@ const commit = (
   );
 test("all private tenant tables have RLS and browser roles have no raw data grants", async () => {
   const { rows } = await db.query<{ relname: string; relrowsecurity: boolean }>(
-    "select relname,relrowsecurity from pg_class where relname in ('sv_companies','sv_memberships','sv_workspaces','sv_commands','sv_workspace_versions','sv_system_cards')",
+    "select relname,relrowsecurity from pg_class where relname in ('sv_companies','sv_memberships','sv_workspaces','sv_commands','sv_workspace_versions','sv_system_cards','sv_company_products')",
   );
-  assert.equal(rows.length, 6);
+  assert.equal(rows.length, 7);
   assert.ok(rows.every((r) => r.relrowsecurity));
   for (const role of ["anon", "authenticated"]) {
     await db.exec(`set role ${role}`);
@@ -196,4 +203,127 @@ test("new company provisioning includes concrete cards for acquiring, ledger, cl
   );
   assert.equal(rows.length, 5);
   await db.exec("reset role");
+});
+test("CRM-only, POS-only and dual purchases are enforced under the database write lock, independently of owner role", async () => {
+  const company = "33333333-3333-4333-8333-333333333333";
+  await db.exec("set role service_role");
+  await db.query(
+    "select public.sv_provision_company($1,$2,$3,$4,$5::jsonb,$6::text[])",
+    [
+      company,
+      "CRM-only",
+      ua,
+      "Owner",
+      JSON.stringify(state(company, ua)),
+      ["crm"],
+    ],
+  );
+  const submit = (kind: string, rev: number) =>
+    db.query("select public.sv_commit_workspace($1,$2,$3,$4,$5::jsonb,$6)", [
+      company,
+      ua,
+      rev,
+      randomUUID(),
+      JSON.stringify(state(company, ua)),
+      kind,
+    ]);
+  await assert.rejects(() => submit("pos", 0), /product_not_purchased/);
+  await assert.rejects(() => submit("pos-admin", 0), /product_not_purchased/);
+  await submit("inbox", 0);
+  await db.query("select public.sv_set_company_products($1,$2::text[])", [
+    company,
+    ["pos"],
+  ]);
+  await assert.rejects(() => submit("inbox", 1), /product_not_purchased/);
+  await assert.rejects(() => submit("studio", 1), /product_not_purchased/);
+  await submit("pos", 1);
+  await submit("customer-create", 2);
+  await db.query("select public.sv_set_company_products($1,$2::text[])", [
+    company,
+    ["crm", "pos"],
+  ]);
+  await submit("inbox", 3);
+  await submit("pos", 4);
+  await db.query("select public.sv_set_company_products($1,$2::text[])", [
+    company,
+    [],
+  ]);
+  await assert.rejects(
+    () => submit("customer-create", 5),
+    /product_not_purchased/,
+  );
+  assert.equal(
+    (
+      await db.query<{ revision: number }>(
+        "select revision from public.sv_workspaces where company_id=$1",
+        [company],
+      )
+    ).rows[0].revision,
+    5,
+  );
+  await db.exec("reset role");
+});
+test("expired, future and suspended purchases cannot write; public clients cannot grant products", async () => {
+  const company = "44444444-4444-4444-8444-444444444444";
+  await db.exec("set role service_role");
+  await db.query(
+    "select public.sv_provision_company($1,$2,$3,$4,$5::jsonb,$6::text[])",
+    [
+      company,
+      "POS-only",
+      ua,
+      "Owner",
+      JSON.stringify(state(company, ua)),
+      ["pos"],
+    ],
+  );
+  const submit = () =>
+    db.query("select public.sv_commit_workspace($1,$2,$3,$4,$5::jsonb,$6)", [
+      company,
+      ua,
+      0,
+      randomUUID(),
+      JSON.stringify(state(company, ua)),
+      "pos",
+    ]);
+  await db.query(
+    "update public.sv_company_products set starts_at=now()-interval '2 days',ends_at=now()-interval '1 day' where company_id=$1",
+    [company],
+  );
+  await assert.rejects(submit, /product_not_purchased/);
+  await db.query(
+    "update public.sv_company_products set ends_at=null,starts_at=now()+interval '1 day' where company_id=$1",
+    [company],
+  );
+  await assert.rejects(submit, /product_not_purchased/);
+  await db.query(
+    "update public.sv_company_products set starts_at=now(),status='suspended' where company_id=$1",
+    [company],
+  );
+  await assert.rejects(submit, /product_not_purchased/);
+  await assert.rejects(
+    () =>
+      db.query("select public.sv_set_company_products($1,$2::text[])", [
+        company,
+        ["unknown"],
+      ]),
+    /invalid_products/,
+  );
+  await db.exec("reset role");
+  for (const role of ["anon", "authenticated"]) {
+    await db.exec(`set role ${role}`);
+    await assert.rejects(
+      () =>
+        db.query("select public.sv_set_company_products($1,$2::text[])", [
+          company,
+          ["crm", "pos"],
+        ]),
+      /permission denied/,
+    );
+    await assert.rejects(
+      () => db.query("select * from public.sv_company_products"),
+      /permission denied/,
+    );
+    await db.exec("reset role");
+  }
 });

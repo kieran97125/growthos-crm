@@ -34,7 +34,16 @@ export const appSchema = z
     scope: scopeSchema.optional(),
     pos: posSchema.optional(),
     inbox: stateSchema,
-    studio: studioSchema,
+    studio: z.union([
+      studioSchema,
+      z.object({
+        version: z.literal(1),
+        flows: z.array(studioSchema.shape.flows.element).length(0),
+        bots: z.array(studioSchema.shape.bots.element).length(0),
+        versions: z.array(studioSchema.shape.versions.element).length(0),
+        articles: z.array(studioSchema.shape.articles.element).length(0),
+      }),
+    ]),
     broadcasts: broadcastsSchema,
   })
   .superRefine((s, ctx) => {

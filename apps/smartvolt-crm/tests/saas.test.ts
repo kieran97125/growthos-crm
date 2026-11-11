@@ -2,10 +2,17 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   createCompanyState,
-  applyCompanyCommand,
+  applyCompanyCommand as executeCompanyCommand,
 } from "../src/lib/saas/workspace";
 import { appSchema } from "../src/lib/demo/state";
 import { type CompanyScope, type Role } from "../src/lib/saas/identity";
+const applyCompanyCommand = (
+  state: Parameters<typeof executeCompanyCommand>[0],
+  raw: unknown,
+  actor: Parameters<typeof executeCompanyCommand>[2],
+  now = Date.now(),
+) => executeCompanyCommand(state, raw, actor, now, ["crm", "pos"]);
+
 const scope = (id = "company-a"): CompanyScope => ({
   companyId: id,
   companyName: id,

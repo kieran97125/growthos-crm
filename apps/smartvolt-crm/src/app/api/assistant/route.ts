@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { requireCompany } from "@/lib/saas/server";
 import { sameOrigin, json, failure } from "@/lib/saas/http";
+import { requireProduct } from "@/lib/saas/products";
 import { AccessError } from "@/lib/saas/identity";
 export async function POST(request: NextRequest) {
   try {
@@ -15,7 +16,8 @@ export async function POST(request: NextRequest) {
     }
     if (typeof body.companyId !== "string")
       throw new AccessError("請先登入公司工作空間。", 401);
-    await requireCompany(body.companyId);
+    const access = await requireCompany(body.companyId);
+    requireProduct(access.products, "crm");
     return json(
       {
         error:

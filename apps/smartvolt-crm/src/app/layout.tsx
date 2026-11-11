@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   applicationName: BRAND.name,
   appleWebApp: { capable: true, title: BRAND.name, statusBarStyle: "default" },
   description:
-    "SmartVolt CRM：公司專屬客戶工作空間、團隊收件匣、Flow、AI BOT 及推播成效。",
+    "SmartVolt：獨立 CRM 與 POS 產品，按公司方案使用客戶營運、對話、預約、收銀與套票。",
   robots: { index: false, follow: false },
 };
 export const viewport: Viewport = { themeColor: BRAND.colors.royal };

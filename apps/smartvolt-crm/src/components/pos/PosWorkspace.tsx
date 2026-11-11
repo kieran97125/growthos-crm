@@ -67,11 +67,14 @@ export type PosOpenContext = {
   token: string;
 };
 export default function PosWorkspace({
-  onCRM,
+  renderProductHeader,
   context,
   active,
 }: {
-  onCRM: (id?: string, brandId?: string) => void;
+  renderProductHeader: (context: {
+    contactId?: string;
+    brandId?: string;
+  }) => React.ReactNode;
   context: PosOpenContext | null;
   active: boolean;
 }) {
@@ -86,6 +89,10 @@ export default function PosWorkspace({
     context?.brandId ?? identity.scope.brands[0].id,
   );
   const [customer, setCustomerId] = useState(context?.contactId ?? "");
+  const [focusedCustomer, setFocusedCustomer] = useState<{
+    contactId?: string;
+    brandId?: string;
+  } | null>(null);
   const [seenContext, setSeenContext] = useState(context?.token);
   const [date, setDate] = useState(hkDate(workspace.now));
   const [dialog, setDialog] = useState<Dialog | null>(null);
@@ -97,7 +104,11 @@ export default function PosWorkspace({
   const [staff, setStaff] = useState("all");
   if (context?.token !== seenContext) {
     setSeenContext(context?.token);
-    if (context) {
+    if (
+      context &&
+      (context.contactId !== customer || context.brandId !== brand)
+    ) {
+      setFocusedCustomer(null);
       setBrand(context.brandId);
       setCustomerId(context.contactId);
       setSection("cashier");
@@ -130,6 +141,7 @@ export default function PosWorkspace({
     }
   }
   function setCustomer(id: string) {
+    setFocusedCustomer(null);
     setCustomerId(id);
     setOrderId("");
   }
@@ -170,6 +182,12 @@ export default function PosWorkspace({
         setOrderId(id);
     }
   }
+  function customerDetails(id?: string, detailBrand = brand) {
+    if (id) {
+      setFocusedCustomer({ contactId: id, brandId: detailBrand });
+      setDialog({ kind: "customer-detail", id, brandId: detailBrand });
+    } else setDialog({ kind: "customer" });
+  }
   const ui = {
     workspace,
     identity,
@@ -180,7 +198,7 @@ export default function PosWorkspace({
     date,
     run,
     open: setDialog,
-    crm: onCRM,
+    customerDetails,
     checkout,
     customerName,
   };
@@ -206,6 +224,9 @@ export default function PosWorkspace({
     );
   return (
     <PosContext.Provider value={ui}>
+      {renderProductHeader(
+        focusedCustomer ?? { contactId: customer || undefined, brandId: brand },
+      )}
       <section className="sv-pos" aria-label="POS 營運工作台">
         <header className="sv-pos-header">
           <div className="sv-pos-title">
@@ -239,14 +260,6 @@ export default function PosWorkspace({
                 ))}
               </select>
             </label>
-            <button
-              className="sv-secondary sv-crm-return"
-              onClick={() => onCRM(customer || undefined, brand)}
-            >
-              <MessageSquare size={15} />
-              返回 CRM
-              <ArrowRight size={15} />
-            </button>
           </div>
         </header>
         <div className="sv-pos-navline">
@@ -456,11 +469,15 @@ export default function PosWorkspace({
                     <span className="sv-growth-icon">
                       <Sparkles size={22} />
                     </span>
-                    <span className="sv-eyebrow">NEXT BEST FOLLOW-UP</span>
+                    <span className="sv-eyebrow">CUSTOMER RELATIONSHIPS</span>
                     <h3>服務完成，關係繼續。</h3>
                     <p>睇返客戶對話、到店記錄同剩餘套票，再安排合適嘅回訪。</p>
-                    <button onClick={() => onCRM(customer || undefined, brand)}>
-                      前往 CRM 跟進
+                    <button
+                      onClick={() =>
+                        customerDetails(customer || undefined, brand)
+                      }
+                    >
+                      查看客戶資料
                       <ArrowRight size={15} />
                     </button>
                   </div>
@@ -482,7 +499,9 @@ export default function PosWorkspace({
                         <button
                           className="sv-followup"
                           key={p.id}
-                          onClick={() => onCRM(p.contactId, p.brandId)}
+                          onClick={() =>
+                            customerDetails(p.contactId, p.brandId)
+                          }
                         >
                           <span className="sv-avatar">
                             {customerName(p.contactId).slice(0, 1)}
@@ -730,10 +749,10 @@ export default function PosWorkspace({
                   {customer && (
                     <button
                       className="sv-text-button"
-                      onClick={() => onCRM(customer, brand)}
+                      onClick={() => customerDetails(customer, brand)}
                     >
                       <MessageSquare size={13} />
-                      查看客戶 CRM
+                      查看客戶資料
                     </button>
                   )}
                 </div>
@@ -854,7 +873,8 @@ function Metric({
   );
 }
 export function Appointments({ rows }: { rows: Appointment[] }) {
-  const { pos, identity, open, run, crm, checkout, customerName } = usePos();
+  const { pos, identity, open, run, customerDetails, checkout, customerName } =
+    usePos();
   if (!rows.length)
     return (
       <div className="sv-empty">
@@ -962,8 +982,8 @@ export function Appointments({ rows }: { rows: Appointment[] }) {
                   )}
                   <button
                     className="sv-icon-button"
-                    aria-label={`查看 ${customerName(a.contactId)} CRM`}
-                    onClick={() => crm(a.contactId, a.brandId)}
+                    aria-label={`查看 ${customerName(a.contactId)} 客戶資料`}
+                    onClick={() => customerDetails(a.contactId, a.brandId)}
                   >
                     <MessageSquare size={15} />
                   </button>
@@ -1168,7 +1188,8 @@ function Packages({
   filter: string;
   setFilter: (s: string) => void;
 }) {
-  const { pos, brand, customer, customerName, crm, workspace } = usePos();
+  const { pos, brand, customer, customerName, customerDetails, workspace } =
+    usePos();
   const now = workspace.now;
   const rows = pos.entitlements.filter(
     (p) =>
@@ -1235,7 +1256,7 @@ function Packages({
                 <h3>{p.name}</h3>
                 <button
                   className="sv-text-button"
-                  onClick={() => crm(p.contactId, p.brandId)}
+                  onClick={() => customerDetails(p.contactId, p.brandId)}
                 >
                   {customerName(p.contactId)}
                   <ArrowRight size={13} />
@@ -1259,9 +1280,9 @@ function Packages({
                   </span>
                   <button
                     className="sv-text-button"
-                    onClick={() => crm(p.contactId, p.brandId)}
+                    onClick={() => customerDetails(p.contactId, p.brandId)}
                   >
-                    客戶 CRM
+                    客戶資料
                   </button>
                 </footer>
               </article>

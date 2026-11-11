@@ -1,3 +1,4 @@
+import { requireCommandProduct, type Product } from "./products";
 import { emptyPos, posCommandSchema } from "@/lib/pos/model";
 import { applyPosCommand } from "@/lib/pos/engine";
 import { z } from "zod";
@@ -157,6 +158,7 @@ export function applyCompanyCommand(
   raw: unknown,
   actor: Actor,
   now = Date.now(),
+  products: readonly Product[] = [],
 ): AppState {
   if (!state.scope) throw new AccessError("公司資料未完成設定。", 409);
   if (actor.role === "viewer") throw new AccessError("你目前只有檢視權限。");
@@ -164,6 +166,7 @@ export function applyCompanyCommand(
   if (!checked.success)
     throw new AccessError("此操作未啟用或資料不完整，改動未有儲存。", 400);
   const command = checked.data;
+  requireCommandProduct(products, command);
   if (command.type === "pos") {
     const pos = applyPosCommand(state.pos, command.command, {
       companyId: state.scope.companyId,

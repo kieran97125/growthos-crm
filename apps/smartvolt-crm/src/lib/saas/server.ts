@@ -4,6 +4,13 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { saasConfig } from "./config";
 import { AccessError, roleSchema, scopeSchema, type Actor } from "./identity";
+import {
+  activeProducts,
+  requireProduct,
+  requireCommandProduct,
+  projectWorkspace,
+  type Product,
+} from "./products";
 import { appSchema } from "@/lib/demo/state";
 
 export async function authClient() {
@@ -83,24 +90,56 @@ export async function requireCompany(companyId: string) {
     name: member.display_name,
     role: roleSchema.parse(member.role),
   };
+  const { data: grants, error: grantError } = await db
+    .from("sv_company_products")
+    .select("product,status,starts_at,ends_at")
+    .eq("company_id", companyId);
+  if (grantError) throw new AccessError("暫時未能核實公司產品方案。", 503);
+  const products = activeProducts(grants ?? [], Date.now());
   return {
     db,
     user,
     actor,
+    products,
     company: company as { id: string; name: string; status: string },
   };
 }
-export async function loadCompany(companyId: string) {
-  const access = await requireCompany(companyId);
+async function readCompanyDocument(
+  access: Awaited<ReturnType<typeof requireCompany>>,
+) {
   const { data, error } = await access.db
     .from("sv_workspaces")
     .select("revision,payload")
-    .eq("company_id", companyId)
+    .eq("company_id", access.company.id)
     .single();
   if (error || !data) throw new AccessError("公司工作空間未完成設定。", 503);
   const state = appSchema.parse(data.payload);
-  if (state.scope?.companyId !== companyId)
+  if (state.scope?.companyId !== access.company.id)
     throw new AccessError("工作空間識別不一致。", 409);
-  const scope = scopeSchema.parse(state.scope);
-  return { ...access, state, scope, revision: data.revision as number };
+  return {
+    ...access,
+    state,
+    scope: scopeSchema.parse(state.scope),
+    revision: data.revision as number,
+  };
+}
+export async function loadCompany(companyId: string, product?: Product) {
+  const access = await requireCompany(companyId);
+  if (product) requireProduct(access.products, product);
+  if (!access.products.length)
+    throw new AccessError("公司未有可使用嘅產品方案。");
+  const document = await readCompanyDocument(access);
+  return {
+    ...document,
+    state: appSchema.parse(projectWorkspace(document.state, access.products)),
+  };
+}
+/** Full aggregate stays server-side so an allowed product write cannot erase another product's retained data. */
+export async function loadCompanyForCommand(
+  companyId: string,
+  command: { type: string },
+) {
+  const access = await requireCompany(companyId);
+  requireCommandProduct(access.products, command);
+  return readCompanyDocument(access);
 }

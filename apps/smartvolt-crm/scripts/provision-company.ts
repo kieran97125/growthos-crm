@@ -8,9 +8,10 @@ const args = z
     z.string().min(1).max(100),
     z.string().min(1).max(100),
     z.string().min(1).max(80),
+    z.enum(["crm", "pos", "crm,pos"]),
   ])
   .parse(process.argv.slice(2));
-const [ownerId, companyName, brandName, ownerName] = args;
+const [ownerId, companyName, brandName, ownerName, productSelection] = args;
 const url = process.env.SMARTVOLT_SUPABASE_URL,
   secret = process.env.SMARTVOLT_SUPABASE_SECRET_KEY;
 if (!url || !secret)
@@ -38,6 +39,7 @@ const { error } = await db.rpc("sv_provision_company", {
   p_owner: ownerId,
   p_owner_name: ownerName,
   p_payload: state,
+  p_products: productSelection.split(","),
 });
 if (error) throw Error(`Company provisioning failed (${error.code}).`);
 console.log(JSON.stringify({ companyId, route: `/company/${companyId}` }));

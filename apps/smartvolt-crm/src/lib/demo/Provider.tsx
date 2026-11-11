@@ -15,6 +15,7 @@ import {
   type AppAction,
   synchronizePosBookings,
 } from "./state";
+import { requireCommandProduct, type Product } from "@/lib/saas/products";
 import { seedPos } from "@/lib/pos/seed";
 export type Snapshot = {
   state: AppState;
@@ -22,7 +23,11 @@ export type Snapshot = {
   now: number;
   storage: string;
 };
-function createStore(initialState?: AppState, storageKey = APP_STORAGE) {
+function createStore(
+  initialState?: AppState,
+  storageKey = APP_STORAGE,
+  products: Product[] = ["crm", "pos"],
+) {
   const server: Snapshot = {
     state: initialState ?? createAppState(0),
     ready: false,
@@ -65,6 +70,7 @@ function createStore(initialState?: AppState, storageKey = APP_STORAGE) {
     return cached;
   };
   const dispatch = (a: AppAction) => {
+    if (a.type !== "reset") requireCommandProduct(products, a);
     const current = get(),
       next =
         a.type === "reset" && initialState?.scope
@@ -125,12 +131,16 @@ export function DemoProvider({
   children,
   initialState,
   storageKey,
+  products,
 }: {
   children: ReactNode;
   initialState?: AppState;
   storageKey?: string;
+  products?: Product[];
 }) {
-  const [store] = useState(() => createStore(initialState, storageKey));
+  const [store] = useState(() =>
+    createStore(initialState, storageKey, products),
+  );
   return (
     <WorkspaceContext.Provider value={store}>
       {children}

@@ -16,6 +16,7 @@ export type Dialog =
   | { kind: "appointment"; appointment?: Appointment; start?: string }
   | { kind: "appointment-detail"; id: string }
   | { kind: "customer" }
+  | { kind: "customer-detail"; id: string; brandId?: string }
   | { kind: "payment"; id: string }
   | { kind: "receipt"; id: string }
   | { kind: "refund"; id: string }
@@ -33,7 +34,7 @@ export type PosUI = {
   date: string;
   run: (command: PosCommand, message?: string) => boolean;
   open: (dialog: Dialog | null) => void;
-  crm: (contactId?: string, brandId?: string) => void;
+  customerDetails: (contactId?: string, brandId?: string) => void;
   checkout: (appointment?: Appointment, order?: Order) => void;
   customerName: (id: string) => string;
 };

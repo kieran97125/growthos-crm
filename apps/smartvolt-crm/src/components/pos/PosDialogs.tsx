@@ -5,7 +5,7 @@ import {
   Clock3,
   CreditCard,
   Gift,
-  MessageSquare,
+  UserRound,
   Printer,
   ReceiptText,
   RotateCcw,
@@ -53,6 +53,14 @@ export default function PosDialogs({
     const a = pos.appointments.find((a) => a.id === dialog.id);
     return a ? <AppointmentDetail appointment={a} onClose={onClose} /> : null;
   }
+  if (dialog.kind === "customer-detail")
+    return (
+      <CustomerDetail
+        id={dialog.id}
+        brandId={dialog.brandId}
+        onClose={onClose}
+      />
+    );
   if (dialog.kind === "customer") return <CustomerForm onClose={onClose} />;
   if (dialog.kind === "catalog")
     return <CatalogForm item={dialog.item} onClose={onClose} />;
@@ -186,7 +194,7 @@ function AppointmentForm({
           note,
           status,
         },
-        a ? "預約已更新。" : "預約已建立，CRM 客戶資料會同步顯示。",
+        a ? "預約已更新。" : "預約已建立，客戶資料已更新。",
       )
     )
       onClose();
@@ -354,8 +362,16 @@ function AppointmentDetail({
   appointment: Appointment;
   onClose: () => void;
 }) {
-  const { pos, identity, run, open, crm, checkout, customerName, workspace } =
-    usePos();
+  const {
+    pos,
+    identity,
+    run,
+    open,
+    customerDetails,
+    checkout,
+    customerName,
+    workspace,
+  } = usePos();
   const [packId, setPack] = useState(""),
     [verified, setVerified] = useState(false);
   const packs = pos.entitlements.filter(
@@ -415,10 +431,10 @@ function AppointmentDetail({
         {a.note && <p className="sv-detail-note">{a.note}</p>}
         <button
           className="sv-secondary sv-full"
-          onClick={() => crm(a.contactId, a.brandId)}
+          onClick={() => customerDetails(a.contactId, a.brandId)}
         >
-          <MessageSquare size={15} />
-          開啟客戶 CRM
+          <UserRound size={15} />
+          開啟客戶資料
           <ArrowRight size={14} />
         </button>
         {orders.map((o) => (
@@ -624,7 +640,7 @@ function CustomerForm({ onClose }: { onClose: () => void }) {
   return (
     <Modal
       title="新增到店客戶"
-      subtitle="資料會同步加入 CRM，方便之後跟進。"
+      subtitle="客戶資料、套票同消費記錄會儲存喺公司工作空間。"
       onClose={onClose}
     >
       <FormFrame
@@ -950,7 +966,7 @@ function CorrectionForm({
   );
 }
 function Receipt({ order: o, onClose }: { order: Order; onClose: () => void }) {
-  const { pos, identity, customerName, open, crm } = usePos(),
+  const { pos, identity, customerName, open, customerDetails } = usePos(),
     t = orderTotals(pos, o),
     payments = pos.payments.filter((p) => p.orderId === o.id),
     refunds = pos.refunds.filter((r) => r.orderId === o.id);
@@ -1068,10 +1084,10 @@ function Receipt({ order: o, onClose }: { order: Order; onClose: () => void }) {
         </button>
         <button
           className="sv-secondary"
-          onClick={() => crm(o.contactId, o.brandId)}
+          onClick={() => customerDetails(o.contactId, o.brandId)}
         >
-          <MessageSquare size={15} />
-          客戶 CRM
+          <UserRound size={15} />
+          客戶資料
         </button>
         {["owner", "manager"].includes(identity.actor.role) && t.net > 0 && (
           <button
@@ -1400,6 +1416,102 @@ function ResourceForm({
           開放預約
         </label>
       </FormFrame>
+    </Modal>
+  );
+}
+
+function CustomerDetail({
+  id,
+  brandId,
+  onClose,
+}: {
+  id: string;
+  brandId?: string;
+  onClose: () => void;
+}) {
+  const { workspace, pos, brand, checkout, open } = usePos(),
+    contact = workspace.state.inbox.contacts.find((c) => c.id === id),
+    scope = brandId ?? brand;
+  if (!contact) return null;
+  const packs = pos.entitlements.filter(
+      (p) => p.contactId === id && p.brandId === scope,
+    ),
+    appointments = pos.appointments
+      .filter((a) => a.contactId === id && a.brandId === scope)
+      .toSorted((a, b) => b.startsAt - a.startsAt),
+    orders = pos.orders
+      .filter((o) => o.contactId === id && o.brandId === scope)
+      .toReversed();
+  return (
+    <Modal
+      title="POS 客戶資料"
+      subtitle="客戶資料、服務記錄與套票"
+      onClose={onClose}
+      wide
+    >
+      <div className="sv-pos-profile">
+        <div className="sv-customer-meta">
+          <span className="sv-avatar">{contact.name.slice(0, 1)}</span>
+          <div>
+            <h3>{contact.name}</h3>
+            <p>{contact.phone}</p>
+          </div>
+        </div>
+        {contact.note && <p className="sv-pos-profile-note">{contact.note}</p>}
+        <h4>持有套票</h4>
+        {packs.map((p) => (
+          <div className="sv-pos-profile-row" key={p.id}>
+            <span>
+              {p.name}
+              <small>
+                {hkDate(p.expiresAt)} 到期 · {p.revoked ? "已停用" : "持有中"}
+              </small>
+            </span>
+            <strong>
+              {remainingUnits(pos, p.id)} / {p.units} 次
+            </strong>
+          </div>
+        ))}
+        {!packs.length && <p className="sv-caption">暫未持有套票</p>}
+        <h4>到店及預約</h4>
+        {appointments.map((a) => (
+          <div className="sv-pos-profile-row" key={a.id}>
+            <span>
+              {a.serviceName}
+              <small>
+                {hkDate(a.startsAt)} {hkTime(a.startsAt)} ·{" "}
+                {statusLabels[a.status]}
+              </small>
+            </span>
+            <button
+              onClick={() => open({ kind: "appointment-detail", id: a.id })}
+            >
+              預約詳情
+            </button>
+          </div>
+        ))}
+        {!appointments.length && <p className="sv-caption">暫未有預約</p>}
+        <h4>消費記錄</h4>
+        {orders.map((o) => (
+          <div className="sv-pos-profile-row" key={o.id}>
+            <span>
+              {o.number}
+              <small>
+                {hkDate(o.createdAt)} · {orderTotals(pos, o).status}
+              </small>
+            </span>
+            <button
+              onClick={() => {
+                onClose();
+                checkout(undefined, o);
+              }}
+            >
+              {money(orderTotals(pos, o).total)}
+            </button>
+          </div>
+        ))}
+        {!orders.length && <p className="sv-caption">暫未有消費記錄</p>}
+      </div>
     </Modal>
   );
 }

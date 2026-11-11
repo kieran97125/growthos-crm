@@ -10,7 +10,6 @@ import {
   type FormEvent,
 } from "react";
 import {
-  Store,
   Bot,
   Workflow,
   Sparkles,
@@ -22,7 +21,6 @@ import {
   CalendarDays,
   Check,
   CheckCheck,
-  ChevronRight,
   Clock3,
   ContactRound,
   Flag,
@@ -58,7 +56,6 @@ import {
   type Queue,
 } from "./model";
 import { useDemoWorkspace } from "./useDemoWorkspace";
-import { BrandMark } from "@/components/BrandMark";
 import {
   Avatar,
   ChannelIcon,
@@ -78,8 +75,11 @@ import { StudioLoading } from "../studio/StudioUI";
 import "./workspace.css";
 import "../../pos/pos.css";
 import "../studio/studio.css";
-const PosWorkspace = lazy(() => import("../../pos/PosWorkspace"));
-import type { PosOpenContext } from "../../pos/PosWorkspace";
+import {
+  ProductHeader,
+  type CustomerContext,
+} from "../../products/ProductHeader";
+import type { Product } from "@/lib/saas/products";
 const FlowStudio = lazy(() => import("../studio/FlowStudio"));
 const BotStudio = lazy(() => import("../studio/BotStudio"));
 const BroadcastStudio = lazy(() => import("../studio/BroadcastStudio"));
@@ -91,14 +91,17 @@ export function ConversationWorkspace({
   mode = "demo",
   initialNow,
   initialView = "inbox",
-  initialContact,
   initialConversation,
+  onSwitchProduct,
+  requestedCustomer,
 }: {
   mode?: "demo" | "connected-empty";
   initialNow?: number;
   initialView?: WorkspaceView;
   initialContact?: string;
   initialConversation?: string;
+  onSwitchProduct: (product: Product, context?: CustomerContext) => void;
+  requestedCustomer?: CustomerContext | null;
 }) {
   const identity = useIdentity();
   const BRANDS = identity.scope.brands;
@@ -112,8 +115,7 @@ export function ConversationWorkspace({
   const [view, setView] = useState<WorkspaceView>(
     mode === "demo" ? initialView : "inbox",
   );
-  const [posOpened, setPosOpened] = useState(initialView === "pos");
-  const [posContext, setPosContext] = useState<PosOpenContext | null>(null);
+  const [seenCustomer, setSeenCustomer] = useState<string | undefined>();
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
   const [queue, setQueue] = useState<Queue>("all");
@@ -148,11 +150,23 @@ export function ConversationWorkspace({
   const rows = selectConversations(state, { ...filters, queue });
   const selected =
     state.conversations.find((c) => c.id === selectedId) ?? rows[0];
-  const initialPosContact = state.contacts.find((c) => c.id === initialContact);
-  const initialPosBrand = state.conversations.find(
-    (c) => c.contactId === initialContact,
-  )?.brandId;
   const contact = state.contacts.find((c) => c.id === selected?.contactId);
+  if (requestedCustomer?.token && requestedCustomer.token !== seenCustomer) {
+    setSeenCustomer(requestedCustomer.token);
+    const cv = state.conversations.find(
+      (c) =>
+        c.contactId === requestedCustomer.contactId &&
+        (!requestedCustomer.brandId || c.brandId === requestedCustomer.brandId),
+    );
+    if (cv) {
+      setSelectedId(cv.id);
+      setView("inbox");
+      setQuery("");
+      setBrand("all");
+      setChannel("all");
+      setQueue("all");
+    }
+  }
   const messages = state.messages.filter(
     (m) => m.conversationId === selected?.id,
   );
@@ -194,21 +208,6 @@ export function ConversationWorkspace({
       ...current,
       [selected.id]: { ...draft, [composerMode]: value },
     }));
-  }
-  function openPOS(contactId?: string, brandId?: string) {
-    setPosOpened(true);
-    setView("pos");
-    setProfileOpen(false);
-    setPanel(null);
-    if (contactId && brandId)
-      setPosContext({ contactId, brandId, token: crypto.randomUUID() });
-  }
-  function returnCRM(contactId?: string, brandId?: string) {
-    const cv = state.conversations.find(
-      (c) => c.contactId === contactId && (!brandId || c.brandId === brandId),
-    );
-    if (cv) openConversation(cv.id);
-    else setView("inbox");
   }
   function openConversation(id: string) {
     setView("inbox");
@@ -311,8 +310,11 @@ export function ConversationWorkspace({
   }
   function handleStartBooking() {
     if (!selected || !contact) return;
-    if (booking?.id.startsWith("pos-book-")) {
-      openPOS(contact.id, selected.brandId);
+    if (
+      identity.products.includes("pos") &&
+      booking?.id.startsWith("pos-book-")
+    ) {
+      setNotice("此預約由 POS 管理，請使用頁頂產品切換入口開啟 POS。");
       return;
     }
     setBookingDraft(
@@ -391,55 +393,15 @@ export function ConversationWorkspace({
     <main
       className={`fh-app ${view !== "inbox" ? "fh-studio-view" : ""} ${mobileChat && view === "inbox" ? "fh-mobile-chat" : ""} ${profileOpen && view === "inbox" ? "fh-profile-open" : ""}`}
     >
-      <header className="fh-topbar">
-        <WorkspaceLink className="fh-wordmark" href={empty ? "/crm" : "/"}>
-          <span className="fh-logo">
-            <BrandMark />
-          </span>
-          <strong>
-            Smart<span>Volt</span>
-          </strong>
-          <span className="fh-wordmark-sub">CRM</span>
-        </WorkspaceLink>
-        <div className="fh-workspace-name">
-          <span className="fh-workspace-dot" />
-          {identity.scope.companyName}{" "}
-          <span className="fh-muted">工作空間</span>
-          <ChevronRight size={12} />
-          <span>
-            {view === "pos"
-              ? "POS 營運工作台"
-              : view === "flows"
-                ? "Flow Studio"
-                : view === "bot"
-                  ? "AI BOT Studio"
-                  : view === "broadcasts"
-                    ? "推播與成效"
-                    : view === "experience"
-                      ? "體驗中心"
-                      : "客服中心"}
-          </span>
-        </div>
-        <div className="fh-topbar-right">
-          <span className="fh-demo-badge">
-            <span />
-            {identity.connected ? "通訊渠道待接駁" : "示範 · 未接 WhatsApp"}
-          </span>
-          <button
-            className="fh-guide-button"
-            aria-label="試用指南"
-            onClick={() => setPanel("guide")}
-          >
-            <HelpCircle size={15} />
-            <span>試用指南</span>
-          </button>
-          <span className="fh-divider" />
-          <span className="fh-operator-avatar">
-            {identity.actor.name.slice(0, 1)}
-            <span />
-          </span>
-        </div>
-      </header>
+      <ProductHeader
+        product="crm"
+        onSwitch={(product) =>
+          onSwitchProduct(product, {
+            contactId: contact?.id,
+            brandId: selected?.brandId,
+          })
+        }
+      />
       <nav className="fh-rail" aria-label="CRM 功能">
         <button
           aria-label="訊息收件匣"
@@ -455,17 +417,6 @@ export function ConversationWorkspace({
           <span>訊息</span>
           <i />
         </button>
-        {!empty && (
-          <button
-            aria-label="POS 營運工作台"
-            title="POS 營運工作台"
-            className={view === "pos" ? "is-active" : ""}
-            onClick={() => openPOS()}
-          >
-            <Store size={21} />
-            <span>POS</span>
-          </button>
-        )}
         {!empty && (
           <>
             <button
@@ -1156,7 +1107,6 @@ export function ConversationWorkspace({
                 setPanel={setPanel}
                 setNotice={setNotice}
                 handleStartBooking={handleStartBooking}
-                onOpenPos={() => openPOS(contact.id, selected.brandId)}
               />
             </>
           ) : (
@@ -1206,7 +1156,13 @@ export function ConversationWorkspace({
             </section>
           )}
         </>
-      ) : view === "pos" ? null : (
+      ) : ["flows", "bot"].includes(view) &&
+        (!studio.state.flows.length || !studio.state.bots.length) ? (
+        <section className="fh-no-conversation">
+          <h2>產品設定未完成</h2>
+          <p>請聯絡公司管理員建立 CRM 工作室設定。</p>
+        </section>
+      ) : (
         <Suspense fallback={<StudioLoading />}>
           {view === "flows" ? (
             <FlowStudio
@@ -1239,26 +1195,6 @@ export function ConversationWorkspace({
             />
           )}
         </Suspense>
-      )}
-      {posOpened && ready && (
-        <div className="sv-pos-slot" hidden={view !== "pos"}>
-          <Suspense fallback={<StudioLoading />}>
-            <PosWorkspace
-              active={view === "pos"}
-              context={
-                posContext ??
-                (initialPosContact && initialPosBrand
-                  ? {
-                      contactId: initialPosContact.id,
-                      brandId: initialPosBrand,
-                      token: "initial",
-                    }
-                  : null)
-              }
-              onCRM={returnCRM}
-            />
-          </Suspense>
-        </div>
       )}
       {resetOpen && (
         <Modal

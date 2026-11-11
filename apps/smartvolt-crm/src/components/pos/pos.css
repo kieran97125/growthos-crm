@@ -2372,3 +2372,20 @@
 .sv-mobile-checkout > button {
   flex-shrink: 0;
 }
+.sv-pos button {
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.sv-pos .sv-primary {
+  background: #315ed8;
+  color: #fff;
+  border: 1px solid #315ed8;
+}
+.sv-pos .sv-secondary {
+  background: #fff;
+  border: 1px solid #dce2ec;
+  color: #35445e;
+}

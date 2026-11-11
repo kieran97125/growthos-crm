@@ -17,9 +17,16 @@ import {
 import { posSchema, type PosCommand } from "../src/lib/pos/model";
 import { parseMoney, localToMillis, hkDate } from "../src/lib/pos/money";
 import {
-  applyCompanyCommand,
+  applyCompanyCommand as executeCompanyCommand,
   createCompanyState,
 } from "../src/lib/saas/workspace";
+const applyCompanyCommand = (
+  state: Parameters<typeof executeCompanyCommand>[0],
+  raw: unknown,
+  actor: Parameters<typeof executeCompanyCommand>[2],
+  now = Date.now(),
+) => executeCompanyCommand(state, raw, actor, now, ["crm", "pos"]);
+
 const now = localToMillis("2026-11-11T09:00");
 function fixture() {
   const app = createAppState(now),

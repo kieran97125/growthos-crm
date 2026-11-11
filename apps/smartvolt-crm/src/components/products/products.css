@@ -1,0 +1,360 @@
+.sv-products {
+  height: 100dvh;
+  min-height: 540px;
+  overflow: hidden;
+}
+.sv-product-surface {
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+}
+.sv-product-surface[hidden] {
+  display: none !important;
+}
+.sv-products .fh-app {
+  height: 100%;
+  min-height: 0;
+}
+.sv-company-shell .sv-products,
+.sv-preview-shell .sv-products {
+  height: calc(100dvh - 42px);
+}
+.sv-pos-product {
+  display: flex;
+  flex-direction: column;
+  background: #f6f8fc;
+}
+.sv-pos-product > .sv-pos {
+  flex: 1;
+  min-height: 0;
+}
+.sv-product-header {
+  height: 60px;
+  min-height: 60px;
+  grid-column: 1/-1;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 24px;
+  background: #fff;
+  border-bottom: 1px solid #e0e7f2;
+  font-family: inherit;
+  position: relative;
+  z-index: 3;
+  min-width: 0;
+  color: #283e62;
+}
+.sv-product-wordmark {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+.sv-product-wordmark > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #2859e7;
+  color: #fff;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  box-shadow: 0 3px 9px #315bd621;
+}
+.sv-product-wordmark svg {
+  width: 25px;
+  height: 25px;
+}
+.sv-product-wordmark > strong {
+  font-size: 21px;
+  letter-spacing: -0.7px;
+  color: #204bd5;
+}
+.sv-product-wordmark strong > span {
+  color: #54739c;
+}
+.sv-current-product {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-left: 1px solid #e2e8f3;
+  padding-left: 15px;
+  color: #375fbc;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+}
+.sv-current-product.is-pos {
+  color: #447d78;
+}
+.sv-product-company {
+  font-size: 11px;
+  color: #63738d;
+  gap: 7px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-left: 12px;
+  min-width: 0;
+}
+.sv-product-company i {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #6e9d88;
+}
+.sv-product-header-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+.sv-product-mode {
+  font-size: 10px;
+  color: #65748b;
+}
+.sv-product-header .sv-product-switch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  background: #edf3ff;
+  border: 1px solid #cbdafb;
+  border-radius: 8px;
+  color: #2d55b6;
+  min-height: 36px;
+  padding: 7px 13px;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 2px 3px #2c4b9c05;
+}
+.sv-product-header .sv-product-switch:hover {
+  background: #e0eaff;
+  border-color: #9bb8ee;
+}
+.sv-product-switch b {
+  font-weight: 650;
+}
+.sv-product-switch:focus-visible {
+  outline: 3px solid #8aafea;
+  outline-offset: 3px;
+}
+.sv-product-operator {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f0ebe3;
+  color: #73552a;
+  font-size: 12px;
+}
+.sv-products-denied {
+  min-height: 70dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: #f7f9fc;
+  color: #476285;
+  padding: 30px;
+  text-align: center;
+}
+.sv-products-denied h1 {
+  font-size: 23px;
+  font-weight: 600;
+}
+.sv-products-denied p {
+  font-size: 13px;
+  color: #63738d;
+}
+.sv-products-denied button {
+  padding: 10px 18px;
+  border: 1px solid #2958d2;
+  background: #315ed8;
+  color: white;
+  border-radius: 8px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.sv-preview-shell .sv-company-toolbar {
+  gap: 16px;
+}
+.sv-company-toolbar label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+.sv-company-toolbar select {
+  font: inherit;
+  max-width: 160px;
+}
+.sv-pos-profile h3 {
+  margin: 4px 0;
+  color: #365378;
+}
+.sv-pos-profile .sv-customer-meta {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.sv-pos-profile .sv-customer-meta > div {
+  flex: 1;
+}
+.sv-pos-profile .sv-customer-meta p {
+  font-size: 12px;
+  color: #5e718b;
+  margin: 4px 0;
+}
+.sv-pos-profile h4 {
+  font-size: 12px;
+  color: #4e6889;
+  border-top: 1px solid #e7edf6;
+  padding-top: 16px;
+  margin: 20px 0 10px;
+}
+.sv-pos-profile-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  padding: 10px 0;
+  border-bottom: 1px solid #eef2f8;
+  font-size: 12px;
+  color: #536e90;
+}
+.sv-pos-profile-row small {
+  display: block;
+  color: #667b97;
+  font-size: 10px;
+  margin-top: 4px;
+}
+.sv-pos-profile-row button {
+  font: inherit;
+  color: #365fbb;
+  background: #f1f5ff;
+  border: 1px solid #dde7fb;
+  border-radius: 6px;
+  padding: 5px 8px;
+  cursor: pointer;
+}
+.sv-pos-profile-note {
+  font-size: 12px;
+  line-height: 1.9;
+  color: #5b7390;
+  background: #f5f8fd;
+  border-radius: 8px;
+  padding: 12px;
+}
+.sv-settings-plan {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.sv-settings-plan > article {
+  background: #fff;
+  border: 1px solid #dde6f4;
+  border-radius: 9px;
+  padding: 16px;
+  min-width: 150px;
+}
+.sv-settings-plan strong {
+  font-size: 16px;
+  color: #335a93;
+}
+.sv-settings-plan span {
+  font-size: 11px;
+  display: block;
+  margin-top: 6px;
+  color: #58758f;
+}
+@media (max-width: 1080px) {
+  .sv-product-mode {
+    display: none;
+  }
+  .sv-product-company {
+    max-width: 220px;
+  }
+  .sv-product-header {
+    padding: 0 18px;
+    gap: 12px;
+  }
+}
+@media (max-width: 760px) {
+  .sv-company-shell .sv-products,
+  .sv-preview-shell .sv-products {
+    height: calc(100dvh - 46px);
+  }
+  .sv-product-header {
+    padding: 0 12px;
+    gap: 9px;
+    height: 58px;
+    min-height: 58px;
+  }
+  .sv-product-wordmark > strong {
+    font-size: 17px;
+  }
+  .sv-product-wordmark > span {
+    width: 29px;
+    height: 29px;
+  }
+  .sv-current-product {
+    font-size: 11px;
+    gap: 4px;
+    padding-left: 9px;
+  }
+  .sv-current-product svg {
+    width: 13px;
+  }
+  .sv-product-header-right {
+    gap: 7px;
+  }
+  .sv-product-header .sv-product-switch {
+    font-size: 10px;
+    min-height: 33px;
+    gap: 6px;
+    padding: 6px 8px;
+  }
+  .sv-product-switch > svg:last-child {
+    display: none;
+  }
+  .sv-product-company {
+    display: none !important;
+  }
+  .sv-product-operator {
+    display: none;
+  }
+  .sv-preview-shell .sv-company-toolbar {
+    gap: 10px;
+    padding: 0 12px;
+  }
+  .sv-preview-shell .sv-company-toolbar > strong,
+  .sv-preview-shell .sv-company-toolbar label > span {
+    display: none;
+  }
+  .sv-preview-shell .sv-company-toolbar label select {
+    max-width: 125px;
+    font-size: 10px;
+  }
+  .sv-preview-shell .sv-company-toolbar label:last-of-type select {
+    max-width: 100px;
+  }
+  .sv-preview-shell .sv-company-toolbar > a {
+    font-size: 10px;
+    white-space: nowrap;
+  }
+  .sv-product-header.fh-topbar {
+    gap: 9px;
+  }
+  .sv-products .fh-app {
+    grid-template-rows: 58px minmax(0, 1fr);
+  }
+}

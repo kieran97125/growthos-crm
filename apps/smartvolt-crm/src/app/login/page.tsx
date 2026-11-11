@@ -2,7 +2,12 @@ import Link from "next/link";
 import { BrandMark } from "@/components/BrandMark";
 import { saasConfig } from "@/lib/saas/config";
 import { LoginForm } from "./LoginForm";
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ confirmation?: string; password?: string }>;
+}) {
+  const query = await searchParams;
   return (
     <main className="sv-auth">
       <section className="sv-auth-story">
@@ -48,6 +53,12 @@ export default function LoginPage() {
           <span className="sv-eyebrow">YOUR COMPANY WORKSPACE</span>
           <h2>歡迎返嚟</h2>
           <p>登入，繼續你同客戶嘅對話。</p>
+          {query.confirmation === "invalid" && (
+            <p role="alert">登入連結無效或已過期，請聯絡管理員。</p>
+          )}
+          {query.password === "updated" && (
+            <p role="status">密碼已更新，請用新密碼登入。</p>
+          )}
           <LoginForm enabled={Boolean(saasConfig())} />
           <Link className="sv-preview-link" href="/preview">
             體驗示範工作空間 <span>↗</span>

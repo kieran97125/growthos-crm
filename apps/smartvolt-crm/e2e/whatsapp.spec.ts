@@ -832,10 +832,9 @@ test("real setup controller leaves stored secrets blank and displays one-time to
   ).toBeVisible();
   await expect(page.getByLabel("App Secret", { exact: true })).toHaveValue("");
   await expect(page.getByLabel("系統使用者 Access Token")).toHaveValue("");
-  await expect(page.getByLabel("一次性 Verify Token")).toHaveAttribute(
-    "type",
-    "password",
-  );
+  await expect(
+    page.getByLabel("一次性 Verify Token", { exact: true }),
+  ).toHaveAttribute("type", "password");
   expect(posted).toHaveLength(1);
   expect(posted[0].id).toBe(f.connection.id);
   expect(

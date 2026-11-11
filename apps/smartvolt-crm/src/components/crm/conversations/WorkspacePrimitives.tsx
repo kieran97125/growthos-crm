@@ -1,4 +1,5 @@
 "use client";
+import "@/components/ui/dialog.css";
 import { useEffect, useRef, useId, type ReactNode } from "react";
 import { channelNames, type Contact, type Conversation } from "./model";
 import { Camera, MessageCircle, MessageSquare, X } from "lucide-react";

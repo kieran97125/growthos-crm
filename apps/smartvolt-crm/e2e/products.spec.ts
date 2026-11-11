@@ -107,6 +107,10 @@ test("POS-only customer can create a walk-in, sell and view a customer without a
     page.getByRole("dialog", { name: "POS 客戶資料", exact: true }),
   ).toContainText("POS 獨立客戶");
   await expect(page.getByRole("dialog")).toContainText("已付清");
+  await page.screenshot({
+    path: info.outputPath("smartvolt-pos-only-customer-dialog.png"),
+    fullPage: true,
+  });
   await page
     .getByRole("dialog")
     .getByRole("button", { name: "關閉視窗" })

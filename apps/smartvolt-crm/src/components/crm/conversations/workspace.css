@@ -527,25 +527,6 @@
   border-radius: 5px;
   padding: 1px 6px;
 }
-.fh-icon-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 29px;
-  height: 29px;
-  border-radius: 5px;
-  color: var(--kies-text) !important;
-  padding: 0;
-}
-.fh-icon-button:hover {
-  background: var(--kies-canvas) !important;
-  color: var(--kies-royal) !important;
-}
-.fh-icon-button.is-active {
-  color: var(--kies-strong) !important;
-  background: var(--kies-tint) !important;
-}
 .fh-search {
   display: flex;
   gap: 9px;
@@ -1894,56 +1875,6 @@
   color: var(--kies-muted);
   padding: 0;
   display: flex;
-}
-.fh-dialog {
-  margin: auto;
-  inset: 0;
-  border: 1px solid var(--kies-line);
-  border-radius: 12px;
-  padding: 0;
-  color: var(--fh-ink);
-  background: white;
-  width: 480px;
-  max-width: calc(100vw - 30px);
-  max-height: calc(100dvh - 48px);
-  box-shadow: 0 25px 80px rgba(21, 35, 59, 0.149);
-}
-.fh-dialog::backdrop {
-  background: rgba(21, 35, 59, 0.259);
-  backdrop-filter: blur(2px);
-}
-.fh-dialog-wide {
-  width: 650px;
-}
-.fh-dialog-inner {
-  padding: 0;
-  max-height: calc(100dvh - 50px);
-  overflow-y: auto;
-}
-.fh-dialog-inner > header {
-  display: flex;
-  gap: 15px;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding: 22px 24px 19px;
-  border-bottom: 1px solid var(--kies-divider);
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: #fff;
-}
-.fh-dialog-inner > header h2 {
-  font-size: 17px;
-  font-weight: 650;
-  color: var(--kies-muted);
-}
-.fh-dialog-inner > header p {
-  font-size: 11px;
-  color: var(--kies-text);
-  margin-top: 5px;
-}
-.fh-dialog-inner > header .fh-icon-button {
-  color: var(--kies-text) !important;
 }
 .fh-form {
   padding: 22px 24px;

@@ -1,0 +1,119 @@
+/* Shared dialog and icon-button foundation, loaded independently of either product. */
+.fh-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 29px;
+  height: 29px;
+  border-radius: 5px;
+  color: var(--kies-text) !important;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.fh-icon-button:hover {
+  background: var(--kies-canvas) !important;
+  color: var(--kies-royal) !important;
+}
+.fh-icon-button.is-active {
+  color: var(--kies-strong) !important;
+  background: var(--kies-tint) !important;
+}
+.fh-dialog {
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  margin: auto;
+  inset: 0;
+  border: 1px solid var(--kies-line);
+  border-radius: 12px;
+  padding: 0;
+  color: var(--kies-ink);
+  background: white;
+  width: 480px;
+  max-width: calc(100vw - 30px);
+  max-height: calc(100dvh - 48px);
+  box-shadow: 0 25px 80px rgba(21, 35, 59, 0.149);
+}
+.fh-dialog::backdrop {
+  background: rgba(21, 35, 59, 0.259);
+  backdrop-filter: blur(2px);
+}
+.fh-dialog-wide {
+  width: 650px;
+}
+.fh-dialog-inner {
+  padding: 0;
+  max-height: calc(100dvh - 50px);
+  overflow-y: auto;
+}
+.fh-dialog-inner > header {
+  display: flex;
+  gap: 15px;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 22px 24px 19px;
+  border-bottom: 1px solid var(--kies-divider);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #fff;
+}
+.fh-dialog-inner > header h2 {
+  font-size: 17px;
+  font-weight: 650;
+  color: var(--kies-muted);
+}
+.fh-dialog-inner > header p {
+  font-size: 11px;
+  color: var(--kies-text);
+  margin-top: 5px;
+}
+.fh-dialog-inner > header .fh-icon-button {
+  color: var(--kies-text) !important;
+}
+
+.fh-dialog-inner > .sv-form,
+.fh-dialog-inner > .sv-detail,
+.fh-dialog-inner > .sv-pos-profile {
+  padding: 22px 24px;
+}
+.fh-dialog-inner > .sv-receipt {
+  margin: 20px 24px;
+}
+.fh-dialog-inner > .sv-receipt-actions {
+  padding: 0 24px 22px;
+}
+.fh-dialog-inner > header h2 {
+  margin: 0;
+  color: var(--kies-ink);
+}
+.fh-dialog-inner > header p {
+  line-height: 1.7;
+}
+.fh-dialog-inner > header .fh-icon-button {
+  margin-top: -3px;
+}
+@media (max-width: 680px) {
+  .fh-dialog-inner > header {
+    padding: 18px;
+  }
+  .fh-dialog-inner > .sv-form,
+  .fh-dialog-inner > .sv-detail,
+  .fh-dialog-inner > .sv-pos-profile {
+    padding: 18px;
+  }
+  .fh-dialog-inner > .sv-receipt {
+    margin: 16px;
+  }
+  .fh-dialog-inner > .sv-receipt-actions {
+    padding: 0 16px 18px;
+  }
+}
+@media print {
+  .fh-dialog-inner > .sv-print-root {
+    margin: 0 !important;
+  }
+}

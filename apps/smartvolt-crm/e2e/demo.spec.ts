@@ -135,7 +135,7 @@ test("AI endpoint is protected and unavailable model is clearly disclosed", asyn
     data: { code: "bad" },
   });
   expect(cross.status()).toBe(404);
-  await page.goto("/preview");
+  await page.goto("/preview?view=bot");
   await page
     .getByRole("button", { name: "AI 設定", exact: false })
     .first()

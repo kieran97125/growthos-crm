@@ -132,7 +132,11 @@ export default function WhatsAppInboxView({
   return (
     <main className={`wa-shell ${p.selected ? "wa-has-selection" : ""}`}>
       <header className="wa-topbar">
-        <a className="wa-backlink" href={`/company/${p.companyId}`}>
+        <a
+          className="wa-backlink"
+          href={`/company/${p.companyId}`}
+          aria-label="返回 CRM 工作台"
+        >
           <ArrowLeft size={16} aria-hidden="true" />
           <span>CRM 工作台</span>
         </a>

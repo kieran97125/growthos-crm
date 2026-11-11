@@ -812,7 +812,14 @@ test("real setup controller leaves stored secrets blank and displays one-time to
   await mountController(page, true);
   await expect(page.getByLabel("App Secret", { exact: true })).toHaveValue("");
   await expect(page.getByLabel("系統使用者 Access Token")).toHaveValue("");
-  await page.getByLabel("連接", { exact: true }).selectOption(f.connection.id);
+  // The nested select's options contribute to its label text in getByLabel;
+  // use the exact accessible combobox name confirmed by the CI snapshot.
+  const connectionPicker = page.getByRole("combobox", {
+    name: "連接",
+    exact: true,
+  });
+  await connectionPicker.selectOption(f.connection.id);
+  await expect(connectionPicker).toHaveValue(f.connection.id);
   await page
     .getByLabel("App Secret", { exact: true })
     .fill("isolated-app-secret-fixture");

@@ -269,7 +269,7 @@
 .wa-conversation-head time {
   font-size: 9px;
   flex-shrink: 0;
-  color: #637493;
+  color: #526783;
 }
 .wa-preview {
   display: block;
@@ -465,7 +465,7 @@
 }
 .wa-history-notice {
   margin: 9px 0 25px;
-  color: #637793;
+  color: #526783;
   font-size: 9px;
   display: flex;
   gap: 5px;
@@ -521,7 +521,7 @@
   justify-content: flex-end;
   align-items: center;
   font-size: 8px;
-  color: #607390;
+  color: #526783;
   flex-wrap: wrap;
 }
 .wa-receipt {
@@ -638,7 +638,7 @@
 }
 .wa-delivery-note {
   font-size: 8px;
-  color: #667a96;
+  color: #526783;
   margin: 7px 1px 0;
 }
 .wa-composer-notice {

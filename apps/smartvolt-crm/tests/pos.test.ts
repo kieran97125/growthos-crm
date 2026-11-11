@@ -530,3 +530,58 @@ test("real companies initialize with no demo sales and new walk-ins normalize, d
   );
   assert.equal(s.inbox.contacts.length, 1);
 });
+test("rescheduling an appointment with checkout preserves its quoted price and cannot change billed guest count", () => {
+  const f = fixture(),
+    a = f.pos.appointments[0];
+  let s = applyPosCommand(
+    f.pos,
+    {
+      kind: "cart-add",
+      id: "checkout",
+      orderId: "linked-sale",
+      contactId: a.contactId,
+      itemId: a.serviceId,
+      appointmentId: a.id,
+    },
+    f.ctx,
+  );
+  s = applyPosCommand(s, pay("linked-sale", a.priceCents), f.ctx);
+  s = applyPosCommand(
+    s,
+    {
+      kind: "catalog-save",
+      id: "reprice",
+      item: { ...f.service, priceCents: 99000 },
+    },
+    f.ctx,
+  );
+  const reschedule: PosCommand = {
+    kind: "appointment-save",
+    id: "reschedule",
+    appointmentId: a.id,
+    contactId: a.contactId,
+    serviceId: a.serviceId,
+    staffId: a.staffId,
+    resourceId: a.resourceId,
+    startsAt: localToMillis("2026-11-12T10:00"),
+    guests: 1,
+    note: "改期",
+    status: "confirmed",
+  };
+  const moved = applyPosCommand(s, reschedule, f.ctx);
+  assert.equal(
+    moved.appointments.find((x) => x.id === a.id)?.priceCents,
+    a.priceCents,
+  );
+  assert.equal(
+    orderTotals(
+      moved,
+      moved.orders.find((o) => o.id === "linked-sale")!,
+    ).total,
+    a.priceCents,
+  );
+  assert.throws(
+    () => applyPosCommand(s, { ...reschedule, guests: 2 }, f.ctx),
+    /已有收銀訂單/,
+  );
+});

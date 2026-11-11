@@ -66,7 +66,7 @@ export default function PosCalendar({
         slotHeaderFormat={{ hour: "2-digit", minute: "2-digit", hour12: false }}
         datesSet={(info) => {
           const next = hkDate(info.view.currentStart.getTime());
-          if (info.view.type === "timeGridDay" && next !== date) onDate(next);
+          if (next !== date) onDate(next);
         }}
         dateClick={(info) =>
           open({ kind: "appointment", start: info.dateStr.slice(0, 16) })

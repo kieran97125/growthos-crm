@@ -132,6 +132,11 @@ function AppointmentForm({
     a?.serviceId ?? services[0]?.id ?? "",
   );
   const item = services.find((i) => i.id === serviceId);
+  const linkedOrder =
+    !!a &&
+    pos.orders.some(
+      (o) => o.appointmentId === a.id && !o.voided && o.lines.length > 0,
+    );
   const [resourceId, setResource] = useState(
     a?.resourceId ??
       pos.resources.find(
@@ -333,7 +338,7 @@ function AppointmentForm({
           <Clock3 size={17} />
           <span>
             {item
-              ? `${item.durationMinutes} 分鐘服務 + ${item.bufferMinutes} 分鐘整理緩衝 · ${money(item.priceCents * guests)}`
+              ? `${item.durationMinutes} 分鐘服務 + ${item.bufferMinutes} 分鐘整理緩衝 · ${money(linkedOrder && a ? a.priceCents : item.priceCents * guests)}`
               : "先喺服務設定新增服務同資源，再建立預約。"}
           </span>
         </div>

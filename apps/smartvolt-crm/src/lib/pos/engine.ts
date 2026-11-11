@@ -227,16 +227,19 @@ export function applyPosCommand(
         old.brandId !== item.brandId)
     )
       fail("已到店／完成嘅預約不能直接改期或轉移客戶。");
+    const hasOrder =
+      !!old &&
+      s.orders.some(
+        (o) => o.appointmentId === old.id && !o.voided && o.lines.length > 0,
+      );
     if (
       old &&
-      s.orders.some(
-        (o) =>
-          o.appointmentId === old.id &&
-          s.payments.some((p) => p.orderId === o.id),
-      ) &&
-      old.serviceId !== item.id
+      hasOrder &&
+      (old.serviceId !== item.id || old.guests !== c.guests)
     )
-      fail("此預約已有收款，請保留原服務並另建安排。");
+      fail(
+        "此預約已有收銀訂單，不能更改服務或人數；請先處理原訂單再另建安排。",
+      );
     const cv = ctx.conversations.find(
       (cv) => cv.contactId === c.contactId && cv.brandId === item.brandId,
     )!;
@@ -247,8 +250,8 @@ export function applyPosCommand(
       conversationId: cv.id,
       crmBookingId: old?.crmBookingId ?? `pos-book-${c.appointmentId}`,
       serviceId: item.id,
-      serviceName: item.name,
-      priceCents: item.priceCents * c.guests,
+      serviceName: old && hasOrder ? old.serviceName : item.name,
+      priceCents: old && hasOrder ? old.priceCents : item.priceCents * c.guests,
       staffId: c.staffId,
       resourceId: c.resourceId,
       startsAt: c.startsAt,

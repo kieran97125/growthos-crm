@@ -16,6 +16,7 @@ import {
 import Papa from "papaparse";
 import { parsePhoneNumberFromString } from "libphonenumber-js";
 import { useDemo } from "@/lib/demo/Provider";
+import { BRAND } from "@/lib/brand";
 import {
   audience,
   metrics,
@@ -118,7 +119,7 @@ export default function BroadcastStudio({
       ),
       link = document.createElement("a");
     link.href = url;
-    link.download = "followhub-campaign-audit.csv";
+    link.download = BRAND.auditFilename;
     link.click();
     URL.revokeObjectURL(url);
   }

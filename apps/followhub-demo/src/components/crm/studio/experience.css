@@ -1,12 +1,12 @@
 .xp-workspace {
   display: flex;
   flex-direction: column;
-  background: #fafafe;
+  background: var(--kies-panel);
 }
 .xp-header {
   min-height: 82px;
   padding: 0 26px;
-  border-bottom: 1px solid #e9e4f1;
+  border-bottom: 1px solid var(--kies-divider);
   background: #fff;
   display: flex;
   align-items: center;
@@ -23,7 +23,7 @@
   font-size: 12px;
   font-weight: 400;
   letter-spacing: 0;
-  color: #645a71;
+  color: var(--kies-muted);
   margin-left: 12px;
 }
 .xp-scroll {
@@ -44,10 +44,10 @@
   place-items: center;
   width: 43px;
   height: 43px;
-  border: 1px solid #dfd5ee;
+  border: 1px solid var(--kies-line);
   border-radius: 10px;
-  background: #f0eafa;
-  color: #67508d;
+  background: var(--kies-tint);
+  color: var(--kies-strong);
   flex-shrink: 0;
 }
 .xp-intro h2 {
@@ -57,7 +57,7 @@
 .xp-intro p {
   font-size: 11px;
   line-height: 1.8;
-  color: #685c73;
+  color: var(--kies-muted);
   margin-top: 6px;
 }
 .xp-intro > .bc-button {
@@ -75,24 +75,24 @@
   align-items: center;
   gap: 12px;
   font-size: 11px;
-  color: #655970;
+  color: var(--kies-muted);
   margin: 0 0 13px;
 }
 .xp-customer > label select {
   flex: 1;
   padding: 9px 10px;
-  border: 1px solid #e0d9ec;
+  border: 1px solid var(--kies-line);
   border-radius: 6px;
   background: white;
   min-width: 0;
   font-size: 11px;
-  color: #51435e;
+  color: var(--kies-text);
 }
 .xp-phone {
-  border: 1px solid #dcdfe5;
+  border: 1px solid var(--kies-line);
   border-radius: 18px;
   background: #edf3ef;
-  box-shadow: 0 10px 25px #4834570b;
+  box-shadow: 0 10px 25px rgba(21, 35, 59, 0.043);
   overflow: hidden;
   max-width: 440px;
   margin: auto;
@@ -227,17 +227,17 @@
   display: flex;
   gap: 7px;
   align-items: center;
-  color: #65517d;
+  color: var(--kies-strong);
   font-size: 10px;
   line-height: 1.8;
   margin: 12px auto;
-  background: #f3eef9;
-  border: 1px solid #e5dbef;
+  background: var(--kies-canvas);
+  border: 1px solid var(--kies-line);
   border-radius: 6px;
   padding: 10px;
 }
 .xp-operations {
-  border: 1px solid #e5ddef;
+  border: 1px solid var(--kies-line);
   background: #fff;
   border-radius: 12px;
   padding: 23px;
@@ -247,7 +247,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  border-bottom: 1px solid #ece5f2;
+  border-bottom: 1px solid var(--kies-divider);
   padding-bottom: 18px;
 }
 .xp-operation-header > span {
@@ -256,8 +256,8 @@
   width: 36px;
   height: 36px;
   border-radius: 8px;
-  background: #f0eafa;
-  color: #645183;
+  background: var(--kies-tint);
+  color: var(--kies-strong);
 }
 .xp-operation-header h2 {
   font-size: 15px;
@@ -265,7 +265,7 @@
 }
 .xp-operation-header p {
   font-size: 10px;
-  color: #695c74;
+  color: var(--kies-muted);
   margin-top: 4px;
 }
 .xp-mode {
@@ -275,7 +275,7 @@
   padding: 18px 0;
 }
 .xp-mode > svg {
-  color: #655480;
+  color: var(--kies-strong);
   margin-top: 3px;
   flex-shrink: 0;
 }
@@ -286,7 +286,7 @@
 .xp-mode p {
   font-size: 10px;
   line-height: 1.9;
-  color: #64566e;
+  color: var(--kies-muted);
   margin-top: 5px;
 }
 .fh-app .xp-mode > button {
@@ -295,8 +295,8 @@
   align-items: center;
   gap: 5px;
   font-size: 10px;
-  color: #604981;
-  border: 1px solid #e4d9ed;
+  color: var(--kies-strong);
+  border: 1px solid var(--kies-line);
   border-radius: 5px;
   padding: 6px 8px;
   white-space: nowrap;
@@ -322,7 +322,7 @@
   bottom: 0;
   left: 12px;
   width: 1px;
-  background: #e8e0f0;
+  background: var(--kies-tint);
 }
 .xp-stages > li > span {
   width: 26px;
@@ -330,9 +330,9 @@
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  background: #f3eff9;
-  color: #67577c;
-  border: 1px solid #dfd6ea;
+  background: var(--kies-canvas);
+  color: var(--kies-muted);
+  border: 1px solid var(--kies-line);
   border-radius: 50%;
   font-size: 10px;
 }
@@ -353,12 +353,12 @@
 .xp-stages p {
   font-size: 11px;
   line-height: 1.9;
-  color: #66596e;
+  color: var(--kies-muted);
   margin: 8px 0 10px;
 }
 .xp-stages small {
   font-size: 9px;
-  color: #66586c;
+  color: var(--kies-text);
   line-height: 1.8;
   margin-top: 9px;
   display: block;
@@ -372,12 +372,12 @@
   display: grid;
   gap: 6px;
   font-size: 10px;
-  color: #5b4c67;
+  color: var(--kies-text);
 }
 .xp-verify input:not([type="checkbox"]) {
   padding: 8px 10px;
   background: #fff;
-  border: 1px solid #ddd4e8;
+  border: 1px solid var(--kies-line);
   border-radius: 5px;
   font-size: 12px;
 }
@@ -389,7 +389,7 @@
 }
 .xp-checkbox input {
   margin: 3px 0 0;
-  accent-color: #786297;
+  accent-color: var(--kies-royal);
 }
 .xp-reminder-checks {
   display: flex;
@@ -402,23 +402,23 @@
   align-items: center;
   gap: 6px;
   font-size: 10px;
-  color: #61516b;
+  color: var(--kies-text);
 }
 .xp-reminder-checks input {
-  accent-color: #786297;
+  accent-color: var(--kies-royal);
 }
 .xp-feedback {
   padding: 12px 14px;
-  border: 1px solid #e4daef;
+  border: 1px solid var(--kies-line);
   border-radius: 7px;
-  background: #faf7fe;
+  background: var(--kies-panel);
   font-size: 11px;
   line-height: 1.9;
-  color: #5f4c70;
+  color: var(--kies-strong);
   margin-top: 12px !important;
 }
 .xp-feedback > button {
-  color: #58408b;
+  color: var(--kies-strong);
   text-decoration: underline;
   margin-top: 8px;
   display: block;
@@ -435,9 +435,9 @@
   align-items: center;
   gap: 6px;
   font-size: 10px;
-  color: #5c477b;
-  border: 1px solid #e0d6ed;
-  background: #faf6ff;
+  color: var(--kies-strong);
+  border: 1px solid var(--kies-line);
+  background: var(--kies-panel);
   border-radius: 6px;
   padding: 7px 9px;
   white-space: nowrap;
@@ -446,7 +446,7 @@
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #8d789c;
+  background: var(--kies-royal);
 }
 .ai-connect > span.is-ready {
   background: #418560;
@@ -460,8 +460,8 @@
   width: 54px;
   height: 54px;
   border-radius: 12px;
-  background: #f0e9fa;
-  color: #645082;
+  background: var(--kies-tint);
+  color: var(--kies-strong);
   margin-bottom: 17px;
 }
 .ai-access h3 {
@@ -475,7 +475,7 @@
 .ai-access small {
   font-size: 10px;
   line-height: 1.9;
-  color: #675a73;
+  color: var(--kies-muted);
   display: block;
   margin-top: 15px;
 }
@@ -490,7 +490,7 @@
 .ai-access input {
   width: 100%;
   padding: 11px;
-  border: 1px solid #ddd3e8;
+  border: 1px solid var(--kies-line);
   border-radius: 6px;
   font-size: 12px;
   margin-top: 6px;
@@ -499,7 +499,7 @@
   padding: 10px 14px;
   border-radius: 6px;
   color: #fff;
-  background: #67508d;
+  background: var(--kies-strong);
   display: flex;
   align-items: center;
   gap: 7px;
@@ -529,8 +529,8 @@
 }
 .ai-copilot-info {
   padding: 13px 15px;
-  border: 1px solid #e6deef;
-  background: #fbf8ff;
+  border: 1px solid var(--kies-line);
+  background: var(--kies-panel);
   border-radius: 7px;
   display: flex;
   align-items: flex-start;
@@ -552,7 +552,7 @@
 .ai-lab-options {
   padding: 0 18px;
   font-size: 10px;
-  color: #62506e;
+  color: var(--kies-muted);
 }
 .ai-lab-options > button {
   text-decoration: underline;
@@ -572,8 +572,8 @@
 }
 .ai-handoff-summary {
   padding: 12px 14px;
-  background: #f6f2fb;
-  border: 1px solid #e6deef;
+  background: var(--kies-panel);
+  border: 1px solid var(--kies-line);
   border-radius: 6px;
   margin-top: 12px;
 }
@@ -740,19 +740,19 @@
 .xp-draft {
   margin-top: 16px;
   padding: 15px;
-  border: 1px solid #dfd7ec;
+  border: 1px solid var(--kies-line);
   border-radius: 8px;
-  background: #faf8ff;
+  background: var(--kies-panel);
 }
 .xp-draft label {
   display: grid;
   gap: 8px;
   font-size: 11px;
-  color: #50415f;
+  color: var(--kies-text);
 }
 .xp-draft textarea {
   width: 100%;
-  border: 1px solid #ddd5e8;
+  border: 1px solid var(--kies-line);
   border-radius: 6px;
   padding: 10px;
   font-size: 12px;

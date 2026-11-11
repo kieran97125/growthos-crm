@@ -63,7 +63,7 @@ export function WorkspaceDialogs({
       {panel === "guide" && (
         <Modal
           title="由一個對話開始試用"
-          subtitle="FollowHub · 獨立 CRM 覆客工作台"
+          subtitle="KiesTECH · 獨立 CRM 覆客工作台"
           onClose={() => setPanel(null)}
         >
           <div className="fh-guide">
@@ -579,7 +579,7 @@ export function WorkspaceDialogs({
       {panel === "settings" && (
         <Modal
           title="工作空間設定"
-          subtitle="FollowHub v0.2 · 獨立示範環境"
+          subtitle="KiesTECH · 獨立示範環境"
           onClose={() => setPanel(null)}
         >
           <div className="fh-settings">

@@ -1,11 +1,16 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import type { CSSProperties } from "react";
+import { BRAND, BRAND_CSS } from "@/lib/brand";
 import "./globals.css";
 export const metadata: Metadata = {
-  title: "FollowHub · 客戶對話工作台",
+  title: BRAND.title,
+  applicationName: BRAND.name,
+  appleWebApp: { capable: true, title: BRAND.name, statusBarStyle: "default" },
   description:
     "獨立 CRM Demo：客服收件匣、WhatsApp Flow、AI 建議、推播及成效追蹤。",
   robots: { index: false, follow: false },
 };
+export const viewport: Viewport = { themeColor: BRAND.colors.royal };
 export default function RootLayout({
   children,
 }: {
@@ -13,7 +18,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="zh-HK">
-      <body>{children}</body>
+      <body style={BRAND_CSS as CSSProperties}>{children}</body>
     </html>
   );
 }

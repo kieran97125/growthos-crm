@@ -1,4 +1,4 @@
-name: FollowHub standalone verification
+name: KiesTECH standalone verification
 on:
   push:
     branches: [demo/standalone-workspace-20261110]

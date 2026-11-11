@@ -58,6 +58,7 @@ import {
   type Queue,
 } from "./model";
 import { useDemoWorkspace } from "./useDemoWorkspace";
+import { BrandMark } from "@/components/BrandMark";
 import {
   Avatar,
   ChannelIcon,
@@ -346,11 +347,10 @@ export function ConversationWorkspace({
       <header className="fh-topbar">
         <WorkspaceLink className="fh-wordmark" href={empty ? "/crm" : "/"}>
           <span className="fh-logo">
-            <MessageSquare size={21} fill="currentColor" />
-            <span />
+            <BrandMark />
           </span>
           <strong>
-            Follow<span>Hub</span>
+            Kies<span>TECH</span>
           </strong>
           <span className="fh-wordmark-sub">CRM</span>
         </WorkspaceLink>

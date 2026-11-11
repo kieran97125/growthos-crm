@@ -1,6 +1,12 @@
-# FollowHub independent CRM demo
+# KiesTECH independent CRM demo
 
 An independent Next.js application for demonstrating a customer conversation workspace. Deploy **only this directory** as the Vercel project root. The root CRM application remains separate.
+
+## Platform identity
+
+KiesTECH uses royal blue (`#2457E7`), cool silver (`#B9C5D8`) and navy ink (`#15233B`). Shared platform tokens live in `src/lib/brand.ts`; `BrandMark` supplies the same K vector to the workspace, browser icons (32/192/512), Apple icon (180) and maskable manifest. Icon routes are generated locally without external fonts or image services. The manifest provides home-screen identity, not offline synchronization. Existing installations may need to refresh or re-add their home-screen shortcut to clear a cached icon.
+
+The Vercel project/directory and browser storage keys retain their existing internal identifiers, preserving links and saved demo data. Fictional client workspaces retain their own identities.
 
 ## Working experience
 
@@ -61,6 +67,6 @@ The Vercel project root is `apps/followhub-demo`, framework Next.js, Node 24. `g
 
 ## Product Learning Sync checked
 
-Read the canonical Product Learning Sync protocol, index and review checkpoint before implementation. Applied the WhatsApp broadcast operations boundary (2026-07-26: consent, suppression, approved version, send-time validation and idempotency) and permission-aware aggregate scope (2026-08-10: one brand scope for audience and metrics). Existing CRM graph, review-before-confirmation and destructive-action regressions are retained. No company runtime or credentials were changed. Canonical documentation changes remain review proposals rather than changes to a client application.
+Read the canonical Product Learning Sync protocol, index and review checkpoint before implementation. Rechecked for the 2026-11-11 KiesTECH identity change and applied the 2026-08-10 platform app identity/icon contract: one platform mark across UI, browser and mobile metadata with maskable safe area and no client logo reuse. Applied the WhatsApp broadcast operations boundary (2026-07-26: consent, suppression, approved version, send-time validation and idempotency) and permission-aware aggregate scope (2026-08-10: one brand scope for audience and metrics). Existing CRM graph, review-before-confirmation and destructive-action regressions are retained. No company runtime or credentials were changed. Canonical documentation changes remain review proposals rather than changes to a client application.
 
 The standalone application owns its own lockfile and verification workflow. Root TypeScript and ESLint exclude `apps/` so each package is checked against its own dependencies instead of mixing different Next.js/React versions.

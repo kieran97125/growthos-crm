@@ -41,6 +41,7 @@ import {
 import { Modal } from "../conversations/WorkspacePrimitives";
 import { uid, actionTime } from "../conversations/events";
 import { useDemo } from "@/lib/demo/Provider";
+import { BRAND } from "@/lib/brand";
 import { BRANDS } from "../conversations/model";
 import {
   DEFAULT_SIMULATION,
@@ -203,12 +204,12 @@ export default function FlowStudio({
           stroke: result?.steps.some(
             (s) => s.nodeId === e.source && s.state === "completed",
           )
-            ? "#8a78d0"
-            : "#c8c8dc",
+            ? BRAND.colors.royal
+            : BRAND.colors.silver,
           strokeWidth: 1.4,
         },
-        labelStyle: { fontSize: 10, fill: "#777189" },
-        labelBgStyle: { fill: "#fcfbff" },
+        labelStyle: { fontSize: 10, fill: BRAND.colors.muted },
+        labelBgStyle: { fill: BRAND.colors.panel },
       })),
     [flow.edges, result],
   );
@@ -543,14 +544,14 @@ export default function FlowStudio({
               variant={BackgroundVariant.Dots}
               gap={20}
               size={1}
-              color="#dddbea"
+              color={BRAND.colors.line}
             />
             <Controls showInteractive={false} />
             <MiniMap
               pannable
               zoomable
-              nodeColor="#d6cbee"
-              maskColor="rgba(248,247,252,.7)"
+              nodeColor={BRAND.colors.silver}
+              maskColor="rgba(244,247,252,.7)"
               ariaLabel="流程縮圖"
             />
           </ReactFlow>

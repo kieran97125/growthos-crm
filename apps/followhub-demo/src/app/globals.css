@@ -8,7 +8,7 @@ body {
   margin: 0;
   padding: 0;
   min-height: 100%;
-  background: #f7f8fc;
+  background: var(--kies-canvas, #f4f7fc);
 }
 body {
   font-family: Arial, "PingFang HK", "Microsoft JhengHei", sans-serif;
@@ -40,9 +40,9 @@ a:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 2px solid #6254d9;
+  outline: 2px solid var(--kies-royal);
   outline-offset: 3px;
 }
 ::selection {
-  background: #e2ddff;
+  background: var(--kies-selected);
 }

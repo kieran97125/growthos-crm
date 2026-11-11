@@ -218,10 +218,21 @@ test("POS overview, cashier and mobile layout are keyboard accessible with AA co
       page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
     )
     .toBe(true);
+  await expect(page.getByLabel("手機收銀客戶")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "查看訂單", exact: true }),
+  ).toBeVisible();
   await page.screenshot({
     path: info.outputPath("smartvolt-pos-cashier-mobile.png"),
     fullPage: true,
   });
+  await page.getByRole("button", { name: "查看訂單", exact: true }).click();
+  await expect(
+    page.getByRole("complementary", { name: "POS 收銀訂單" }),
+  ).toBeFocused();
+  await expect(
+    page.getByRole("complementary", { name: "POS 收銀訂單" }),
+  ).toBeInViewport();
   await tab(page, "今日營運");
   await page.screenshot({
     path: info.outputPath("smartvolt-pos-overview-mobile.png"),

@@ -1,5 +1,5 @@
 "use client";
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useRef, useState } from "react";
 import {
   ArrowRight,
   CalendarDays,
@@ -78,6 +78,7 @@ export default function PosWorkspace({
   const workspace = useDemo(),
     identity = useIdentity();
   const pos = workspace.state.pos ?? emptyPos(identity.scope.companyId);
+  const cartRef = useRef<HTMLElement>(null);
   const [section, setSection] = useState<Section>(
     context ? "cashier" : "today",
   );
@@ -560,6 +561,30 @@ export default function PosWorkspace({
                   <h3>服務與商品</h3>
                   <span className="sv-caption">選擇項目加入訂單</span>
                 </div>
+                <div className="sv-mobile-customer">
+                  <label>
+                    收銀客戶
+                    <select
+                      aria-label="手機收銀客戶"
+                      value={customer}
+                      onChange={(e) => setCustomer(e.target.value)}
+                    >
+                      <option value="">選擇客戶…</option>
+                      {contacts.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name} · {c.phone}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    className="sv-text-button"
+                    onClick={() => setDialog({ kind: "customer" })}
+                  >
+                    <Plus size={13} />
+                    新增
+                  </button>
+                </div>
                 <div className="sv-filter-row">
                   <div className="sv-segment">
                     {[
@@ -664,7 +689,12 @@ export default function PosWorkspace({
                   </div>
                 )}
               </section>
-              <aside className="sv-card sv-cart">
+              <aside
+                ref={cartRef}
+                className="sv-card sv-cart"
+                tabIndex={-1}
+                aria-label="POS 收銀訂單"
+              >
                 <div className="sv-card-head">
                   <h3>
                     <ShoppingBag size={17} />
@@ -758,6 +788,38 @@ export default function PosWorkspace({
             </span>
           </footer>
         </div>
+        {section === "cashier" && (
+          <div className="sv-mobile-checkout">
+            <div>
+              <small>
+                {customer ? customerName(customer) : "先選擇收銀客戶"} ·{" "}
+                {selectedOrder?.lines.reduce((n, l) => n + l.quantity, 0) ?? 0}{" "}
+                項
+              </small>
+              <strong>
+                {money(selectedOrder ? orderTotals(pos, selectedOrder).due : 0)}
+              </strong>
+            </div>
+            <button
+              className="sv-primary"
+              onClick={() => {
+                cartRef.current?.scrollIntoView({
+                  block: "start",
+                  behavior: window.matchMedia(
+                    "(prefers-reduced-motion: reduce)",
+                  ).matches
+                    ? "instant"
+                    : "smooth",
+                });
+                cartRef.current?.focus({ preventScroll: true });
+              }}
+            >
+              <ShoppingBag size={16} />
+              查看訂單
+              <ArrowRight size={14} />
+            </button>
+          </div>
+        )}
         {dialog && (
           <PosDialogs
             key={dialog.kind + ("id" in dialog ? dialog.id : "")}

@@ -132,3 +132,4 @@ end;
 $$;
 revoke all on function public.sv_provision_company(uuid,text,uuid,text,jsonb) from public, anon, authenticated;
 grant execute on function public.sv_provision_company(uuid,text,uuid,text,jsonb) to service_role;
+

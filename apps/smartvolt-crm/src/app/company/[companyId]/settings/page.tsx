@@ -51,6 +51,11 @@ export default async function CompanySettings({
         <p>
           購買方案由 SaaS 營運方管理；員工角色只決定已購買產品內嘅操作權限。
         </p>
+        {access.products.includes("pos") && (
+          <Link className="sv-secondary" href={`/company/${companyId}/ledger`}>
+            查閱交易帳簿 →
+          </Link>
+        )}
       </section>
       {members && (
         <section className="sv-settings-section">

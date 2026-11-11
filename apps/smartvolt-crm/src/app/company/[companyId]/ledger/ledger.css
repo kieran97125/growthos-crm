@@ -1,0 +1,195 @@
+.sv-ledger {
+  max-width: 1240px;
+}
+.sv-ledger nav,
+.sv-ledger-heading,
+.sv-ledger-records > header,
+.sv-ledger-records > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.sv-ledger nav {
+  font-size: 13px;
+  color: #3a568d;
+}
+.sv-ledger-heading {
+  margin: 8px 0 28px;
+}
+.sv-ledger-heading h1 {
+  letter-spacing: -1px;
+}
+.sv-ledger-badge {
+  flex-shrink: 0;
+  border: 1px solid #c9d7f4;
+  border-radius: 30px;
+  padding: 7px 13px;
+  color: #2457b6;
+  font-size: 11px;
+  background: #f2f6ff;
+}
+.sv-ledger-filters {
+  display: flex;
+  align-items: end;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid #dce3ee;
+  border-radius: 14px;
+  background: #fff;
+}
+.sv-ledger-filters label {
+  display: grid;
+  gap: 7px;
+  color: #42536e;
+  font-size: 12px;
+  flex: 1;
+}
+.sv-ledger-filters input,
+.sv-ledger-filters button {
+  min-height: 44px;
+  font: inherit;
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+.sv-ledger-filters input {
+  background: #f8faff;
+  color: #15233b;
+  border: 1px solid #d4deef;
+  width: 100%;
+}
+.sv-ledger-filters button {
+  background: #2457e7;
+  color: #fff;
+  border: 0;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+.sv-ledger :is(input, button, a, [tabindex]):focus-visible {
+  outline: 3px solid #4779ff;
+  outline-offset: 3px;
+}
+.sv-ledger-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin: 24px 0 14px;
+}
+.sv-ledger-metrics article {
+  padding: 22px;
+  background: #fff;
+  border: 1px solid #dce3ee;
+  border-radius: 13px;
+}
+.sv-ledger-metrics article:last-child {
+  background: #102e70;
+  border-color: #102e70;
+  color: white;
+}
+.sv-ledger-metrics span {
+  display: block;
+  font-size: 12px;
+  opacity: 0.8;
+  margin-bottom: 10px;
+}
+.sv-ledger-metrics strong {
+  font-size: clamp(19px, 2vw, 27px);
+  font-weight: 650;
+  letter-spacing: -0.6px;
+  font-variant-numeric: tabular-nums;
+}
+.sv-ledger p.sv-ledger-note {
+  font-size: 12px;
+  line-height: 1.9;
+}
+.sv-ledger-records {
+  border: 1px solid #dce3ee;
+  border-radius: 15px;
+  background: #fff;
+  margin-top: 28px;
+  overflow: hidden;
+}
+.sv-ledger-records > header,
+.sv-ledger-records > footer {
+  padding: 20px 22px;
+  font-size: 12px;
+  color: #52617a;
+}
+.sv-ledger-records h2 {
+  font-size: 16px;
+  color: #15233b;
+  margin: 0;
+}
+.sv-ledger-table {
+  overflow-x: auto;
+}
+.sv-ledger-table table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.sv-ledger-table :is(th, td) {
+  padding: 16px 22px;
+  border-bottom: 1px solid #e8edf5;
+  white-space: nowrap;
+}
+.sv-ledger-table thead {
+  background: #f7f9fd;
+  color: #52617a;
+}
+.sv-ledger-table tbody th {
+  font-weight: 400;
+}
+.sv-ledger-table small {
+  display: block;
+  color: #64738e;
+  margin-top: 5px;
+}
+.sv-ledger-empty {
+  text-align: center;
+  padding: 60px 22px;
+  background: #f8faff;
+}
+.sv-ledger-empty h3 {
+  font-size: 17px;
+  margin: 0 0 8px;
+}
+@media (max-width: 700px) {
+  .sv-ledger {
+    padding: 28px 18px;
+  }
+  .sv-ledger-heading {
+    display: block;
+  }
+  .sv-ledger-heading h1 {
+    font-size: 27px;
+  }
+  .sv-ledger-badge {
+    display: inline-block;
+    margin-top: 10px;
+  }
+  .sv-ledger-filters {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .sv-ledger-filters label {
+    min-width: calc(50% - 12px);
+  }
+  .sv-ledger-filters button {
+    width: 100%;
+  }
+  .sv-ledger-metrics {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .sv-ledger-metrics article {
+    padding: 18px;
+  }
+  .sv-ledger-records > footer {
+    align-items: start;
+    flex-direction: column;
+  }
+}

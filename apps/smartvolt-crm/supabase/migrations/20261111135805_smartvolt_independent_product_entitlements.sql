@@ -1,4 +1,37 @@
--- Standalone SmartVolt only. Authoring this migration does not connect or modify a hosted project.
+-- SmartVolt company purchases are independent of company membership and staff roles.
+-- Missing, suspended, future or expired purchases grant no access. No hosted project is changed by authoring this file.
+create table public.sv_company_products(
+ company_id uuid not null references public.sv_companies(id) on delete cascade,
+ product text not null check(product in ('crm','pos')),
+ status text not null default 'active' check(status in ('active','suspended','cancelled')),
+ starts_at timestamptz not null default now(),ends_at timestamptz,
+ updated_at timestamptz not null default now(),
+ primary key(company_id,product),check(ends_at is null or ends_at>starts_at)
+);
+alter table public.sv_company_products enable row level security;
+revoke all on public.sv_company_products from public,anon,authenticated;
+grant all on public.sv_company_products to service_role;
+create policy sv_product_company_member on public.sv_company_products for select to authenticated using(
+ exists(select 1 from public.sv_memberships m join public.sv_companies c on c.id=m.company_id
+ where m.company_id=sv_company_products.company_id and m.user_id=(select auth.uid()) and m.status='active' and c.status='active')
+);
+-- SaaS operator only: a company owner cannot buy/unlock a product by editing a document or a JWT claim.
+create function public.sv_set_company_products(p_company uuid,p_products text[]) returns void
+ language plpgsql security invoker set search_path='' as $$
+begin
+ if p_products is null or exists(select 1 from unnest(p_products) p where p is null or p not in ('crm','pos')) or cardinality(p_products)<>(select count(distinct p) from unnest(p_products) p) then raise exception 'invalid_products';end if;
+ perform 1 from public.sv_companies where id=p_company for update;
+ if not found then raise exception 'company_missing';end if;
+ update public.sv_company_products set status='cancelled',updated_at=now() where company_id=p_company and not(product=any(p_products));
+ insert into public.sv_company_products(company_id,product,status,starts_at,ends_at)
+ select p_company,p,'active',now(),null from unnest(p_products) p
+ on conflict(company_id,product) do update set status='active',starts_at=now(),ends_at=null,updated_at=now();
+end;$$;
+revoke all on function public.sv_set_company_products(uuid,text[]) from public,anon,authenticated;
+grant execute on function public.sv_set_company_products(uuid,text[]) to service_role;
+-- New provisioning must declare the purchased products explicitly. No blanket backfill grants POS.
+drop function public.sv_provision_company(uuid,text,uuid,text,jsonb);
+
 create or replace function public.sv_commit_workspace(p_company uuid, p_actor uuid, p_expected bigint,
  p_command_id uuid, p_payload jsonb, p_kind text) returns jsonb
  language plpgsql security invoker set search_path = '' as $$
@@ -14,6 +47,13 @@ begin
  end if;
  if p_kind not in ('inbox','studio','import','campaign-save','campaign-pause','consent','active-recipient','pos','pos-admin','customer-create') then
   raise exception 'unknown_command';
+ end if;
+ -- Purchases are server-owned and locked for this operation, independently of staff role.
+ perform 1 from public.sv_company_products p where p.company_id=p_company for share;
+ if not exists(select 1 from public.sv_company_products p where p.company_id=p_company
+  and p.status='active' and p.starts_at<=statement_timestamp() and (p.ends_at is null or p.ends_at>statement_timestamp())
+  and (p_kind='customer-create' or p.product=case when p_kind in ('pos','pos-admin') then 'pos' else 'crm' end)) then
+  raise exception 'product_not_purchased';
  end if;
  select * into doc from public.sv_workspaces where company_id=p_company for update;
  if not found then raise exception 'workspace_missing'; end if;
@@ -36,7 +76,8 @@ revoke all on function public.sv_commit_workspace(uuid,uuid,bigint,uuid,jsonb,te
 grant execute on function public.sv_commit_workspace(uuid,uuid,bigint,uuid,jsonb,text) to service_role;
 
 
-create or replace function public.sv_provision_company(p_id uuid,p_name text,p_owner uuid,p_owner_name text,p_payload jsonb)
+
+create or replace function public.sv_provision_company(p_id uuid,p_name text,p_owner uuid,p_owner_name text,p_payload jsonb,p_products text[])
  returns uuid language plpgsql security invoker set search_path = '' as $$
 begin
  if p_payload #>> '{scope,companyId}' is distinct from p_id::text then raise exception 'invalid_company_scope'; end if;
@@ -55,14 +96,15 @@ begin
 (p_id,'pos-classes','班課與週期會員','build','planned','加入班課名額、候補、重複排程、週期扣款與多次數會員；目前提供單次服務預約及預付套票。'),
 (p_id,'pos-retail-stock','商品庫存與成本','finance','planned','目前可記錄零售商品銷售；庫存異動、進貨、成本、供應商及銷貨成本待完成。'),
 (p_id,'pos-acquisition','營運至增長歸因','crm','planned','把來源、預約、到店、首購、退款及回訪事件連成客戶旅程；資料不足時不推算療程 ROAS。');
+ insert into public.sv_system_cards(company_id,id,title,category,status,detail) values (p_id,'product-billing-sync','產品方案與付款狀態同步','admin','planned','營運方登記已購買產品；付款 webhook、續期、寬限期及圖形化授權稽核介面待完成。'),(p_id,'shared-customer-directory','共用客戶資料獨立儲存','build','planned','抽成獨立客戶及品牌關係表、索引與分頁，POS 購買權不依賴 CRM。');
+ perform public.sv_set_company_products(p_id,p_products);
  return p_id;
 end;
 $$;
-revoke all on function public.sv_provision_company(uuid,text,uuid,text,jsonb) from public, anon, authenticated;
-grant execute on function public.sv_provision_company(uuid,text,uuid,text,jsonb) to service_role;
+revoke all on function public.sv_provision_company(uuid,text,uuid,text,jsonb,text[]) from public, anon, authenticated;
+grant execute on function public.sv_provision_company(uuid,text,uuid,text,jsonb,text[]) to service_role;
 
-insert into public.sv_system_cards(company_id,id,title,category,status,detail) select id,'pos-acquiring','POS 收款服務接駁','finance','planned','接駁公司專用收單帳戶、簽名 webhook、交易對帳及退款；目前只作人工核實收款登記。' from public.sv_companies on conflict(company_id,id) do nothing;
-insert into public.sv_system_cards(company_id,id,title,category,status,detail) select id,'pos-ledger','交易帳簿與營運分頁','build','planned','將訂單、付款、退款及套票流水抽成按公司隔離嘅不可變關聯表、約束及索引，完成稽核與恢復演練後先上線真實收款。' from public.sv_companies on conflict(company_id,id) do nothing;
-insert into public.sv_system_cards(company_id,id,title,category,status,detail) select id,'pos-classes','班課與週期會員','build','planned','加入班課名額、候補、重複排程、週期扣款與多次數會員；目前提供單次服務預約及預付套票。' from public.sv_companies on conflict(company_id,id) do nothing;
-insert into public.sv_system_cards(company_id,id,title,category,status,detail) select id,'pos-retail-stock','商品庫存與成本','finance','planned','目前可記錄零售商品銷售；庫存異動、進貨、成本、供應商及銷貨成本待完成。' from public.sv_companies on conflict(company_id,id) do nothing;
-insert into public.sv_system_cards(company_id,id,title,category,status,detail) select id,'pos-acquisition','營運至增長歸因','crm','planned','把來源、預約、到店、首購、退款及回訪事件連成客戶旅程；資料不足時不推算療程 ROAS。' from public.sv_companies on conflict(company_id,id) do nothing;
+insert into public.sv_system_cards(company_id,id,title,category,status,detail) select id,'product-billing-sync','產品方案與付款狀態同步','admin','planned','現時由營運方明確登記 CRM、POS 或兩者；付款供應商 webhook、續期、付款失敗寬限期及授權稽核介面待完成。' from public.sv_companies on conflict(company_id,id) do nothing;
+
+insert into public.sv_system_cards(company_id,id,title,category,status,detail) select id,'shared-customer-directory','共用客戶資料獨立儲存','build','planned','現時以受驗證共用客戶資料接駁 CRM 與 POS；後續抽成獨立客戶及品牌關係表、索引與分頁，POS 購買權不依賴 CRM。' from public.sv_companies on conflict(company_id,id) do nothing;
+

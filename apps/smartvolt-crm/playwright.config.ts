@@ -18,6 +18,7 @@ export default defineConfig({
     url: "http://127.0.0.1:3042",
     reuseExistingServer: false,
     env: {
+      SMARTVOLT_APP_URL: "http://127.0.0.1:3042",
       SMARTVOLT_SUPABASE_URL: "",
       SMARTVOLT_SUPABASE_PUBLISHABLE_KEY: "",
       SMARTVOLT_SUPABASE_SECRET_KEY: "",

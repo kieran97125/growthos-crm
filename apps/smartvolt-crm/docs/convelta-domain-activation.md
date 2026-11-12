@@ -1,12 +1,12 @@
 # Convelta domain activation
 
-Verified 2026-11-12, Hong Kong time. The user has authorized the Convelta website and `convelta.io`. This record distinguishes the hosting setup from registration and production activation. No domain purchase, registrar-contact submission, successful DNS write or application-origin change was performed in this continuation.
+Verified 2026-11-12, Hong Kong time. The user has authorized the Convelta website and `convelta.io`. This record distinguishes the hosting setup from registration and production activation. The initial verification found no purchase or DNS zone; the subsequent user-completed checkout and configuration changes are recorded below.
 
-The user subsequently asked the agent to choose the registrar and open checkout for the user to pay. **Vercel was selected.** The existing signed-in Vercel dashboard's Buy dialog returned `convelta.io` at USD 14.99 for the first year and USD 46/year renewal; selecting it opened Billing Information with the user's existing payment/contact details. The checkout was retained for the user; no final payment was submitted by the agent. This supersedes the earlier unsuccessful billing-page inspection without claiming purchase or enabling renewal.
+The user subsequently asked the agent to choose the registrar and open checkout for the user to pay. **Vercel was selected.** The existing signed-in Vercel dashboard's Buy dialog returned `convelta.io` at USD 14.99 for the first year and USD 46/year renewal; selecting it opened Billing Information with the user's existing payment/contact details. The user completed the payment and Mox verification. The browser displayed "Your domain is ready", and registrar readback confirmed registration and a writable Vercel zone. Auto-renew is off. No payment information or registrant contact is stored here.
 
 ## Prepared domain source
 
-`src/lib/brand.ts` now declares `https://convelta.io` and `https://app.convelta.io`; application metadata uses the configured server origin with the product app origin as its default. `.env.example` documents the exact production canonical origin. The existing strict same-origin check and WhatsApp callback builder already consume `SMARTVOLT_APP_URL`; the production environment will be changed together with the verified domain deployment, rather than weakening that check or changing credentials/cookies. TypeScript and the production build passed for these source changes.
+`src/lib/brand.ts` now declares `https://convelta.io` and `https://app.convelta.io`; application metadata uses the configured server origin with the product app origin as its default. `.env.example` documents the exact production canonical origin. The existing strict same-origin check and WhatsApp callback builder already consume `SMARTVOLT_APP_URL`; the production environment now sets `SMARTVOLT_APP_URL=https://app.convelta.io` for the coordinated production deployment, rather than weakening that check or changing credentials/cookies. TypeScript and the production build passed for these source changes.
 
 The marketing source has been updated together: four application entry links, dynamic product-tab links, canonical URL, Open Graph URL/image, JSON-LD, robots and sitemap. JavaScript syntax, exact target origins, local assets and sitemap XML passed checks. That version is prepared for the post-payment cutover and is not evidence of a working registered domain. No dependency installation was needed for these configuration and link changes.
 
@@ -15,12 +15,12 @@ The marketing source has been updated together: four application entry links, dy
 | Area | Verified state | Evidence |
 | --- | --- | --- |
 | Product website | Public and active | Sites project `appgprj_6af580e396588191bac4a46790d07675`, version 1; https://convelta.kierankwok.chatgpt.site/ |
-| Application | Production READY | Vercel project `smartvolt-crm` / `prj_gGZ6T5HEMjNAdhcZNX0x6scQEFg0`, deployment `dpl_B8eyT7DmxXWDwdTsNep5s5izjqxz`; existing https://smartvolthk.com |
+| Application | New production deployment READY | Vercel project `smartvolt-crm` / `prj_gGZ6T5HEMjNAdhcZNX0x6scQEFg0`, deployment `dpl_DuCbqrCMr2e3tn1v9Y9zsSPpGcuS`, source `6106791ddc7af0254cce9d3f7cc93f0b89eb42e5`. Deployment login HTTP 200 and Convelta title verified; application custom-domain HTTPS remains pending public DNS |
 | Marketing apex | Hosting binding exists; validation pending | Sites domain `appgdom_6af585dc2f18819198f6137c4eb2b51d`; `convelta.io`; SSL `pending_validation` |
-| Application subdomain | Hosting binding exists; DNS absent | `app.convelta.io` is associated with the correct Vercel project; domain configuration reports `misconfigured: true`, with no public A/CNAME values |
-| Registration | Not purchased | Registrar quote reports available; account domain has `boughtAt: null`, no expiry, `serviceType: na` and `zone: false`. Account/project `verified: true` does not prove registry ownership or working DNS |
-| DNS | Not writable yet | No existing records. One attempted ownership TXT preparation returned `400 invalid_zone`; no successful write occurred. Do not repeatedly submit records until registration and authoritative DNS are established |
-| Payment and registrant contact | User checkout opened | Vercel's Buy dialog reached Billing Information with existing payment/contact information. The user is completing checkout; registration/order completion has not been observed |
+| Application subdomain | Production alias and DNS record saved; public propagation pending | `app.convelta.io` is associated with the correct Vercel project; domain configuration reports `misconfigured: true`, with no public A/CNAME values |
+| Registration | Purchased by the user | Registrar `boughtAt: 1794481152000`, `expiresAt: 1826017152000`, `serviceType: zeit.world`, `zone: true`, auto-renew off; checkout success observed |
+| DNS | Required apex/app records written and independently read back; www also prepared | Two marketing-apex A records, two Sites ownership/TLS TXT records and the project-specific app CNAME are present. A www Sites binding and its returned CNAME/TXT records were also created; existing system CAA/ALIAS records retained. Public delegation/certificate propagation remains to verify |
+| Payment and registrant contact | Checkout completed by the user | Success screen and registry state observed; contact/payment data remain outside source control |
 
 The read-only quote was USD 14.99 for one year, with auto-renew **off** in that quote. It is not a purchase authorization token for later use; obtain a fresh quote immediately before an authorized purchase. Taxes/processing fees may be added at charge time; the team default card is used; domain registrations are immediate and non-refundable. Keep contact data, payment data and signed quote tokens out of source control. Reuse the existing buying authorization; obtain only missing purchase choices/contact information. Do not substitute the historic incorporation contact for the user's intended registrar contact.
 
@@ -48,12 +48,12 @@ Do not point the marketing apex to Vercel's generic application A record. Do not
 
 | Card | State | Completion evidence |
 | --- | --- | --- |
-| `brand-domain-registration` | User checkout opened; payment pending | Intended contact reviewed by the user; successful single purchase order and registry readback; required email verification |
-| `brand-domain-code` | Prepared; typecheck/build and website link checks passed | Product origins, metadata and environment example updated; matching app and marketing sources saved before coordinated production activation |
-| `brand-domain-dns` | Blocked on registration and authoritative zone | Exact existing Sites/app bindings retained, current required records written once and independently resolved |
+| `brand-domain-registration` | Registered; contact-verification lifecycle separate | User completed checkout; successful registry readback; any registrar verification email remains subject to the registrar lifecycle |
+| `brand-domain-code` | App released; website version 2 saved for final activation | App source `6106791`, production `dpl_DuCbqrCMr2e3tn1v9Y9zsSPpGcuS` READY. Exact source CI runs `43205005485` and `43205005535` succeeded. Public website version 1 remains live; saved version 2 / source `1d552c5242751cebe45be15f2eb88824f3bae944` contains all new links |
+| `brand-domain-dns` | Records saved; public delegation propagating | Exact existing Sites/app bindings retained and required records independently read back; public authoritative resolution remains to verify |
 | `brand-domain-https` | Blocked on DNS | Sites domain and SSL active; application DNS verification clean; trusted HTTPS on both origins |
 | `brand-domain-app-origin` | Blocked on HTTPS | Canonical application origin, same-origin writes, login/session handling and webhook URL acceptance verified together |
-| `brand-domain-marketing-cutover` | Blocked on application acceptance | Marketing CTAs, canonical, Open Graph, robots and sitemap use verified production origins; public/mobile links checked |
+| `brand-domain-marketing-cutover` | Saved website version 2; blocked on public DNS/HTTPS | Marketing CTAs, canonical, Open Graph, robots and sitemap use verified production origins; public/mobile links checked |
 | `brand-domain-commercial-launch` | Separate | Current product privacy/service disclosures, finalized offer/pricing, live channel acceptance and selected advertising/tracking configuration verified |
 
 ## Activation order
@@ -69,3 +69,15 @@ Do not point the marketing apex to Vercel's generic application A record. Do not
 ## Product Learning Sync checked
 
 Canonical protocol, index and checkpoint were read. Considered `entries/2026-08-10-platform-app-identity-icon-contract.md` and `entries/2026-08-05-production-auth-callback-email-contract.md`; retained the existing neutral identity and canonical-origin acceptance principles. Existing identity review remains on canonical [draft PR #88](https://github.com/kieran97125/leadhub-source-os/pull/88). This continuation records deployment facts and outstanding work; it does not introduce a new Core/Enterprise classification, adopt client implementations or claim a merged checkpoint review. No client data, credentials or configuration cross the product boundary.
+
+## Release acceptance and remaining external propagation
+
+Exact app source passed both hosted workflows, including the existing unit/database and browser acceptance gates. Local typecheck/build and website URL/asset/XML/JavaScript checks also passed. The new production deployment returned login HTTP 200 with the Convelta title; its error/fatal runtime scan returned no logs. The production canonical origin is `https://app.convelta.io`.
+
+At 2026-11-12 19:08 HKT, Vercel public domain configuration still reported the parent `.io` nameservers, no public application A/CNAME and `misconfigured: true`; Sites apex SSL remained `pending_validation`. A new-domain fetch failed while the deployment URL succeeded. These are explicitly different results; neither the hosting alias nor a writable DNS zone is represented as public-domain completion. No unchanged failing fetch is retried until the DNS/certificate state changes.
+
+Final website activation uses already-saved Sites version `appgprj_6af580e396588191bac4a46790d07675~appgver_9db74ca2b5e08191929cdd49caeb9807` (version 2). Verify domain SSL, application hostname and that no newer website release would be overwritten before deploying that version. No additional purchase, credential change, broad origin allowance or access-policy change is needed.
+
+## Temporary deployment follow-through
+
+Temporary task `Automation_0e2f5795083881918066e0402cde937e` / Convelta 網域啟用 retains the authorized post-DNS completion. It checks at most hourly for up to 24 occurrences, performs only the existing saved-version activation after public domain checks, preserves newer releases, notifies only material changes/success and disables itself after completion. It stops with a concrete blocker report after 2026-11-13 19:00 HKT if activation is still unresolved. No further purchase, access-policy change or credentials are authorized by this task.

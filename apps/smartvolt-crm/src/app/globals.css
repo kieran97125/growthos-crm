@@ -1,5 +1,11 @@
 @import "../components/crm/studio/broadcast.css";
 @import "../components/crm/studio/experience.css";
+/* Initial workspace styles must be in the render-blocking layout stylesheet.
+   React.lazy renders the workspace HTML before its client CSS chunk is ready. */
+@import "../components/ui/dialog.css";
+@import "../components/crm/conversations/workspace.css";
+@import "../components/pos/pos.css";
+@import "../components/crm/studio/studio.css";
 * {
   box-sizing: border-box;
 }

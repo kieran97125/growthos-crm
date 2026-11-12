@@ -201,7 +201,13 @@ export function ConversationList({
       </div>
       <footer className="fh-list-footer">
         <ShieldCheck size={12} />
-        <span>{empty ? "獨立 CRM 工作空間" : "全部為虛構示範客戶"}</span>
+        <span>
+          {identity.connected
+            ? "公司專屬工作空間"
+            : empty
+              ? "獨立 CRM 工作空間"
+              : "全部為虛構示範客戶"}
+        </span>
       </footer>
     </section>
   );

@@ -578,7 +578,8 @@ export function ConversationWorkspace({
               })}
             </div>
             <div className="fh-section-label fh-channel-label">
-              通訊渠道 <span>{empty ? "0" : "3"}</span>
+              {identity.connected ? "支援渠道" : "通訊渠道"}{" "}
+              <span>{empty ? "0" : "3"}</span>
             </div>
             <div className="fh-channel-list">
               {Object.entries(channelNames).map(([key, name]) => (
@@ -601,12 +602,15 @@ export function ConversationWorkspace({
               <div className="fh-queue-bottom">
                 <div>
                   <span className="fh-presence-dot" />
-                  團隊在線<span>3</span>
+                  {identity.connected ? "公司成員" : "團隊在線"}
+                  <span>{TEAM.length}</span>
                 </div>
                 <div className="fh-team-stack">
-                  <span>M</span>
-                  <span>I</span>
-                  <span>K</span>
+                  {TEAM.slice(0, 3).map((member) => (
+                    <span key={member.id} title={member.name}>
+                      {member.initials}
+                    </span>
+                  ))}
                   <button
                     onClick={() => setPanel("team")}
                     aria-label="檢視團隊"

@@ -31,10 +31,14 @@ jobs:
       - run: npm run build
       - name: Select and record acceptance browser
         run: bash ../../scripts/select-ci-browser.sh
+      - name: Verify production cold load and refresh
+        run: npm run test:paint
       - run: npm run test:e2e
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
           name: smartvolt-browser-evidence
-          path: apps/smartvolt-crm/test-results/
+          path: |
+            apps/smartvolt-crm/test-results/
+            apps/smartvolt-crm/paint-test-results/
           retention-days: 7

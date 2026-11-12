@@ -1,0 +1,9 @@
+# Workspace rendering on refresh
+
+The user reported a one-second unstyled CRM view after refresh. The production document includes workspace HTML while the complete conversation, POS, studio and dialog styles were owned by React.lazy client modules. The header/global styles could arrive before those modules' stylesheet chunks. This is a stylesheet discovery/first-paint defect, independent of AI or saved company data.
+
+The root layout stylesheet now imports the existing namespaced workspace styles, making them render-blocking initial CSS for the application. Heavy component JavaScript remains lazy. No body-hiding timer, hydration suppression, extra dependency or authentication exception is introduced. The connected workspace also uses its actual company identity for the customer-data label and member avatars/count; supported channels are not labelled as established connections.
+
+The new `test:paint` command uses `next build` + `next start`, because development CSS injection does not exercise production first paint. It deliberately delays stylesheets, samples visible workspace layout on animation frames, and covers CRM/POS desktop/mobile cold navigation and refresh. Existing development interaction/accessibility checks remain separate. Both evidence directories are collected by the existing read-only CI job.
+
+Product Learning Sync checked: the canonical private protocol, index and checkpoint were read fresh. Considered `entries/2026-07-29-connector-readiness-and-identity-boundary.md` (truthful identity/readiness) and `entries/2026-08-10-platform-app-identity-icon-contract.md` (consistent platform identity and refresh evidence). Only neutral presentation/release principles are adopted; no Alyssa runtime, identity, records, domains, prices or credentials are imported. The canonical checkpoint is updated through existing draft PR #88 with the final release evidence.

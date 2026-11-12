@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     id: "/",
     name: BRAND.name,
     short_name: BRAND.name,
-    description: "客戶對話、Flow 自動化、AI 輔助及推播成效工作台。",
+    description: BRAND.description,
     start_url: "/",
     scope: "/",
     display: "standalone",

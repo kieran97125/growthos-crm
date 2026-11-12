@@ -1,6 +1,7 @@
 "use client";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { LockKeyhole } from "lucide-react";
+import { BRAND } from "@/lib/brand";
 import { useDemo } from "@/lib/demo/Provider";
 import { useIdentity } from "@/lib/saas/CompanyProvider";
 import { defaultProduct, type Product } from "@/lib/saas/products";
@@ -51,7 +52,7 @@ export function ProductWorkspace({
   );
   const [crmContext, setCrmContext] = useState<CustomerContext | null>(null);
   useEffect(() => {
-    document.title = `SmartVolt ${product.toUpperCase()} · ${scope.companyName}`;
+    document.title = `${BRAND.name} ${product.toUpperCase()} · ${scope.companyName}`;
   }, [product, scope.companyName]);
   function switchProduct(next: Product, context?: CustomerContext) {
     if (!products.includes(next)) {

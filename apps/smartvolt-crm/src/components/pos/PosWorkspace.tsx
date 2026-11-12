@@ -26,6 +26,7 @@ import {
   X,
 } from "lucide-react";
 import { actionTime } from "@/components/crm/conversations/events";
+import { BRAND } from "@/lib/brand";
 import { useDemo } from "@/lib/demo/Provider";
 import { useIdentity } from "@/lib/saas/CompanyProvider";
 import {
@@ -234,7 +235,9 @@ export default function PosWorkspace({
               <Store size={22} />
             </span>
             <div>
-              <span className="sv-eyebrow">SMARTVOLT · OPERATIONS</span>
+              <span className="sv-eyebrow">
+                {BRAND.name.toUpperCase()} · OPERATIONS
+              </span>
               <h1>POS 營運工作台</h1>
             </div>
             <span className="sv-live-dot">

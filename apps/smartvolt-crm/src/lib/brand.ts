@@ -1,8 +1,12 @@
 /** Platform identity only; client workspace identities belong to their own scope. */
 export const BRAND = {
-  name: "SmartVolt",
-  title: "SmartVolt · CRM 與 POS",
-  auditFilename: "smartvolt-campaign-audit.csv",
+  name: "Convelta",
+  title: "Convelta · AI CRM · Booking · POS",
+  description:
+    "Convelta：串連客戶通訊、預約管理、CRM、POS 與 AI 輔助，讓每段對話接到下一步。",
+  operator: "SmartVolt 智威特",
+  auditFilename: "convelta-campaign-audit.csv",
+  unsavedFilename: "convelta-unsaved-changes.json",
   colors: {
     royal: "#2457e7",
     strong: "#1a43bc",
@@ -24,9 +28,7 @@ export const BRAND_CSS = Object.fromEntries(
   Object.entries(BRAND.colors).map(([key, value]) => [`--kies-${key}`, value]),
 );
 
-/** SmartVolt mark remains inside the central maskable safe area at every size. */
-export const K_MARK = {
-  stem: "M12 10H30V15H17V18H27V30H9V25H22V22H12Z",
-  upper: "M27 9L23 17H29L25 25L34 14H28L31 9Z",
-  lower: "M9 10H12V15H9Z",
+/** Convelta's C and connection point share the icon's central maskable safe area. */
+export const BRAND_MARK = {
+  body: "M28.49 11.51A12 12 0 1 0 28.49 28.49L24.95 24.95A7 7 0 1 1 24.95 15.05Z",
 } as const;

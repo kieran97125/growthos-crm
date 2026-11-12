@@ -1,4 +1,4 @@
-import { BRAND, K_MARK } from "@/lib/brand";
+import { BRAND, BRAND_MARK } from "@/lib/brand";
 
 /** Shared vector for the workspace, browser icon and home-screen identity. */
 export function BrandMark({ size = 40 }: { size?: number }) {
@@ -11,9 +11,8 @@ export function BrandMark({ size = 40 }: { size?: number }) {
       aria-hidden="true"
     >
       <path fill={BRAND.colors.royal} d="M0 0H40V40H0Z" />
-      <path fill="white" d={K_MARK.stem} />
-      <path fill={BRAND.colors.silverLight} d={K_MARK.upper} />
-      <path fill="white" d={K_MARK.lower} />
+      <path fill="white" d={BRAND_MARK.body} />
+      <circle cx="30" cy="20" r="2.5" fill={BRAND.colors.silverLight} />
     </svg>
   );
 }

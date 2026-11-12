@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BrandMark } from "@/components/BrandMark";
+import { BRAND } from "@/lib/brand";
 import { saasConfig } from "@/lib/saas/config";
 import { LoginForm } from "./LoginForm";
 export default function LoginPage() {
@@ -9,7 +10,8 @@ export default function LoginPage() {
         <Link className="sv-brand" href="/">
           <BrandMark />
           <b>
-            SmartVolt<span>CRM</span>
+            {BRAND.name}
+            <span>CRM · Booking · POS</span>
           </b>
         </Link>
         <div className="sv-auth-copy">
@@ -41,7 +43,7 @@ export default function LoginPage() {
             </footer>
           </div>
         </div>
-        <small className="sv-auth-foot">SmartVolt · 智威特</small>
+        <small className="sv-auth-foot">由 {BRAND.operator} 營運</small>
       </section>
       <section className="sv-auth-panel">
         <div>

@@ -1,4 +1,8 @@
-# SmartVolt CRM — independent company SaaS
+# Convelta — independent CRM, Booking and POS by SmartVolt
+
+Brand decision: 2026-11-12. The customer-facing product is **Convelta**, operated by **SmartVolt International Limited／智威特國際有限公司**. The product name, login, CRM/POS surfaces, export filenames and installable-app identity share `src/lib/brand.ts`. Stable internal project, schema, environment, session and preview-storage identifiers retain their original names. Product domains `convelta.io` and `convelta.ai` were found available but have not been purchased or connected.
+
+Product Learning Sync checked (2026-11-12): canonical protocol, index and checkpoint reviewed; `entries/2026-08-10-platform-app-identity-icon-contract.md` considered for the existing identity contract. [Canonical draft PR #88](https://github.com/kieran97125/leadhub-source-os/pull/88) records the review. This release changes product presentation only and imports no client identity or records. See [brand rollout cards](docs/convelta-brand-rollout.md).
 
 Product decision: 2026-11-11. SmartVolt CRM is a standalone company CRM SaaS. KiesTECH is the interaction and visual reference. Customers sign in directly and enter their own company workspace; no Growth OS launcher, other-app entitlement, shared session, cross-app data contract, or external platform database is required.
 

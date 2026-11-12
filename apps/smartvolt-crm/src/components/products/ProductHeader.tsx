@@ -1,6 +1,7 @@
 "use client";
 import { ArrowLeftRight, MessagesSquare, Store } from "lucide-react";
 import { BrandMark } from "@/components/BrandMark";
+import { BRAND } from "@/lib/brand";
 import { useIdentity } from "@/lib/saas/CompanyProvider";
 import type { Product } from "@/lib/saas/products";
 export type CustomerContext = {
@@ -27,14 +28,12 @@ export function ProductHeader({
             ? `/company/${identity.scope.companyId}/${product}`
             : `/preview/${product}?plan=${identity.products.length === 2 ? "both" : (identity.products[0] ?? "none")}`
         }
-        aria-label={`SmartVolt ${product.toUpperCase()}`}
+        aria-label={`${BRAND.name} ${product.toUpperCase()}`}
       >
         <span>
           <BrandMark />
         </span>
-        <strong>
-          Smart<span>Volt</span>
-        </strong>
+        <strong>{BRAND.name}</strong>
       </a>
       <span className={`sv-current-product is-${product}`}>
         {product === "crm" ? <MessagesSquare size={16} /> : <Store size={16} />}

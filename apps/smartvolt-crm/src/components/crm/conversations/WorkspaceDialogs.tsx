@@ -1,5 +1,6 @@
 "use client";
 import { useIdentity } from "@/lib/saas/CompanyProvider";
+import { BRAND } from "@/lib/brand";
 import { useState } from "react";
 import {
   QUICK_REPLIES,
@@ -66,7 +67,7 @@ export function WorkspaceDialogs({
       {panel === "guide" && (
         <Modal
           title="由一個對話開始試用"
-          subtitle="SmartVolt · 客戶對話工作台"
+          subtitle={`${BRAND.name} · 客戶對話工作台`}
           onClose={() => setPanel(null)}
         >
           <div className="fh-guide">
@@ -584,8 +585,8 @@ export function WorkspaceDialogs({
           title="工作空間設定"
           subtitle={
             identity.connected
-              ? "SmartVolt · 公司工作空間"
-              : "SmartVolt · 獨立示範環境"
+              ? `${BRAND.name} · 公司工作空間`
+              : `${BRAND.name} · 獨立示範環境`
           }
           onClose={() => setPanel(null)}
         >

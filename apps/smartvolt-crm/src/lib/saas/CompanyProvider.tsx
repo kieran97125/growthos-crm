@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { BRAND } from "@/lib/brand";
 import { createContext, useContext, useState, type ReactNode } from "react";
 import { WorkspaceContext, useDemo, type Snapshot } from "@/lib/demo/Provider";
 import {
@@ -184,7 +185,7 @@ function createCompanyStore(
       const link = document.createElement("a"),
         url = URL.createObjectURL(file);
       link.href = url;
-      link.download = "smartvolt-unsaved-changes.json";
+      link.download = BRAND.unsavedFilename;
       link.click();
       URL.revokeObjectURL(url);
     },

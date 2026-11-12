@@ -25,7 +25,9 @@ export function classifyAIError(error: unknown): AIErrorCode {
   }
   const text = pieces.join(" ");
   if (
-    /customer_verification_required|verify.*payment|payment.*verif/i.test(text)
+    /customer_verification_required|verify.*payment|payment.*verif|valid credit card/i.test(
+      text,
+    )
   )
     return "verification_required";
   if (/insufficient_funds|insufficient.*credit|402.*balance/i.test(text))

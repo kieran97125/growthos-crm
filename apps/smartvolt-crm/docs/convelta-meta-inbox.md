@@ -34,3 +34,9 @@ The automated suite covers signature/account boundaries, duplicate event ingesti
 Product Learning Sync checked: canonical protocol, index and checkpoint were read, together with `entries/2026-07-16-alyssa-crm-operations-extraction.md`, `entries/2026-07-26-whatsapp-broadcast-operations-boundary.md`, `entries/2026-07-29-connector-readiness-and-identity-boundary.md` and `entries/2026-08-10-platform-app-identity-icon-contract.md`. Only neutral isolation, readiness/evidence and identity principles apply. Provider payload handling is a new Convelta implementation checked against primary Meta protocol references. No Alyssa runtime, client identity, data, prices or secrets were imported. Canonical checkpoint review remains in draft PR #88.
 
 No dependency was added: the installed Next.js, Zod, Supabase client, Node cryptography, PGlite, Playwright and axe tooling cover the implementation and verification.
+
+## Hosted migration and public hosting
+
+The source migration was created with the Supabase CLI before the hosted apply operation. The hosted operation assigned authoritative version `20261112123549`; the existing SQL file is aligned to that version with its bytes unchanged. This keeps future migration history comparisons consistent.
+
+The original website publication on ChatGPT Sites did not provide reliable access to all visitors: the user supplied a Cloudflare block page naming chatgpt.site. The same static bright-yellow build was moved to a dedicated Vercel project (`convelta-website`), production deployment `dpl_EpK258EUsjruyQMbgAtfB6Ve1SUT`. Apex and www now route to Vercel; www redirects to the canonical apex. Anonymous HTTPS checks return 200 and an x-vercel-id. The app subdomain and its existing security boundaries remain separate.

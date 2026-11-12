@@ -22,7 +22,14 @@ test.beforeAll(async () => {
     platform: "browser",
     format: "iife",
     jsx: "automatic",
-    define: { "process.env.NODE_ENV": JSON.stringify("test") },
+    // Next normally replaces these client constants at build time. This harness
+    // bundles the real component outside Next, so provide that browser boundary.
+    define: {
+      "process.env": JSON.stringify({
+        NODE_ENV: "test",
+        __NEXT_ROUTER_BASEPATH: "",
+      }),
+    },
   });
   bundle = built.outputFiles[0].text;
 });

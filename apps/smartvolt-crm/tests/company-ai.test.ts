@@ -155,6 +155,14 @@ test("AI SDK produces and validates a structured company answer using bounded mo
 });
 test("billing and authentication failures expose actionable categories without raw provider details", () => {
   assert.equal(
+    classifyAIError(
+      new Error(
+        "Free tier users do not have access to this model. Upgrade to paid credits.",
+      ),
+    ),
+    "paid_credits_required",
+  );
+  assert.equal(
     classifyAIError(new Error("Gateway requires a valid credit card on file")),
     "verification_required",
   );

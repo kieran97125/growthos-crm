@@ -1,6 +1,7 @@
 export type AIErrorCode =
   | "verification_required"
   | "credits_required"
+  | "paid_credits_required"
   | "budget_exhausted"
   | "authentication"
   | "rate_limited"
@@ -8,6 +9,8 @@ export type AIErrorCode =
 export const aiErrors: Record<AIErrorCode, string> = {
   verification_required: "Vercel 需要先驗證帳戶付款方式，先可以使用 AI 模型。",
   credits_required: "Vercel AI Gateway 額度不足，需要先補充額度。",
+  paid_credits_required:
+    "此模型需要 Vercel AI Gateway 付費額度，現有免費額度未能啟用。",
   budget_exhausted: "AI 用量已達平台預算上限，請由營運方核對。",
   authentication: "AI 平台身份驗證未通過，請由營運方修正連線。",
   rate_limited: "模型暫時繁忙，請稍後再試；本次未有發送任何客戶訊息。",
@@ -24,6 +27,8 @@ export function classifyAIError(error: unknown): AIErrorCode {
     current = e.cause;
   }
   const text = pieces.join(" ");
+  if (/free tier users do not have access|upgrade to paid credits/i.test(text))
+    return "paid_credits_required";
   if (
     /customer_verification_required|verify.*payment|payment.*verif|valid credit card/i.test(
       text,

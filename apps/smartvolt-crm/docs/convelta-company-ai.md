@@ -37,3 +37,9 @@ Local unit/database checks cover authority injection, cross-tenant scope, role/p
 No package was added: installed AI SDK, Supabase, Zod, Lucide, PGlite, Playwright, axe and Next tooling are used. Channel authorization and actual inbound/outbound acceptance remain tracked separately. Automatic replies and tool actions are not activated by this phase.
 
 Product Learning Sync checked: canonical private protocol, index and checkpoint were read. Considered `entries/2026-07-16-alyssa-crm-operations-extraction.md` (neutral CRM context/ownership), `entries/2026-07-26-whatsapp-broadcast-operations-boundary.md` (independent execution and consent boundary) and `entries/2026-07-29-connector-readiness-and-identity-boundary.md` (truthful readiness and server authorization). Only those neutral principles are adopted; no Alyssa runtime, client identity, records, prices, domains, tokens or legal information is imported. The canonical review checkpoint is updated through existing draft PR #88.
+
+## Verified model-access blocker
+
+The staged diagnostic returned HTTP 403 from AI Gateway: the team's free tier does not have access to the selected model and purchased credits are required. This is distinct from a missing API key, an empty balance or Meta verification. The service exposes `paid_credits_required` with an actionable message, never a simulated answer. No credits, subscription, auto-top-up, paid data control or broader connector permission was purchased/enabled. A later successful staff request records real readiness automatically after funding.
+
+The first complete integration candidate passed CI type/lint/build, 184 unit/database checks and all 63 browser checks. The explicit provider-access response remains the authoritative activation state until a successful live grounded request is observed.

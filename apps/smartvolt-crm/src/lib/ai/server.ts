@@ -329,5 +329,28 @@ export async function prepareCompanyAnswer(raw: unknown) {
     p_output: outputTokens,
   });
   dbError(completed.error);
+  // A successful real request also confirms readiness after an operator tops
+  // up credits; no redeploy or public diagnostic endpoint is needed.
+  if (
+    !errorCode ||
+    [
+      "verification_required",
+      "credits_required",
+      "paid_credits_required",
+      "authentication",
+      "budget_exhausted",
+    ].includes(errorCode)
+  ) {
+    const health = await a.db
+      .from("sv_ai_runtime")
+      .upsert({
+        id: "platform",
+        model,
+        status: errorCode ? "blocked" : "ready",
+        error_code: errorCode,
+        checked_at: new Date().toISOString(),
+      });
+    if (health.error) console.error("company_ai_health_write_failed");
+  }
   return savedResult(completed.data);
 }

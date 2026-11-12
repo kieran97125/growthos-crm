@@ -40,3 +40,5 @@ No dependency was added: the installed Next.js, Zod, Supabase client, Node crypt
 The source migration was created with the Supabase CLI before the hosted apply operation. The hosted operation assigned authoritative version `20261112123549`; the existing SQL file is aligned to that version with its bytes unchanged. This keeps future migration history comparisons consistent.
 
 The original website publication on ChatGPT Sites did not provide reliable access to all visitors: the user supplied a Cloudflare block page naming chatgpt.site. The same static bright-yellow build was moved to a dedicated Vercel project (`convelta-website`), production deployment `dpl_EpK258EUsjruyQMbgAtfB6Ve1SUT`. Apex and www now route to Vercel; www redirects to the canonical apex. Anonymous HTTPS checks return 200 and an x-vercel-id. The app subdomain and its existing security boundaries remain separate.
+
+The latest approved identity supersedes the yellow exploration: website, CRM and POS share blue `#2457E7`, ink `#15233B`, white and pale blue. Full product screenshots remain removed. This is an identity change, not provider activation.

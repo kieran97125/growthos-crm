@@ -16,6 +16,7 @@ import {
   signatureValid,
 } from "./protocol";
 import { inspectPage, sendMetaText, MetaGraphError } from "./graph";
+import { inboxQuerySchema, threadOperationsSchema } from "./operations";
 const uuid = z.uuid();
 const bodySchema = z
   .string()
@@ -54,6 +55,15 @@ export const metaAction = z.discriminatedUnion("action", [
     .object({ action: z.literal("note"), threadId: uuid, body: bodySchema })
     .strict(),
   z.object({ action: z.literal("disable"), connectionId: uuid }).strict(),
+  z
+    .object({
+      action: z.literal("manage"),
+      threadId: uuid,
+      commandId: uuid,
+      revision: z.number().int().nonnegative(),
+      data: threadOperationsSchema,
+    })
+    .strict(),
 ]);
 function key() {
   return Buffer.from(
@@ -86,6 +96,13 @@ function check(error: { code?: string; message?: string } | null) {
   if (!error) return;
   if (/meta_(access|product|brand|connection)/.test(error.message ?? ""))
     throw new AccessError("你無權操作此公司或通訊連接。", 403);
+  if (/meta_assignee_invalid/.test(error.message ?? ""))
+    throw new AccessError(
+      "負責人必須係公司內有操作權限嘅在職同事，請重新分派。",
+      409,
+    );
+  if (/meta_operations_invalid|meta_query_invalid/.test(error.message ?? ""))
+    throw new AccessError("跟進資料未通過驗證，改動未有儲存。", 400);
   if (/meta_window/.test(error.message ?? ""))
     throw new AccessError(
       "客戶服務時限已過，請於原生平台核對可用聯絡方式。",
@@ -115,6 +132,7 @@ export async function readMeta(
   companyId: string,
   threadId?: string,
   before?: string,
+  filters: unknown = {},
 ) {
   const a = await access(companyId);
   if (threadId) {
@@ -122,7 +140,7 @@ export async function readMeta(
     const thread = await a.db
       .from("sv_meta_threads")
       .select(
-        "id,revision,last_inbound_at,status,read_seq,connection_id,peer_id",
+        "id,revision,last_inbound_at,status,read_seq,connection_id,peer_id,customer_name,assignee_id,priority,follow_up_at,next_step",
       )
       .eq("company_id", companyId)
       .eq("id", threadId)
@@ -153,7 +171,17 @@ export async function readMeta(
       .order("provider_at", { ascending: false })
       .limit(20);
     check(sources.error);
+    const activity = await a.db
+      .from("sv_meta_thread_activity")
+      .select("command_id,actor_name,created_at,previous,next")
+      .eq("company_id", companyId)
+      .eq("thread_id", threadId)
+      .order("created_at", { ascending: false })
+      .order("command_id", { ascending: false })
+      .limit(20);
+    check(activity.error);
     return {
+      activity: activity.data ?? [],
       thread: thread.data,
       sources: (sources.data ?? []).map((e) => ({
         at: e.provider_at,
@@ -172,36 +200,42 @@ export async function readMeta(
     .eq("company_id", companyId)
     .order("created_at");
   check(connections.error);
-  let q = a.db
-    .from("sv_meta_thread_summaries")
-    .select(
-      "id,connection_id,peer_id,revision,last_inbound_at,updated_at,status,read_seq,unread_count",
-    )
-    .eq("company_id", companyId)
-    .order("updated_at", { ascending: false })
-    .order("id", { ascending: false })
-    .limit(101);
-  // Stable keyset by last-updated time plus UUID; refresh restarts from the newest page.
+  const filter = inboxQuerySchema.parse(filters);
+  let cursor: { at: string; id: string } | null = null;
   if (before) {
     if (!/^[A-Za-z0-9_-]{1,512}$/.test(before))
       throw new AccessError("分頁資料不正確。", 400);
-    let decoded: unknown;
     try {
-      decoded = JSON.parse(Buffer.from(before, "base64url").toString());
+      cursor = z
+        .object({ at: z.iso.datetime({ offset: true }), id: uuid })
+        .parse(JSON.parse(Buffer.from(before, "base64url").toString()));
     } catch {
       throw new AccessError("分頁資料不正確。", 400);
     }
-    const cursor = z
-      .object({ at: z.iso.datetime({ offset: true }), id: uuid })
-      .safeParse(decoded);
-    if (!cursor.success) throw new AccessError("分頁資料不正確。", 400);
-    q = q.or(
-      `updated_at.lt.${cursor.data.at},and(updated_at.eq.${cursor.data.at},id.lt.${cursor.data.id})`,
-    );
   }
-  const threads = await q;
+  const [threads, members] = await Promise.all([
+    a.db.rpc("sv_meta_inbox_list", {
+      p_company: companyId,
+      p_actor: a.user.id,
+      p_queue: filter.queue,
+      p_channel: filter.channel,
+      p_search: filter.search,
+      p_before: cursor?.at ?? null,
+      p_before_id: cursor?.id ?? null,
+    }),
+    a.db
+      .from("sv_memberships")
+      .select("user_id,display_name")
+      .eq("company_id", companyId)
+      .eq("status", "active")
+      .neq("role", "viewer")
+      .order("display_name"),
+  ]);
   check(threads.error);
-  const rows = (threads.data ?? []).slice(0, 100),
+  check(members.error);
+  const allRows: { id: string; updated_at: string }[] =
+    threads.data?.threads ?? [];
+  const rows = allRows.slice(0, 100),
     last = rows.at(-1);
   const blockers: string[] = [];
   try {
@@ -227,13 +261,16 @@ export async function readMeta(
   const owner = a.actor.role === "owner";
   return {
     companyName: a.company.name,
+    actorId: a.user.id,
+    members: members.data ?? [],
+    counts: threads.data?.counts ?? {},
     canSend: a.actor.role !== "viewer",
     canManage: owner,
     brands,
     connections: connections.data ?? [],
     threads: rows,
     nextCursor:
-      (threads.data?.length ?? 0) > 100 && last
+      allRows.length > 100 && last
         ? Buffer.from(
             JSON.stringify({ at: last.updated_at, id: last.id }),
           ).toString("base64url")
@@ -310,6 +347,18 @@ export async function actMeta(companyId: string, input: unknown) {
     });
     check(changed.error);
     return { disabled: true };
+  }
+  if (data.action === "manage") {
+    const result = await a.db.rpc("sv_meta_manage_thread", {
+      p_company: companyId,
+      p_actor: a.user.id,
+      p_thread: data.threadId,
+      p_command: data.commandId,
+      p_expected: data.revision,
+      p_data: data.data,
+    });
+    check(result.error);
+    return result.data;
   }
   if (data.action !== "send") {
     const result = await a.db.rpc("sv_meta_command", {

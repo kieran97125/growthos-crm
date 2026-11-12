@@ -456,3 +456,189 @@ test("read horizon never consumes a later unseen message and referrals alone nev
     false,
   );
 });
+
+const followup = {
+  customer_name: "Synthetic inquiry",
+  assignee_id: owner,
+  priority: "urgent",
+  follow_up_at: "2026-01-01T00:00:00Z",
+  next_step: "確認需求後安排示範",
+  status: "open",
+};
+async function manage(
+  data: object,
+  command = randomUUID(),
+  expected?: number,
+  actor = owner,
+  target = company,
+  targetThread?: string,
+) {
+  return result<{ saved: boolean; replayed: boolean }>(
+    "select public.sv_meta_manage_thread($1,$2,$3,$4,$5,$6::jsonb) value",
+    [
+      target,
+      actor,
+      targetThread ?? thread,
+      command,
+      expected ?? (await revision()),
+      JSON.stringify(data),
+    ],
+  );
+}
+async function list(
+  queue = "all",
+  channel = "all",
+  search = "",
+  before?: { updated_at: string; id: string },
+  target = company,
+  actor = owner,
+) {
+  return result<{
+    threads: Record<string, unknown>[];
+    counts: Record<string, number>;
+  }>("select public.sv_meta_inbox_list($1,$2,$3,$4,$5,$6,$7) value", [
+    target,
+    actor,
+    queue,
+    channel,
+    search,
+    before?.updated_at ?? null,
+    before?.id ?? null,
+  ]);
+}
+test("operational handover is tenant-bound, revision-checked, durable and replay-safe", async () => {
+  const command = randomUUID(),
+    expected = await revision();
+  assert.equal((await manage(followup, command, expected)).replayed, false);
+  assert.equal((await manage(followup, command, expected)).replayed, true);
+  assert.equal(await revision(), expected + 1);
+  const receipt = await one(
+    "select previous,next,actor_name from public.sv_meta_thread_activity where command_id=$1",
+    [command],
+  );
+  assert.equal((receipt.next as typeof followup).next_step, followup.next_step);
+  assert.equal(receipt.actor_name, "Owner");
+  await assert.rejects(
+    () => manage({ ...followup, next_step: "different" }, command, expected),
+    /meta_idempotency_conflict/,
+  );
+  await assert.rejects(
+    () => manage(followup, randomUUID(), expected),
+    /meta_revision_conflict/,
+  );
+  await assert.rejects(
+    () => manage(followup, randomUUID(), undefined, viewer),
+    /meta_access_denied/,
+  );
+  await assert.rejects(() =>
+    manage(followup, randomUUID(), undefined, outsider, foreign),
+  );
+  await assert.rejects(
+    () => manage(followup, randomUUID(), undefined, owner, pos),
+    /meta_product_required/,
+  );
+  await assert.rejects(
+    () => manage({ ...followup, assignee_id: outsider }),
+    /meta_assignee_invalid/,
+  );
+  await assert.rejects(
+    () => manage({ ...followup, assignee_id: viewer }),
+    /meta_assignee_invalid/,
+  );
+  await assert.rejects(
+    () => manage({ ...followup, next_step: "x".repeat(501) }),
+    /meta_operations_invalid/,
+  );
+  await assert.rejects(
+    () => manage({ ...followup, follow_up_at: "infinity" }),
+    /meta_operations_invalid/,
+  );
+  await assert.rejects(() =>
+    db.exec("update public.sv_meta_thread_activity set actor_name='rewritten'"),
+  );
+  await assert.rejects(() =>
+    db.exec("delete from public.sv_meta_thread_activity"),
+  );
+  assert.equal(
+    (await one("select count(*)::int n from public.sv_meta_thread_activity")).n,
+    1,
+  );
+});
+test("complete-dataset queues and literal search run before keyset pagination", async () => {
+  await db.query(
+    "insert into public.sv_meta_threads(company_id,connection_id,peer_id,customer_name,updated_at) select $1,$2,(40000+n)::text,'Older inquiry '||n,'2026-01-01'::timestamptz from generate_series(1,104)n",
+    [company, connection],
+  );
+  const first = await list();
+  assert.equal(first.threads.length, 101);
+  assert.equal(first.counts.all, 105);
+  const cursor = first.threads[99] as { updated_at: string; id: string };
+  const second = await list("all", "all", "", cursor);
+  assert.equal(second.threads.length, 5);
+  assert.equal(
+    second.threads.some((t) =>
+      first.threads.slice(0, 100).some((f) => f.id === t.id),
+    ),
+    false,
+  );
+  assert.equal((await list("mine")).counts.mine, 1);
+  assert.equal((await list("overdue")).threads[0].id, thread);
+  assert.equal((await list("priority")).threads[0].id, thread);
+  assert.equal((await list("unassigned")).counts.unassigned, 104);
+  assert.equal((await list("all", "instagram")).threads.length, 0);
+  assert.equal(
+    (await list("all", "all", "Older inquiry 104")).threads.length,
+    1,
+  );
+  assert.equal((await list("all", "all", "%")).threads.length, 0);
+  assert.equal(
+    (await list("all", "all", "", undefined, foreign, outsider)).threads.length,
+    0,
+  );
+  assert.equal(
+    (await list("all", "all", "", undefined, company, viewer)).counts.all,
+    105,
+  );
+  await assert.rejects(
+    () => list("all", "all", "", undefined, company, outsider),
+    /meta_access_denied/,
+  );
+  await assert.rejects(() => list("unsupported"), /meta_query_invalid/);
+  const current = await revision();
+  await manage({ ...followup, status: "resolved" });
+  assert.equal((await list("overdue")).threads.length, 0);
+  assert.equal((await list("resolved")).threads[0].id, thread);
+  // A status change invalidates a simultaneous handover from another browser.
+  await assert.rejects(
+    () => manage(followup, randomUUID(), current),
+    /meta_revision_conflict/,
+  );
+});
+test("former assignees return to unassigned and immutable receipts remain confirmable", async () => {
+  await db.query(
+    "insert into public.sv_memberships(company_id,user_id,role,display_name)values($1,$2,'agent','Synthetic agent')",
+    [company, outsider],
+  );
+  const command = randomUUID(),
+    expected = await revision(),
+    data = { ...followup, assignee_id: outsider };
+  await manage(data, command, expected);
+  await db.query(
+    "update public.sv_memberships set status='suspended' where company_id=$1 and user_id=$2",
+    [company, outsider],
+  );
+  assert.equal((await list("unassigned")).counts.unassigned, 105);
+  assert.equal((await manage(data, command, expected)).replayed, true);
+  await assert.rejects(() => manage(data), /meta_assignee_invalid/);
+  await manage({ ...data, assignee_id: null });
+  assert.equal((await list("unassigned")).counts.unassigned, 105);
+  for (const role of ["anon", "authenticated"]) {
+    await db.exec("reset role;set role " + role);
+    await assert.rejects(() =>
+      db.exec("select * from public.sv_meta_thread_activity"),
+    );
+    await assert.rejects(() => list());
+    await assert.rejects(() => manage(followup, randomUUID(), 0));
+  }
+  await db.exec("reset role;set role service_role");
+});

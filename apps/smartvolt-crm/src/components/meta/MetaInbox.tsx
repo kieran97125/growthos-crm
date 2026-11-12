@@ -3,6 +3,16 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BRAND } from "@/lib/brand";
 import type { MetaChannel } from "@/lib/meta/protocol";
+import {
+  inboxQueues,
+  operationsOf,
+  priorityNames,
+  type InboxQueue,
+  type InboxMember,
+  type ThreadOperations,
+  type ThreadActivity,
+} from "@/lib/meta/operations";
+import ThreadOperationsPanel, { type OperationDraft } from "./ThreadOperations";
 type Connection = {
   id: string;
   brand_id: string;
@@ -13,14 +23,14 @@ type Connection = {
   account_id: string;
   last_inbound_at: number | null;
 };
-type Thread = {
+type Thread = ThreadOperations & {
   unread_count?: number;
   id: string;
   connection_id: string;
   peer_id: string;
   revision: number;
   last_inbound_at: number | null;
-  status: string;
+  assignee_active?: boolean;
 };
 type Message = {
   id: string;
@@ -36,6 +46,9 @@ type Message = {
 };
 type Overview = {
   companyName: string;
+  actorId: string;
+  members: InboxMember[];
+  counts: Partial<Record<InboxQueue, number>>;
   canSend: boolean;
   canManage: boolean;
   brands: { id: string; name: string }[];
@@ -50,6 +63,7 @@ type Overview = {
   };
 };
 type Detail = {
+  activity?: ThreadActivity[];
   sources?: { at: number; adId: string | null }[];
   thread: Thread;
   messages: Message[];
@@ -88,7 +102,13 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
     [note, setNote] = useState(false),
     [pendingThread, setPendingThread] = useState<string | null>(null),
     [channel, setChannel] = useState("all"),
-    [now, setNow] = useState(0);
+    [queue, setQueue] = useState<InboxQueue>("all"),
+    [search, setSearch] = useState(""),
+    [searchInput, setSearchInput] = useState(""),
+    [now, setNow] = useState(0),
+    [operationCache, setOperationCache] = useState<
+      Record<string, OperationDraft | undefined>
+    >({});
   const selection = useRef<string | null>(null),
     pending = useRef<{
       clientId: string;
@@ -97,6 +117,10 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
       revision: number;
     } | null>(null),
     drafts = useRef<Record<string, string>>({});
+  const query = new URLSearchParams({ channel, queue, search }).toString();
+  const view = useRef(query);
+  const [loadedQuery, setLoadedQuery] = useState("");
+  const displayedOverview = loadedQuery === query ? overview : null;
   const request = useCallback(
     async <T,>(
       query = "",
@@ -111,7 +135,10 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
         signal,
       });
       const value = await res.json();
-      if (!res.ok) throw new Error(value.error ?? "暫時未能讀取收件匣。");
+      if (!res.ok)
+        throw Object.assign(new Error(value.error ?? "暫時未能讀取收件匣。"), {
+          status: res.status,
+        });
       return value as T;
     },
     [endpoint],
@@ -120,25 +147,16 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
     async (signal?: AbortSignal) => {
       const id = selection.current;
       const [o, d] = await Promise.all([
-        request<Overview>("", undefined, signal),
+        request<Overview>(`?${query}`, undefined, signal),
         id
           ? request<Detail>(`?thread=${id}`, undefined, signal)
           : Promise.resolve(null),
       ]);
-      setOverview((current) =>
-        current && current.threads.length > 100
-          ? {
-              ...o,
-              threads: [
-                ...o.threads,
-                ...current.threads.filter(
-                  (t) => !o.threads.some((n) => n.id === t.id),
-                ),
-              ],
-              nextCursor: current.nextCursor,
-            }
-          : o,
-      );
+      if (signal?.aborted || view.current !== query) return;
+      setLoadedQuery(query);
+      // A refreshed filtered queue always starts from the newest page. Old pages
+      // cannot retain conversations which no longer match ownership or status.
+      setOverview(o);
       if (selection.current === id)
         setDetail((current) => {
           if (!current || !d || current.thread.id !== d.thread.id) return d;
@@ -157,9 +175,10 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
         });
       setNow(Date.now());
     },
-    [request],
+    [request, query],
   );
   useEffect(() => {
+    view.current = query;
     const controller = new AbortController();
     let active = true,
       working = false;
@@ -186,7 +205,7 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
       clearInterval(timer);
       controller.abort();
     };
-  }, [refresh]);
+  }, [refresh, query]);
   async function selectThread(id: string) {
     if (busy) return;
     if (selection.current) drafts.current[selection.current] = draft;
@@ -220,6 +239,37 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
       await refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "操作未完成。");
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function saveOperations(
+    data: Parameters<
+      React.ComponentProps<typeof ThreadOperationsPanel>["onSave"]
+    >[0],
+  ) {
+    if (busy) return false;
+    setBusy(true);
+    setError("");
+    try {
+      await request("", data);
+      setNotice("跟進資料已儲存，交接記錄已更新。");
+      await refresh();
+      return true;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "儲存結果未確認，請核對。");
+      if (
+        e &&
+        typeof e === "object" &&
+        "status" in e &&
+        typeof e.status === "number" &&
+        e.status < 500
+      ) {
+        // Load the winning revision without discarding the local handover draft.
+        await refresh().catch(() => {});
+        return false;
+      }
+      return undefined;
     } finally {
       setBusy(false);
     }
@@ -329,13 +379,7 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
       (m) => m.state === "sending" || m.state === "uncertain",
     ),
     max = note ? 2000 : connection?.channel === "instagram" ? 1000 : 2000;
-  const threads =
-    overview?.threads.filter(
-      (t) =>
-        channel === "all" ||
-        overview.connections.find((c) => c.id === t.connection_id)?.channel ===
-          channel,
-    ) ?? [];
+  const threads = displayedOverview?.threads ?? [];
   return (
     <main className="meta-workspace">
       <header className="meta-header">
@@ -532,11 +576,30 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
               ))}
             </div>
           )}
-          <div className="meta-columns">
+          <nav className="meta-queues" aria-label="查詢工作清單">
+            {Object.entries(inboxQueues).map(([key, label]) => (
+              <button
+                key={key}
+                aria-pressed={queue === key}
+                disabled={busy}
+                onClick={() => setQueue(key as InboxQueue)}
+              >
+                {label}
+                <span>
+                  {displayedOverview?.counts?.[key as InboxQueue] ?? "—"}
+                </span>
+              </button>
+            ))}
+          </nav>
+          <div
+            className={`meta-columns ${detail ? "has-detail" : ""}`}
+            aria-busy={busy}
+          >
             <aside className="meta-threads">
               <div className="meta-list-title">
                 <h1>客戶查詢</h1>
                 <select
+                  disabled={busy}
                   aria-label="篩選渠道"
                   value={channel}
                   onChange={(e) => setChannel(e.target.value)}
@@ -546,15 +609,44 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
                   <option value="instagram">Instagram</option>
                 </select>
               </div>
+              <form
+                className="meta-search"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  setSearch(searchInput.trim());
+                }}
+              >
+                <label className="meta-sr" htmlFor="meta-search">
+                  搜尋客戶名稱或平台帳戶 ID
+                </label>
+                <input
+                  id="meta-search"
+                  type="search"
+                  maxLength={100}
+                  value={searchInput}
+                  placeholder="搜尋客戶名稱或帳戶 ID"
+                  disabled={busy}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                />
+                <button disabled={busy}>搜尋</button>
+              </form>
               {!threads.length ? (
                 <div className="meta-empty">
                   <span>↗</span>
                   <h2>
-                    {overview?.connections.length
-                      ? "等候第一則真實查詢"
-                      : "先連接品牌渠道"}
+                    {loadedQuery !== query
+                      ? "正在更新工作清單…"
+                      : !overview?.connections.length
+                        ? "先連接品牌渠道"
+                        : queue !== "all" || search || channel !== "all"
+                          ? "呢個清單暫時冇查詢"
+                          : "等候第一則真實查詢"}
                   </h2>
-                  <p>接駁並收到 Meta 訊息後，客戶查詢會出現喺呢度。</p>
+                  <p>
+                    {queue !== "all" || search || channel !== "all"
+                      ? "可以轉換清單、渠道或搜尋條件，查看其他查詢。"
+                      : "接駁並收到 Meta 訊息後，客戶查詢會出現喺呢度。"}
+                  </p>
                 </div>
               ) : (
                 threads.map((t) => {
@@ -573,13 +665,32 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
                       </span>
                       <span>
                         <b>
-                          客戶 · {t.peer_id.slice(-8)}{" "}
+                          {t.customer_name || `客戶 · ${t.peer_id.slice(-8)}`}{" "}
                           {t.unread_count ? `（${t.unread_count} 未讀）` : ""}
                         </b>
                         <small>
                           {c?.label} ·{" "}
                           {t.status === "resolved" ? "已處理" : "跟進中"}
                         </small>
+                        <small className="meta-thread-owner">
+                          {overview?.members?.find(
+                            (m) => m.user_id === t.assignee_id,
+                          )?.display_name ?? "待分派"}
+                          {t.priority && t.priority !== "normal"
+                            ? ` · ${priorityNames[t.priority]}`
+                            : ""}
+                        </small>
+                        {t.follow_up_at && t.status === "open" && (
+                          <small
+                            className={
+                              new Date(t.follow_up_at).getTime() <= now
+                                ? "meta-due"
+                                : ""
+                            }
+                          >
+                            跟進 · {date(t.follow_up_at)}
+                          </small>
+                        )}
                         <small>
                           {t.last_inbound_at
                             ? date(t.last_inbound_at)
@@ -590,25 +701,32 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
                   );
                 })
               )}
-              {overview?.nextCursor && (
+              {displayedOverview?.nextCursor && (
                 <button
                   className="meta-load"
+                  disabled={busy}
                   onClick={async () => {
+                    setBusy(true);
                     try {
                       const more = await request<Overview>(
-                        `?before=${overview.nextCursor}`,
+                        `?${query}&before=${displayedOverview.nextCursor}`,
                       );
                       setOverview({
                         ...more,
                         threads: [
-                          ...overview.threads,
+                          ...displayedOverview.threads,
                           ...more.threads.filter(
-                            (t) => !overview.threads.some((x) => x.id === t.id),
+                            (t) =>
+                              !displayedOverview.threads.some(
+                                (x) => x.id === t.id,
+                              ),
                           ),
                         ],
                       });
                     } catch (e) {
                       setError(e instanceof Error ? e.message : "讀取失敗。");
+                    } finally {
+                      setBusy(false);
                     }
                   }}
                 >
@@ -627,7 +745,10 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
                 <>
                   <div className="meta-conversation-header">
                     <div>
-                      <b>客戶 · {detail.thread.peer_id.slice(-8)}</b>
+                      <b>
+                        {detail.thread.customer_name ||
+                          `客戶 · ${detail.thread.peer_id.slice(-8)}`}
+                      </b>
                       <small>
                         {connection?.label} ·{" "}
                         {connection?.channel === "instagram"
@@ -635,27 +756,11 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
                           : "Messenger"}
                       </small>
                     </div>
-                    {overview?.canSend && (
-                      <button
-                        disabled={busy}
-                        onClick={() =>
-                          void action(
-                            {
-                              action:
-                                detail.thread.status === "resolved"
-                                  ? "reopen"
-                                  : "resolve",
-                              threadId: detail.thread.id,
-                            },
-                            "對話狀態已更新。",
-                          )
-                        }
-                      >
-                        {detail.thread.status === "resolved"
-                          ? "重新跟進"
-                          : "標記已處理"}
-                      </button>
-                    )}
+                    <span className={`meta-status ${detail.thread.status}`}>
+                      {detail.thread.status === "resolved"
+                        ? "已處理"
+                        : "跟進中"}
+                    </span>
                   </div>
                   <div className="meta-messages">
                     {!!detail.sources?.length && (
@@ -790,6 +895,26 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
                 </>
               )}
             </section>
+            {detail && overview && (
+              <ThreadOperationsPanel
+                key={detail.thread.id}
+                thread={{ ...detail.thread, ...operationsOf(detail.thread) }}
+                members={overview.members ?? []}
+                actorId={overview.actorId}
+                canEdit={overview.canSend}
+                busy={busy}
+                now={now}
+                activity={detail.activity ?? []}
+                cached={operationCache[detail.thread.id]}
+                onDraft={(draft) =>
+                  setOperationCache((current) => ({
+                    ...current,
+                    [detail.thread.id]: draft,
+                  }))
+                }
+                onSave={saveOperations}
+              />
+            )}
           </div>
         </>
       )}

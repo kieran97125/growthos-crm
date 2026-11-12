@@ -12,6 +12,11 @@ export async function GET(request: NextRequest, ctx: Context) {
         (await ctx.params).companyId,
         request.nextUrl.searchParams.get("thread") ?? undefined,
         request.nextUrl.searchParams.get("before") ?? undefined,
+        {
+          queue: request.nextUrl.searchParams.get("queue") ?? undefined,
+          channel: request.nextUrl.searchParams.get("channel") ?? undefined,
+          search: request.nextUrl.searchParams.get("search") ?? undefined,
+        },
       ),
     );
   } catch (e) {

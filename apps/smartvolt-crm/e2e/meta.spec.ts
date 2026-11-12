@@ -3,6 +3,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { build } from "esbuild";
 import { readFileSync } from "node:fs";
 import { BRAND_CSS } from "../src/lib/brand";
+import type { ThreadActivity } from "../src/lib/meta/operations";
 
 // A browser-only harness for the real controller, with synthetic tenant data.
 // No production route, provider request, test credential or Auth exception.
@@ -60,11 +61,32 @@ function fixture(expired = false) {
     peer_id: "20000001",
     revision: 1,
     last_inbound_at: now - (expired ? 25 * 3600000 : 60000),
-    status: "open",
+    status: "open" as "open" | "resolved",
+    customer_name: "",
+    assignee_id: null as string | null,
+    priority: "normal" as "normal" | "high" | "urgent",
+    follow_up_at: null as string | null,
+    next_step: "",
     unread_count: 1,
   };
   const overview = {
     companyName: "Aurora · synthetic fixture",
+    actorId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    members: [
+      {
+        user_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        display_name: "Synthetic owner",
+      },
+    ],
+    counts: {
+      all: 1,
+      mine: 0,
+      unassigned: 1,
+      overdue: 0,
+      priority: 0,
+      unread: 1,
+      resolved: 0,
+    },
     canSend: true,
     canManage: true,
     brands: [{ id: "fixture-brand", name: "Synthetic brand" }],
@@ -103,7 +125,7 @@ function fixture(expired = false) {
       referral: { ad_id: "synthetic-ad" } as { ad_id: string } | null,
     },
   ];
-  return { thread, overview, messages };
+  return { thread, overview, messages, activity: [] as ThreadActivity[] };
 }
 type F = ReturnType<typeof fixture>;
 async function intercept(
@@ -132,6 +154,7 @@ async function intercept(
               messages: f.messages,
               hasMore: false,
               sources: [],
+              activity: f.activity,
             }
           : f.overview,
       });
@@ -281,4 +304,142 @@ test("unconfigured company shows the activation blocker without synthetic inquir
     page.getByText("Meta App ID／App Secret 未配置", { exact: true }),
   ).toBeVisible();
   await expect(page.locator(".meta-thread")).toHaveCount(0);
+});
+
+test("team handover persists Hong Kong follow-up, ownership and audit history together", async ({
+  page,
+}, info) => {
+  const f = fixture();
+  const attempts: Record<string, unknown>[] = [];
+  await intercept(page, f, async (route, body) => {
+    attempts.push(body);
+    const previous = {
+      customer_name: f.thread.customer_name,
+      assignee_id: f.thread.assignee_id,
+      priority: f.thread.priority,
+      follow_up_at: f.thread.follow_up_at,
+      next_step: f.thread.next_step,
+      status: f.thread.status,
+    };
+    Object.assign(f.thread, body.data, { revision: f.thread.revision + 1 });
+    f.activity.push({
+      command_id: String(body.commandId),
+      actor_name: "Synthetic owner",
+      created_at: new Date().toISOString(),
+      previous,
+      next: body.data as ThreadActivity["next"],
+    });
+    await route.fulfill({ json: { saved: true } });
+  });
+  await mount(page);
+  await openThread(page);
+  const panel = page.getByRole("complementary", { name: "查詢跟進" });
+  await panel.getByLabel("客戶名稱").fill("Harbour Studio");
+  await panel.getByRole("button", { name: "由我跟進" }).click();
+  await panel.getByLabel("優先次序").selectOption("urgent");
+  await panel.getByLabel("下次跟進（香港時間）").fill("2026-11-13T09:30");
+  await panel.getByLabel("下一步行動").fill("了解查詢渠道，再安排示範");
+  await panel.getByRole("button", { name: "儲存跟進", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText("跟進資料已儲存");
+  expect(attempts).toHaveLength(1);
+  expect(attempts[0]).toMatchObject({
+    action: "manage",
+    revision: 1,
+    data: {
+      customer_name: "Harbour Studio",
+      assignee_id: f.overview.actorId,
+      priority: "urgent",
+      follow_up_at: "2026-11-13T01:30:00.000Z",
+      next_step: "了解查詢渠道，再安排示範",
+    },
+  });
+  await expect(panel.getByText("優先次序：緊急")).toBeVisible();
+  await expect(
+    panel.getByRole("button", { name: "儲存跟進", exact: true }),
+  ).toBeDisabled();
+  await page.screenshot({
+    path: info.outputPath("inbox-team-handover.png"),
+    fullPage: true,
+  });
+});
+
+test("lost handover response reconciles with the original command and preserves customer reply draft", async ({
+  page,
+}) => {
+  const f = fixture(),
+    attempts: Record<string, unknown>[] = [];
+  await intercept(page, f, async (route, body) => {
+    attempts.push(body);
+    if (attempts.length === 1) {
+      Object.assign(f.thread, body.data, { revision: 2 });
+      return route.abort("failed");
+    }
+    await route.fulfill({ json: { saved: true, replayed: true } });
+  });
+  await mount(page);
+  await openThread(page);
+  const reply = page.getByRole("textbox", { name: "回覆內容", exact: true });
+  await reply.fill("未發出嘅回覆草稿");
+  const panel = page.getByRole("complementary", { name: "查詢跟進" });
+  await panel.getByLabel("下一步行動").fill("確認方案");
+  await panel.getByRole("button", { name: "儲存跟進", exact: true }).click();
+  await expect(
+    panel.getByRole("button", { name: "核對儲存結果" }),
+  ).toBeEnabled();
+  await panel.getByRole("button", { name: "核對儲存結果" }).click();
+  expect(attempts).toHaveLength(2);
+  expect(attempts[1]).toEqual(attempts[0]);
+  await expect(reply).toHaveValue("未發出嘅回覆草稿");
+});
+
+test("queue, channel and literal customer search reach the server together", async ({
+  page,
+}) => {
+  const f = fixture(),
+    requests: URL[] = [];
+  await page.route(
+    "**/api/companies/isolated-presentation/meta**",
+    async (route) => {
+      const url = new URL(route.request().url());
+      requests.push(url);
+      const visible =
+        url.searchParams.get("queue") === "mine" ||
+        url.searchParams.get("search")
+          ? []
+          : [f.thread];
+      await route.fulfill({ json: { ...f.overview, threads: visible } });
+    },
+  );
+  await mount(page);
+  await page.getByRole("button", { name: /我負責/ }).click();
+  await expect(page.getByText("呢個清單暫時冇查詢")).toBeVisible();
+  await page
+    .getByRole("combobox", { name: "篩選渠道" })
+    .selectOption("instagram");
+  await page
+    .getByRole("searchbox", { name: "搜尋客戶名稱或平台帳戶 ID" })
+    .fill("Harbour %");
+  await page.getByRole("button", { name: "搜尋", exact: true }).click();
+  await expect
+    .poll(() => requests.at(-1)?.searchParams.get("search"))
+    .toBe("Harbour %");
+  expect(requests.at(-1)?.searchParams.get("channel")).toBe("instagram");
+  expect(requests.at(-1)?.searchParams.get("queue")).toBe("mine");
+});
+
+test("viewer can inspect handover but cannot alter assignment or follow-up", async ({
+  page,
+}) => {
+  const f = fixture();
+  f.overview.canSend = false;
+  f.overview.canManage = false;
+  await intercept(page, f);
+  await mount(page);
+  await openThread(page);
+  const panel = page.getByRole("complementary", { name: "查詢跟進" });
+  await expect(panel.getByLabel("負責同事")).toBeDisabled();
+  await expect(panel.getByLabel("下次跟進（香港時間）")).toBeDisabled();
+  await expect(
+    panel.getByRole("button", { name: "儲存跟進", exact: true }),
+  ).toHaveCount(0);
 });

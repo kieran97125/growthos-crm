@@ -86,7 +86,7 @@ async function claim(
 }
 before(async () => {
   await db.exec(
-    "create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create table auth.users(id uuid primary key);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;grant usage on schema auth,public to authenticated,service_role;",
+    "create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create table auth.users(id uuid primary key);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;grant usage on schema auth,public to authenticated,service_role;alter default privileges in schema public grant all on tables to service_role;",
   );
   for (const f of readdirSync("supabase/migrations")
     .filter((f) => f.endsWith(".sql"))
@@ -559,6 +559,13 @@ test("operational handover is tenant-bound, revision-checked, durable and replay
   await assert.rejects(() =>
     db.exec("delete from public.sv_meta_thread_activity"),
   );
+  await assert.rejects(() =>
+    db.exec("truncate public.sv_meta_thread_activity"),
+  );
+  const grants = await one(
+    "select has_table_privilege('service_role','public.sv_meta_thread_activity','UPDATE') as update,has_table_privilege('service_role','public.sv_meta_thread_activity','DELETE') as delete,has_table_privilege('service_role','public.sv_meta_events','TRUNCATE') as truncate",
+  );
+  assert.deepEqual(grants, { update: false, delete: false, truncate: false });
   assert.equal(
     (await one("select count(*)::int n from public.sv_meta_thread_activity")).n,
     1,

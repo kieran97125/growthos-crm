@@ -44,3 +44,13 @@ The canonical checkpoint is updated through existing draft PR #88. No Alyssa ide
 ## Remaining activation
 
 Deployment of collaboration features does not establish a provider connection. Meta App Secret, verified Page authorization/subscriptions, Instagram brand account/linkage and real inbound/outbound acceptance remain pending. AI provider/model activation and a source-grounded human-reviewed workflow remain pending. The real company's system cards track these boundaries.
+
+## Hosted schema verification
+
+The finalized additive migration was applied to the dedicated Convelta database as authoritative version `20261112134105_convelta_inbox_operations`. The CLI-created source file is renamed to that version with SQL bytes unchanged. Readback confirms audit-table RLS, no anon/authenticated table access or RPC execution, and all real-company queues empty. No sample contacts, messages, provider events or handover receipts were inserted.
+
+The local Playwright launch cannot create the required Chromium socket in this execution environment (`Operation not permitted`). Browser acceptance therefore runs in GitHub Actions using the repository's existing supported Chrome selection. This environment limitation is separate from the passing local build and unit/database checks.
+
+The first implementation candidate `7e7c75ff29fa0b5ae93555128fd4cc9b297ec7e5` passed both CI workflows, including all 173 unit/database and 58 browser checks ([App acceptance run](https://github.com/kieran97125/growthos-crm/actions/runs/43229570213)). Screenshots confirm desktop/mobile layout, no horizontal overflow, accessible controls, durable handover and truthful receipt states.
+
+Hosted readback identified the project's automatic ALL table grant to service_role, which differs from a plain Postgres test database. The separate additive `20261112134543_convelta_inbox_audit_grants` migration explicitly revokes those defaults, grants only select/insert/update for operational rows and select/insert for immutable provider/audit evidence. Readback confirms UPDATE, DELETE and TRUNCATE are denied for evidence while operational thread updates remain allowed. Regression setup now reproduces that hosted default and tests the restrictions. The original applied migration bytes are preserved.

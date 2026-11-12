@@ -593,6 +593,28 @@
   line-height: 1.7;
   margin: 4px 0;
 }
+@media (min-width: 1181px) {
+  .meta-columns.has-detail {
+    height: min(800px, 72dvh);
+    min-height: 600px;
+  }
+  .meta-columns.has-detail .meta-threads,
+  .meta-columns.has-detail .meta-operations {
+    overflow-y: auto;
+  }
+  .meta-columns.has-detail .meta-conversation {
+    min-height: 0;
+  }
+  .meta-columns.has-detail .meta-messages {
+    flex: 1;
+    min-height: 150px;
+    max-height: none;
+  }
+  .meta-columns.has-detail .meta-composer {
+    flex-shrink: 0;
+    margin-top: 0;
+  }
+}
 @media (min-width: 761px) and (max-width: 1180px) {
   .meta-columns.has-detail {
     grid-template-columns: 280px minmax(0, 1fr);

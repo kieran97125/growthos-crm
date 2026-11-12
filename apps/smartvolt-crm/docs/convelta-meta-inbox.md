@@ -6,7 +6,7 @@ The user intends to receive inquiries from Convelta's own advertising and reply 
 
 | Card | Current state | Acceptance |
 | --- | --- | --- |
-| `meta-inbox-implementation` | Prepared for release | Signed webhooks, scoped private inbox, manual replies, internal notes, source evidence, pagination and unread horizon. Local type/lint/build and unit/database checks; browser controller acceptance in CI. |
+| `meta-inbox-implementation` | Released; provider activation pending | Signed webhooks, scoped private inbox, manual replies, internal notes, source evidence, pagination and unread horizon. Local type/lint/build and unit/database checks; browser controller acceptance in CI. |
 | `meta-cloud-authentication` | Blocked at Facebook CAPTCHA | User completes the challenge in the same cloud browser; never share credentials in chat. |
 | `meta-app-identity` | App ID configured; App Secret missing | Dedicated Convelta platform app, protected production secret and owner-visible readiness pass. Legal business verification is separate. |
 | `meta-page-authorization` | Pending | Verify the actual Graph Page ID and a valid Page token from the intended app, then validate Page identity, scopes and expiry before encrypted storage. Public profile IDs are not assumed to be Graph asset IDs. |
@@ -14,7 +14,7 @@ The user intends to receive inquiries from Convelta's own advertising and reply 
 | `meta-first-inquiry` | Pending | A real customer-originated inquiry appears in the correct company inbox with the actual platform message ID. Referral evidence is shown only when supplied by Meta. |
 | `meta-first-reply` | Pending | Owner sends one authorized reply inside the real customer-service window. Verify platform acceptance and any available receipt; accepted does not mean delivered. |
 | `instagram-brand-account` | Not created | User-owned brand registration, handle, required terms and professional account setup; link the correct Page and validate Instagram asset ownership. |
-| `brand-social-profile` | Assets prepared | Apply the yellow avatar, Facebook cover and approved bios on the actual brand accounts, then verify the rendered result. |
+| `brand-social-profile` | Assets prepared | Apply the blue-white avatar, Facebook cover and approved bios on the actual brand accounts, then verify the rendered result. |
 | `ai-live-service` | Not activated | Approved provider/model, knowledge, action scope, human handoff and end-to-end verification before presenting any automatic reply as operational. |
 
 ## Boundary and behavior
@@ -42,3 +42,13 @@ The source migration was created with the Supabase CLI before the hosted apply o
 The original website publication on ChatGPT Sites did not provide reliable access to all visitors: the user supplied a Cloudflare block page naming chatgpt.site. The same static bright-yellow build was moved to a dedicated Vercel project (`convelta-website`), production deployment `dpl_EpK258EUsjruyQMbgAtfB6Ve1SUT`. Apex and www now route to Vercel; www redirects to the canonical apex. Anonymous HTTPS checks return 200 and an x-vercel-id. The app subdomain and its existing security boundaries remain separate.
 
 The latest approved identity supersedes the yellow exploration: website, CRM and POS share blue `#2457E7`, ink `#15233B`, white and pale blue. Full product screenshots remain removed. This is an identity change, not provider activation.
+
+## Production release verification
+
+Runtime `02385d5fd55034a6e35aa8c7a0f68d2c0104b6c1` is READY as Vercel deployment `dpl_ABvJztn1cYKuTfMc4oWvLEJxP6Gm` at https://app.convelta.io. Official login and manifest return HTTP 200 and the shared blue theme; cloud Chrome confirms the rendered login page and no horizontal overflow. Unauthenticated company inbox reads return 401, foreign-origin mutations return 403, and the unconfigured Meta webhook returns 503. No provider activation, inbound message or send is implied by this deployment.
+
+The hosted Meta tables have RLS enabled, no anon/authenticated table privileges, and no anon/authenticated RPC execution. RPCs are security invoker with an empty search path. The intentionally server-only tables have no browser RLS policies. Connection/message counts remain zero. The existing Auth leaked-password advisor warning is separate from this release; no Auth policy was weakened.
+
+The original test-only controller harness needed Next's compile-time environment constants when bundled outside Next. That harness was corrected; the resulting release checks passed 168 unit/database tests and all 54 browser tests, including desktop/mobile accessibility, provider acceptance, failed-draft preservation and same-UUID reconciliation. Fixtures remain entirely synthetic. Latest palette-only changes also pass local typecheck, lint and production build.
+
+Official marketing production is `dpl_6SPJb9vuawAbCCVXKs7FKmEkZgEd`, source `62ea8983ee9a65318cc972c5a6ec433f4f07b138`. Both apex/www return the blue release anonymously, with Vercel response IDs; www redirects to the apex. All three former full product JPG URLs are absent (404). The former Sites custom-domain list is empty. System cards distinguish completed website/app publication from blocked Meta authorization, Instagram registration and live acceptance.

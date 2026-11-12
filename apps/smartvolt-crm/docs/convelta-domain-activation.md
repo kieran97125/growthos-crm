@@ -2,6 +2,14 @@
 
 Verified 2026-11-12, Hong Kong time. The user has authorized the Convelta website and `convelta.io`. This record distinguishes the hosting setup from registration and production activation. No domain purchase, registrar-contact submission, successful DNS write or application-origin change was performed in this continuation.
 
+The user subsequently asked the agent to choose the registrar and open checkout for the user to pay. **Vercel was selected.** The existing signed-in Vercel dashboard's Buy dialog returned `convelta.io` at USD 14.99 for the first year and USD 46/year renewal; selecting it opened Billing Information with the user's existing payment/contact details. The checkout was retained for the user; no final payment was submitted by the agent. This supersedes the earlier unsuccessful billing-page inspection without claiming purchase or enabling renewal.
+
+## Prepared domain source
+
+`src/lib/brand.ts` now declares `https://convelta.io` and `https://app.convelta.io`; application metadata uses the configured server origin with the product app origin as its default. `.env.example` documents the exact production canonical origin. The existing strict same-origin check and WhatsApp callback builder already consume `SMARTVOLT_APP_URL`; the production environment will be changed together with the verified domain deployment, rather than weakening that check or changing credentials/cookies. TypeScript and the production build passed for these source changes.
+
+The marketing source has been updated together: four application entry links, dynamic product-tab links, canonical URL, Open Graph URL/image, JSON-LD, robots and sitemap. JavaScript syntax, exact target origins, local assets and sitemap XML passed checks. That version is prepared for the post-payment cutover and is not evidence of a working registered domain. No dependency installation was needed for these configuration and link changes.
+
 ## Current state
 
 | Area | Verified state | Evidence |
@@ -12,7 +20,7 @@ Verified 2026-11-12, Hong Kong time. The user has authorized the Convelta websit
 | Application subdomain | Hosting binding exists; DNS absent | `app.convelta.io` is associated with the correct Vercel project; domain configuration reports `misconfigured: true`, with no public A/CNAME values |
 | Registration | Not purchased | Registrar quote reports available; account domain has `boughtAt: null`, no expiry, `serviceType: na` and `zone: false`. Account/project `verified: true` does not prove registry ownership or working DNS |
 | DNS | Not writable yet | No existing records. One attempted ownership TXT preparation returned `400 invalid_zone`; no successful write occurred. Do not repeatedly submit records until registration and authoritative DNS are established |
-| Payment and registrant contact | Unresolved | Quote requires a payment method and a complete registrant contact; a valid charged order and current user-designated contact are not available. Billing UI inspection did not complete, so absence of a saved card is not established |
+| Payment and registrant contact | User checkout opened | Vercel's Buy dialog reached Billing Information with existing payment/contact information. The user is completing checkout; registration/order completion has not been observed |
 
 The read-only quote was USD 14.99 for one year, with auto-renew **off** in that quote. It is not a purchase authorization token for later use; obtain a fresh quote immediately before an authorized purchase. Taxes/processing fees may be added at charge time; the team default card is used; domain registrations are immediate and non-refundable. Keep contact data, payment data and signed quote tokens out of source control. Reuse the existing buying authorization; obtain only missing purchase choices/contact information. Do not substitute the historic incorporation contact for the user's intended registrar contact.
 
@@ -40,7 +48,8 @@ Do not point the marketing apex to Vercel's generic application A record. Do not
 
 | Card | State | Completion evidence |
 | --- | --- | --- |
-| `brand-domain-registration` | Blocked on current registrant contact and payment | Fresh quote and intended contact; successful single purchase order and registry readback; required email verification |
+| `brand-domain-registration` | User checkout opened; payment pending | Intended contact reviewed by the user; successful single purchase order and registry readback; required email verification |
+| `brand-domain-code` | Prepared; typecheck/build and website link checks passed | Product origins, metadata and environment example updated; matching app and marketing sources saved before coordinated production activation |
 | `brand-domain-dns` | Blocked on registration and authoritative zone | Exact existing Sites/app bindings retained, current required records written once and independently resolved |
 | `brand-domain-https` | Blocked on DNS | Sites domain and SSL active; application DNS verification clean; trusted HTTPS on both origins |
 | `brand-domain-app-origin` | Blocked on HTTPS | Canonical application origin, same-origin writes, login/session handling and webhook URL acceptance verified together |

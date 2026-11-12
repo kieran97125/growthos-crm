@@ -5,6 +5,10 @@ export const BRAND = {
   description:
     "Convelta：串連客戶通訊、預約管理、CRM、POS 與 AI 輔助，讓每段對話接到下一步。",
   operator: "SmartVolt 智威特",
+  urls: {
+    website: "https://convelta.io",
+    app: "https://app.convelta.io",
+  },
   auditFilename: "convelta-campaign-audit.csv",
   unsavedFilename: "convelta-unsaved-changes.json",
   colors: {

@@ -4,6 +4,7 @@ import { BRAND, BRAND_CSS } from "@/lib/brand";
 import "./globals.css";
 import "./saas.css";
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.SMARTVOLT_APP_URL || BRAND.urls.app),
   title: BRAND.title,
   applicationName: BRAND.name,
   appleWebApp: { capable: true, title: BRAND.name, statusBarStyle: "default" },

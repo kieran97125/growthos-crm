@@ -1,5 +1,5 @@
 import { generateText, Output, type LanguageModel } from "ai";
-import { groundedAnswerSchema, validateGroundedAnswer } from "./protocol";
+import { groundedAnswerSchema, inspectGroundedAnswer } from "./protocol";
 import type { AssistantInput } from "@/lib/demo/ai-contract";
 export async function generateCompanyAnswer(
   input: AssistantInput,
@@ -36,7 +36,7 @@ export async function generateCompanyAnswer(
     }),
   });
   return {
-    answer: validateGroundedAnswer(
+    ...inspectGroundedAnswer(
       result.output,
       input,
       now,

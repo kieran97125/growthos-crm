@@ -26,6 +26,8 @@ async function main() {
   const target = process.env.SMARTVOLT_AI_VERIFICATION_COMPANY_ID;
   let receipt: { company: string; actor: string; request: string } | null =
     null;
+  let inputTokens: number | null = null,
+    outputTokens: number | null = null;
   try {
     if (db && target) {
       z.uuid().parse(target);
@@ -114,11 +116,17 @@ async function main() {
         state.scope.companyName,
         Date.now(),
       );
+      inputTokens = generated.inputTokens;
+      outputTokens = generated.outputTokens;
       if (
         generated.answer.decision !== "draft" ||
         !generated.answer.sources.length
-      )
-        throw new Error("AI acceptance evidence validation did not pass.");
+      ) {
+        code = "answer_verification_failed";
+        throw new Error(
+          "AI answer validation: " + JSON.stringify(generated.validation),
+        );
+      }
       const saved = await db.rpc("sv_ai_finish", {
         p_company: target,
         p_actor: owner.data.user_id,
@@ -176,7 +184,7 @@ async function main() {
       );
     }
   } catch (e) {
-    code = classifyAIError(e);
+    code = code ?? classifyAIError(e);
     if (db && receipt)
       await db.rpc("sv_ai_finish", {
         p_company: receipt.company,
@@ -184,8 +192,8 @@ async function main() {
         p_request: receipt.request,
         p_result: null,
         p_error: code,
-        p_input: null,
-        p_output: null,
+        p_input: inputTokens,
+        p_output: outputTokens,
       });
     const diagnostic: { name?: string; status?: unknown; reason?: string }[] =
       [];

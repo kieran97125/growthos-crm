@@ -5,6 +5,7 @@ export type AIErrorCode =
   | "budget_exhausted"
   | "authentication"
   | "rate_limited"
+  | "answer_verification_failed"
   | "unavailable";
 export const aiErrors: Record<AIErrorCode, string> = {
   verification_required: "Vercel 需要先驗證帳戶付款方式，先可以使用 AI 模型。",
@@ -14,6 +15,8 @@ export const aiErrors: Record<AIErrorCode, string> = {
   budget_exhausted: "AI 用量已達平台預算上限，請由營運方核對。",
   authentication: "AI 平台身份驗證未通過，請由營運方修正連線。",
   rate_limited: "模型暫時繁忙，請稍後再試；本次未有發送任何客戶訊息。",
+  answer_verification_failed:
+    "模型已回應，但答案依據未通過驗證，請由營運方核對知識及引用。",
   unavailable: "AI 暫時未能產生完整建議，請稍後再試或交由同事處理。",
 };
 export function classifyAIError(error: unknown): AIErrorCode {

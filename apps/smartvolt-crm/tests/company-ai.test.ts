@@ -5,6 +5,7 @@ import {
   approvedKnowledge,
   retrieveKnowledge,
   validateGroundedAnswer,
+  inspectGroundedAnswer,
   companyAIRequest,
 } from "../src/lib/ai/protocol";
 import { generateCompanyAnswer } from "../src/lib/ai/generate";
@@ -128,6 +129,32 @@ test("live request accepts identity references and rejects browser-supplied auth
       companyAIRequest.safeParse({ ...request, ...extra }).success,
       false,
     );
+});
+test("answer diagnostics distinguish invalid evidence from model-requested human review", () => {
+  const invalid = inspectGroundedAnswer(
+    {
+      ...output,
+      evidence: [{ sourceId: article.id, quote: "fabricated quotation" }],
+    },
+    input,
+    now,
+    "model",
+  );
+  assert.equal(invalid.answer.decision, "handoff");
+  assert.deepEqual(invalid.validation.issues, ["invalid_quotes"]);
+  const handoff = inspectGroundedAnswer(
+    { ...output, action: "handoff", confidence: 0.5 },
+    input,
+    now,
+    "model",
+  );
+  assert.ok(handoff.validation.issues.includes("model_handoff"));
+  assert.ok(handoff.validation.issues.includes("low_confidence"));
+  assert.ok(!JSON.stringify(handoff.validation).includes(article.content));
+  assert.deepEqual(
+    inspectGroundedAnswer(output, input, now, "model").validation.issues,
+    [],
+  );
 });
 test("AI SDK produces and validates a structured company answer using bounded model options", async () => {
   const model = new MockLanguageModelV4({

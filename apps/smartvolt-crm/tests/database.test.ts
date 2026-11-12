@@ -327,3 +327,134 @@ test("expired, future and suspended purchases cannot write; public clients canno
     await db.exec("reset role");
   }
 });
+
+test("member management is owner-only, protects owners and updates scope with an immutable audit", async () => {
+  await db.exec("reset role");
+  const company = randomUUID(),
+    owner = randomUUID(),
+    agent = randomUUID();
+  await db.query("insert into auth.users values($1),($2)", [owner, agent]);
+  await db.query(
+    "select public.sv_provision_company($1,$2,$3,$4,$5::jsonb,$6::text[])",
+    [
+      company,
+      "Members",
+      owner,
+      "Owner",
+      JSON.stringify(state(company, owner)),
+      ["crm", "pos"],
+    ],
+  );
+  await db.query(
+    "insert into public.sv_memberships(company_id,user_id,role,display_name) values($1,$2,'agent','Agent')",
+    [company, agent],
+  );
+  const update = (
+    actor: string,
+    target: string,
+    revision: number,
+    role: string,
+    status: string,
+    key = randomUUID(),
+  ) =>
+    db.query<{ sv_update_member: number }>(
+      "select public.sv_update_member($1,$2,$3,$4,$5,$6,$7,$8)",
+      [company, actor, target, revision, key, role, status, "Updated"],
+    );
+  await db.exec("set role service_role");
+  await assert.rejects(
+    () => update(agent, agent, 0, "manager", "active"),
+    /owner_required/,
+  );
+  await assert.rejects(
+    () => update(owner, owner, 0, "viewer", "suspended"),
+    /owner_protected/,
+  );
+  await assert.rejects(
+    () => update(owner, agent, 0, "owner", "active"),
+    /invalid_member/,
+  );
+  await assert.rejects(
+    () => update(owner, ub, 0, "agent", "active"),
+    /member_missing/,
+  );
+  const key = randomUUID();
+  assert.equal(
+    (await update(owner, agent, 0, "viewer", "active", key)).rows[0]
+      .sv_update_member,
+    1,
+  );
+  assert.equal(
+    (await update(owner, agent, 0, "viewer", "active", key)).rows[0]
+      .sv_update_member,
+    1,
+  );
+  await assert.rejects(
+    () => update(owner, agent, 0, "manager", "active"),
+    /revision_conflict/,
+  );
+  const { rows } = await db.query<{ payload: ReturnType<typeof state> }>(
+    "select payload from public.sv_workspaces where company_id=$1",
+    [company],
+  );
+  assert.ok(
+    rows[0].payload.scope?.team.some(
+      (m) => m.id === agent && m.name === "Updated",
+    ),
+  );
+  const assigned = structuredClone(rows[0].payload);
+  const handoff = assigned.studio.flows[0].nodes.find(
+    (n) => n.kind === "handoff",
+  );
+  assert.ok(handoff && handoff.kind === "handoff");
+  handoff.config.owner = agent;
+  await db.exec("reset role");
+  await db.query(
+    "update public.sv_workspaces set payload=$2::jsonb where company_id=$1",
+    [company, JSON.stringify(assigned)],
+  );
+  await db.exec("set role service_role");
+  await assert.rejects(
+    () => update(owner, agent, 1, "viewer", "suspended"),
+    /member_reassignment_required/,
+  );
+  await db.exec("reset role");
+  await db.query(
+    "update public.sv_workspaces set payload=$2::jsonb where company_id=$1",
+    [company, JSON.stringify(rows[0].payload)],
+  );
+  await db.exec("set role service_role");
+  await update(owner, agent, 1, "viewer", "suspended");
+  const { rows: after } = await db.query<{ payload: ReturnType<typeof state> }>(
+    "select payload from public.sv_workspaces where company_id=$1",
+    [company],
+  );
+  assert.ok(!after[0].payload.scope?.team.some((m) => m.id === agent));
+  const { rows: events } = await db.query(
+    "select * from public.sv_member_events where company_id=$1",
+    [company],
+  );
+  assert.equal(events.length, 2);
+  await assert.rejects(
+    () =>
+      db.query("delete from public.sv_member_events where company_id=$1", [
+        company,
+      ]),
+    /permission denied/,
+  );
+  await db.exec("reset role");
+  await db.query("update public.sv_companies set seat_limit=1 where id=$1", [
+    company,
+  ]);
+  await db.exec("set role service_role");
+  await assert.rejects(
+    () => update(owner, agent, 2, "agent", "active"),
+    /seat_limit/,
+  );
+  await db.exec("reset role;set role authenticated");
+  await assert.rejects(
+    () => update(owner, agent, 2, "agent", "active"),
+    /permission denied/,
+  );
+  await db.exec("reset role");
+});

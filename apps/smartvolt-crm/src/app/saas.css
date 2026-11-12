@@ -452,3 +452,32 @@
     display: none;
   }
 }
+
+.sv-member-edit {
+  min-width: 160px;
+}
+.sv-member-edit summary {
+  cursor: pointer;
+  color: #2454c8;
+  font-weight: 600;
+}
+.sv-member-edit .sv-login-form {
+  margin-top: 12px;
+  max-width: 320px;
+}
+.sv-member-edit label {
+  display: grid;
+  gap: 6px;
+}
+.sv-member-edit select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #dce3ee;
+  border-radius: 8px;
+  background: white;
+  color: #15233b;
+}
+.sv-member-edit input[type="checkbox"] {
+  min-height: auto;
+  justify-self: start;
+}

@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { randomUUID } from "node:crypto";
+import { MemberControls } from "./MemberControls";
 import { redirect } from "next/navigation";
 import { requireCompany } from "@/lib/saas/server";
 import { AccessError, canManage } from "@/lib/saas/identity";
@@ -32,12 +34,21 @@ export default async function CompanySettings({
         .select("user_id,display_name,role,status")
         .eq("company_id", companyId)
     : { data: null };
+  const { data: workspace } =
+    access.actor.role === "owner"
+      ? await access.db
+          .from("sv_workspaces")
+          .select("revision")
+          .eq("company_id", companyId)
+          .single()
+      : { data: null };
   return (
     <main className="sv-picker">
       <Link href={`/company/${companyId}`}>← 返回客戶工作台</Link>
       <span className="sv-eyebrow">COMPANY SETTINGS</span>
       <h1>{access.company.name}</h1>
       <p>你目前嘅角色：{access.actor.role}。所有設定只適用於此公司。</p>
+      <Link href="/account/password">設定帳戶密碼</Link>
       <section className="sv-settings-section">
         <h2>公司產品方案</h2>
         <div className="sv-settings-plan">
@@ -86,6 +97,7 @@ export default async function CompanySettings({
                 <th>同事</th>
                 <th>角色</th>
                 <th>狀態</th>
+                <th>管理</th>
               </tr>
             </thead>
             <tbody>
@@ -94,6 +106,22 @@ export default async function CompanySettings({
                   <td>{m.display_name}</td>
                   <td>{m.role}</td>
                   <td>{m.status}</td>
+                  <td>
+                    {m.role === "owner" ? (
+                      "擁有人保護"
+                    ) : access.actor.role === "owner" &&
+                      workspace &&
+                      m.status !== "invited" ? (
+                      <MemberControls
+                        companyId={companyId}
+                        revision={workspace.revision}
+                        member={m}
+                        commandId={randomUUID()}
+                      />
+                    ) : (
+                      "—"
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

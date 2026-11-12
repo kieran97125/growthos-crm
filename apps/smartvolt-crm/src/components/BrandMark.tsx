@@ -10,9 +10,9 @@ export function BrandMark({ size = 40 }: { size?: number }) {
       fill="none"
       aria-hidden="true"
     >
-      <path fill={BRAND.colors.royal} d="M0 0H40V40H0Z" />
-      <path fill="white" d={BRAND_MARK.body} />
-      <circle cx="30" cy="20" r="2.5" fill={BRAND.colors.silverLight} />
+      <path fill={BRAND.colors.accent} d="M0 0H40V40H0Z" />
+      <path fill={BRAND.colors.onAccent} d={BRAND_MARK.body} />
+      <circle cx="30" cy="20" r="2.5" fill={BRAND.colors.onAccent} />
     </svg>
   );
 }

@@ -39,20 +39,32 @@ export async function CompanyProductPage({
     ? (query.view as WorkspaceView)
     : "inbox";
   return (
-    <CompanyProvider
-      state={company.state}
-      revision={company.revision}
-      actor={company.actor}
-      products={company.products}
-    >
-      <AIProvider>
-        <ProductWorkspace
-          initialProduct={selected}
-          initialView={view}
-          initialContact={query.contact}
-          initialConversation={query.conversation}
-        />
-      </AIProvider>
-    </CompanyProvider>
+    <>
+      {selected === "crm" && (
+        <nav className="sv-live-channels" aria-label="正式通訊渠道">
+          <Link href={`/company/${companyId}/crm/meta`}>
+            Messenger／Instagram 收件匣 →
+          </Link>
+          <Link href={`/company/${companyId}/crm/whatsapp`}>
+            WhatsApp 收件匣 →
+          </Link>
+        </nav>
+      )}
+      <CompanyProvider
+        state={company.state}
+        revision={company.revision}
+        actor={company.actor}
+        products={company.products}
+      >
+        <AIProvider>
+          <ProductWorkspace
+            initialProduct={selected}
+            initialView={view}
+            initialContact={query.contact}
+            initialConversation={query.conversation}
+          />
+        </AIProvider>
+      </CompanyProvider>
+    </>
   );
 }

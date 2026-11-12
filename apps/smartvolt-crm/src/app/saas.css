@@ -452,3 +452,14 @@
     display: none;
   }
 }
+
+.sv-live-channels {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 10px 20px;
+  background: var(--kies-panel);
+  border-bottom: 1px solid var(--kies-line);
+  font-size: 12px;
+  color: var(--kies-royal);
+}

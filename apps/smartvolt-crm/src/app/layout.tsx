@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   description: BRAND.description,
   robots: { index: false, follow: false },
 };
-export const viewport: Viewport = { themeColor: BRAND.colors.royal };
+export const viewport: Viewport = { themeColor: BRAND.colors.accent };
 export default function RootLayout({
   children,
 }: {

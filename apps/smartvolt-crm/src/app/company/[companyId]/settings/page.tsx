@@ -59,9 +59,15 @@ export default async function CompanySettings({
       </section>
       {access.products.includes("crm") && (
         <section className="sv-settings-section">
-          <h2>WhatsApp 客戶服務</h2>
+          <h2>客戶通訊與正式收件匣</h2>
           <p>接收真實查詢、手動覆客，同追蹤 Meta 回傳嘅訊息狀態。</p>
           <div className="sv-settings-plan">
+            <Link
+              className="sv-secondary"
+              href={`/company/${companyId}/crm/meta`}
+            >
+              開啟 Messenger／Instagram 收件匣 →
+            </Link>
             <Link
               className="sv-secondary"
               href={`/company/${companyId}/crm/whatsapp`}

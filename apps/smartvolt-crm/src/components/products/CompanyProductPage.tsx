@@ -42,6 +42,7 @@ export async function CompanyProductPage({
     <>
       {selected === "crm" && (
         <nav className="sv-live-channels" aria-label="正式通訊渠道">
+          <Link href={`/company/${companyId}/crm/ai`}>AI 回覆工作室 →</Link>
           <Link href={`/company/${companyId}/crm/meta`}>
             Messenger／Instagram 收件匣 →
           </Link>

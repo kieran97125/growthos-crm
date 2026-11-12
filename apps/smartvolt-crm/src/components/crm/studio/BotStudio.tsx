@@ -81,7 +81,11 @@ export default function BotStudio({
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<Article | null>(null);
   const [articleError, setArticleError] = useState("");
-  const [labInput, setLabInput] = useState("想了解舒緩護理嘅流程同收費。");
+  const [labInput, setLabInput] = useState(
+    identity.connected
+      ? "我哋幾個同事分開覆 IG 同 Messenger，想集中管理查詢，有咩方案適合？"
+      : "想了解舒緩護理嘅流程同收費。",
+  );
   const [labMessages, setLabMessages] = useState<LabMessage[]>([]);
   const [result, setResult] = useState<AssistantResult | null>(null);
   const [withinWindow, setWithinWindow] = useState(true);
@@ -107,9 +111,11 @@ export default function BotStudio({
     setResult(null);
     setHumanOwned(false);
     setLabInput(
-      value === "nova-studio"
-        ? "想了解舒緩護理嘅流程同收費。"
-        : "肩頸服務幾錢？",
+      identity.connected
+        ? "想了解公司嘅服務同適合我哋嘅方案。"
+        : value === "nova-studio"
+          ? "想了解舒緩護理嘅流程同收費。"
+          : "肩頸服務幾錢？",
     );
   }
   async function runLab(demo = false) {
@@ -117,7 +123,7 @@ export default function BotStudio({
     const answer = await ai.ask(
       {
         message: labInput,
-        name: "曉晴",
+        name: identity.connected ? "測試客戶" : "曉晴",
         brandId,
         profile,
         articles: state.articles,
@@ -300,7 +306,11 @@ export default function BotStudio({
                   <span>01</span>
                   <div>
                     <h2>助手點樣參與對話？</h2>
-                    <p>先設定處理範圍，再喺右邊試聊。</p>
+                    <p>
+                      {identity.connected
+                        ? "公司 AI 提供回覆建議，由同事確認後傳送。自動模式只供流程設計與示範。"
+                        : "先設定處理範圍，再喺右邊試聊。"}
+                    </p>
                   </div>
                 </div>
                 <div

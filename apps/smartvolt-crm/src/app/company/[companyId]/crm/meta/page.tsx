@@ -5,6 +5,7 @@ import { requireProduct } from "@/lib/saas/products";
 import { AccessError } from "@/lib/saas/identity";
 import MetaInbox from "@/components/meta/MetaInbox";
 import "@/components/meta/meta.css";
+import "@/components/ai/ai.css";
 export const dynamic = "force-dynamic";
 export default async function MetaInboxPage({
   params,

@@ -1,32 +1,25 @@
 import type { NextRequest } from "next/server";
-import { requireCompany } from "@/lib/saas/server";
 import { sameOrigin, json, failure } from "@/lib/saas/http";
-import { requireProduct } from "@/lib/saas/products";
-import { AccessError } from "@/lib/saas/identity";
+import { boundedJson } from "@/lib/whatsapp/http";
+import { prepareCompanyAnswer, AIServiceError } from "@/lib/ai/server";
+export const runtime = "nodejs";
+export const maxDuration = 60;
 export async function POST(request: NextRequest) {
   try {
     sameOrigin(request);
-    const text = await request.text();
-    if (text.length > 64000) throw new AccessError("資料太大。", 413);
-    let body: Record<string, unknown>;
-    try {
-      body = JSON.parse(text);
-    } catch {
-      throw new AccessError("資料格式不正確。", 400);
-    }
-    if (typeof body.companyId !== "string")
-      throw new AccessError("請先登入公司工作空間。", 401);
-    const access = await requireCompany(body.companyId);
-    requireProduct(access.products, "crm");
+    const result = await prepareCompanyAnswer(await boundedJson(request));
     return json(
-      {
-        error:
-          "此公司嘅真實 AI 模型尚未啟用。可於 AI BOT 使用清楚標示嘅示範引擎。",
-        code: "company_ai_not_activated",
-      },
-      503,
+      result,
+      result &&
+        typeof result === "object" &&
+        "state" in result &&
+        result.state === "running"
+        ? 202
+        : 200,
     );
   } catch (error) {
+    if (error instanceof AIServiceError)
+      return json({ error: error.message, code: error.code }, error.status);
     return failure(error);
   }
 }

@@ -13,6 +13,7 @@ import {
   type ThreadActivity,
 } from "@/lib/meta/operations";
 import ThreadOperationsPanel, { type OperationDraft } from "./ThreadOperations";
+import AIDraft from "@/components/ai/AIDraft";
 type Connection = {
   id: string;
   brand_id: string;
@@ -913,6 +914,33 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
                   }))
                 }
                 onSave={saveOperations}
+                assistant={
+                  connection && (
+                    <div className="meta-ai-panel">
+                      <details>
+                        <summary>✦ AI 回覆建議</summary>
+                        <AIDraft
+                          key={detail.thread.id}
+                          context={{
+                            companyId,
+                            brandId: connection.brand_id,
+                            source: "meta",
+                            threadId: detail.thread.id,
+                          }}
+                          disabled={!overview.canSend || busy}
+                          onInsert={(text) =>
+                            setDraft((current) =>
+                              current.trim() ? current + "\n\n" + text : text,
+                            )
+                          }
+                        />
+                        <Link href={`/company/${companyId}/crm/ai`}>
+                          開啟 AI 工作室
+                        </Link>
+                      </details>
+                    </div>
+                  )
+                }
               />
             )}
           </div>

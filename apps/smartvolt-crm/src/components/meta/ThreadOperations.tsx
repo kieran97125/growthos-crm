@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Clock3, Flag, UserRound, ArrowUpRight, History } from "lucide-react";
 import {
   type InboxMember,
@@ -73,6 +73,7 @@ export default function ThreadOperationsPanel({
   cached,
   onDraft,
   onSave,
+  assistant,
 }: {
   thread: ThreadOperations & { id: string; revision: number };
   members: InboxMember[];
@@ -84,6 +85,7 @@ export default function ThreadOperationsPanel({
   cached?: OperationDraft;
   onDraft: (draft?: OperationDraft) => void;
   onSave: (command: Command) => Promise<boolean | undefined>;
+  assistant?: ReactNode;
 }) {
   const [draft, setDraft] = useState<OperationDraft | undefined>(cached);
   const [pending, setPending] = useState<Command | null>(
@@ -144,6 +146,7 @@ export default function ThreadOperationsPanel({
         <ArrowUpRight size={18} aria-hidden="true" />
       </div>
       <h2>每個查詢，有人跟到底。</h2>
+      {assistant}
       {overdue && (
         <p className="meta-due-banner">
           <Clock3 size={15} aria-hidden="true" />

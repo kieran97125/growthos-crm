@@ -121,7 +121,7 @@ test("CSV import normalizes and deduplicates without granting consent", async ({
     page.getByRole("row").filter({ hasText: "重複電話" }),
   ).toHaveCount(0);
 });
-test("AI endpoint is protected and unavailable model is clearly disclosed", async ({
+test("AI endpoint is protected and public demo remains isolated from live models", async ({
   page,
   request,
 }) => {
@@ -140,7 +140,7 @@ test("AI endpoint is protected and unavailable model is clearly disclosed", asyn
     .getByRole("button", { name: "AI 設定", exact: false })
     .first()
     .click();
-  await expect(page.getByRole("dialog")).toContainText("真實模型尚未啟用");
+  await expect(page.getByRole("dialog")).toContainText("公開示範工作空間");
 });
 for (const view of ["experience", "broadcasts", "inbox", "bot", "flows"])
   test(`${view} desktop accessibility and no console errors`, async ({

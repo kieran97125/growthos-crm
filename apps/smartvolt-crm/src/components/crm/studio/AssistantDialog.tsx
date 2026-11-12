@@ -57,6 +57,7 @@ export function AssistantDialog({
         assist: true,
       },
       demo,
+      { conversationId: conversation.id },
     );
     if (answer) setResult(answer);
   }

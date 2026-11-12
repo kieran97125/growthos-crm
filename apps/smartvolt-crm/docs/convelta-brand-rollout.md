@@ -8,11 +8,11 @@ Customer-facing names, metadata, export filenames and the shared vector icon der
 
 | Card | State | Completion condition |
 | --- | --- | --- |
-| `brand-app-identity` | Implemented; release verification pending | Login, CRM/POS, page titles, manifest, browser and Apple icons show Convelta; desktop/mobile checks and deployed readbacks pass. |
-| `brand-facebook-name` | Owner authentication pending | Existing Page `61596722780516` has a prepared SmartVolt 智威特 → Convelta name request. User enters the Facebook password and submits; Meta approval must then be read back. |
+| `brand-app-identity` | Released and verified | Runtime `411423c5b333682b175ff8c37cff608f0afcd8a8`; READY deployment `dpl_B8eyT7DmxXWDwdTsNep5s5izjqxz` at https://smartvolthk.com. 151 tests and 48 browser checks passed; actual screenshots, live names/titles and metadata/icon reads verified. |
+| `brand-facebook-name` | Completed | The user completed authentication. Settings and public Page `61596722780516` both display Convelta on 2026-11-12. |
 | `brand-social-handles` | Pending | Select and verify a consistent public handle; complete Convelta Instagram registration and link the company-owned Page. Passwords and terms remain with the user where required. |
-| `brand-domain` | Quote prepared; not purchased | User chooses the exact domain, term and spend; confirm registration, DNS and HTTPS after purchase. |
-| `brand-product-site` | Planned | Product-branded sales site links to the same-brand app and names SmartVolt as operator; final public domain, pricing, legal content and launch scope must be resolved. |
+| `brand-domain` | Convelta.io selected; registration/payment pending | The user requested `convelta.io`. Marketing apex and `app.convelta.io` project destinations are prepared. Registration, authoritative DNS, certificate validation and app canonical/Auth cutover remain pending; no domain purchase is claimed. |
+| `brand-product-site` | Publicly deployed | https://convelta.kierankwok.chatgpt.site/ — Site `appgprj_6af580e396588191bac4a46790d07675`, source `62d53f8e073a9c071b7b579f00b2cb8411c7efde`, version 1. Native public access and deployment succeeded; live desktop/mobile render, module/industry tabs, keyboard switching, menu, screenshots and internal links checked. CTAs use the live demo and verified official Facebook Page. No advertising pixel or paid campaign activated. |
 
 ## Domain lookup
 

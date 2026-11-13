@@ -306,7 +306,12 @@ async function fixture(
   const vars = Object.entries(BRAND_CSS)
     .map(([k, v]) => k + ":" + v)
     .join(";");
-  const html = `<!doctype html><html lang="zh-HK"><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Convelta operations · synthetic</title><style>:root{${vars}}*{box-sizing:border-box}body{margin:0;font-family:Arial,'Noto Sans CJK TC',sans-serif}button,input,select,textarea{font:inherit}${styles}</style></head><body><div id="fixture"></div><script>${bundle.replace(/<\/script/gi, "<\\/script")}</script></body></html>`;
+  // Keep the bundle out of HTML's legacy script/comment tokenizer. Dependencies
+  // contain HTML parser expressions that are valid JavaScript in an external file.
+  await page.route("**/__acceptance/operations-fixture.js", (r) =>
+    r.fulfill({ contentType: "text/javascript", body: bundle }),
+  );
+  const html = `<!doctype html><html lang="zh-HK"><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Convelta operations · synthetic</title><style>:root{${vars}}*{box-sizing:border-box}body{margin:0;font-family:Arial,'Noto Sans CJK TC',sans-serif}button,input,select,textarea{font:inherit}${styles}</style></head><body><div id="fixture"></div><script src="/__acceptance/operations-fixture.js"></script></body></html>`;
   await page.route(`**/company/${company}/crm/operations`, (r) =>
     r.fulfill({ contentType: "text/html", body: html }),
   );

@@ -68,6 +68,7 @@ test.beforeAll(async () => {
       else if(view)child=provider(React.createElement(ProductWorkspace,{initialProduct:'crm',initialView:view}));
       else if(url.pathname.endsWith('/customers'))child=React.createElement(Customers,{companyId:id,companyName:name,hasPos:true,canEdit:true});
       else if(url.pathname.endsWith('/ai'))child=React.createElement(AI,{companyId:id,initialStatus:${JSON.stringify(aiStatus)}});
+      else if(url.pathname.endsWith('/operations'))child=React.createElement('main',null,React.createElement('h1',null,'Synthetic operations'));
       else if(url.pathname.endsWith('/settings'))child=React.createElement('main',{className:'sv-picker'},React.createElement('h1',null,'Synthetic company settings'));
       else child=React.createElement(Inbox,{companyId:id,companyName:name,hasPos:true});
       createRoot(document.getElementById('fixture')).render(React.createElement(CompanyWorkspaceChrome,{companyId:id,companyName:name,actorName:'Synthetic owner',products,location:{pathname:url.pathname,search:url.search}},child));
@@ -135,6 +136,7 @@ for (const mobile of [false, true])
     const expected = [
       "收件匣",
       "客戶",
+      "跟進",
       "Flow",
       "AI 助理",
       "BOT／知識庫",
@@ -148,6 +150,7 @@ for (const mobile of [false, true])
       ["BOT／知識庫", "knowledge"],
       ["推播", "broadcasts"],
       ["客戶", "customers"],
+      ["跟進", "operations"],
       ["團隊與設定", "settings"],
       ["收件匣", "inbox"],
     ]) {
@@ -181,6 +184,10 @@ for (const mobile of [false, true])
       if (section === "broadcasts")
         await expect(
           page.getByRole("heading", { name: "推播", exact: true }),
+        ).toBeVisible();
+      if (section === "operations")
+        await expect(
+          page.getByRole("heading", { name: "Synthetic operations", exact: true }),
         ).toBeVisible();
       expect(
         await page.evaluate(

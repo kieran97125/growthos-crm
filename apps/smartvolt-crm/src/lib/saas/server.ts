@@ -1,0 +1,208 @@
+import "server-only";
+import { cache } from "react";
+import { z } from "zod";
+import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
+import { saasConfig } from "./config";
+import { AccessError, roleSchema, scopeSchema, type Actor } from "./identity";
+import {
+  activeProducts,
+  requireProduct,
+  requireCommandProduct,
+  projectWorkspace,
+  type Product,
+} from "./products";
+import { appSchema } from "@/lib/demo/state";
+
+export async function authClient() {
+  const config = saasConfig();
+  if (!config) throw new AccessError("公司登入服務尚未啟用。", 503);
+  const jar = await cookies();
+  return createServerClient(config.url, config.key, {
+    cookieOptions: {
+      name: "smartvolt-auth",
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+    },
+    cookies: {
+      getAll: () => jar.getAll(),
+      setAll(values) {
+        try {
+          values.forEach(({ name, value, options }) =>
+            jar.set(name, value, options),
+          );
+        } catch {
+          /* Server components are refreshed by proxy. */
+        }
+      },
+    },
+  });
+}
+export function database() {
+  const config = saasConfig();
+  if (!config) throw new AccessError("公司資料服務尚未啟用。", 503);
+  return createClient(config.url, config.secret, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+export const requireUser = cache(async function requireUser() {
+  const client = await authClient();
+  const {
+    data: { user },
+    error,
+  } = await client.auth.getUser();
+  if (error || !user || user.is_anonymous)
+    throw new AccessError("請先登入公司帳戶。", 401);
+  return user;
+});
+export async function companiesForUser() {
+  const user = await requireUser();
+  const { data, error } = await database()
+    .from("sv_memberships")
+    .select(
+      "company_id, role, display_name, sv_companies!inner(id,name,status)",
+    )
+    .eq("user_id", user.id)
+    .eq("status", "active")
+    .eq("sv_companies.status", "active");
+  if (error) throw new AccessError("暫時未能讀取公司工作空間。", 503);
+  return { user, memberships: data ?? [] };
+}
+export const requireCompany = cache(async function requireCompany(
+  companyId: string,
+) {
+  const user = await requireUser();
+  const db = database();
+  const { data: member, error } = await db
+    .from("sv_memberships")
+    .select("role,display_name,sv_companies!inner(id,name,status)")
+    .eq("company_id", companyId)
+    .eq("user_id", user.id)
+    .eq("status", "active")
+    .eq("sv_companies.status", "active")
+    .maybeSingle();
+  if (error) throw new AccessError("暫時未能核實公司權限。", 503);
+  if (!member) throw new AccessError("你無權進入此公司工作空間。");
+  const company = Array.isArray(member.sv_companies)
+    ? member.sv_companies[0]
+    : member.sv_companies;
+  const actor: Actor = {
+    id: user.id,
+    name: member.display_name,
+    role: roleSchema.parse(member.role),
+  };
+  const { data: grants, error: grantError } = await db
+    .from("sv_company_products")
+    .select("product,status,starts_at,ends_at")
+    .eq("company_id", companyId);
+  if (grantError) throw new AccessError("暫時未能核實公司產品方案。", 503);
+  const products = activeProducts(grants ?? [], Date.now());
+  return {
+    db,
+    user,
+    actor,
+    products,
+    company: company as { id: string; name: string; status: string },
+  };
+});
+async function readCompanyDocument(
+  access: Awaited<ReturnType<typeof requireCompany>>,
+  extraCustomerId?: string,
+) {
+  const { data, error } = await access.db
+    .from("sv_workspaces")
+    .select("revision,payload")
+    .eq("company_id", access.company.id)
+    .single();
+  if (error || !data) throw new AccessError("公司工作空間未完成設定。", 503);
+  const ids = (data.payload.inbox?.contacts ?? []).map(
+    (c: { id: string }) => c.id,
+  );
+  let payload = data.payload;
+  if (ids.length) {
+    const directory = await access.db
+      .from("sv_customers")
+      .select("id,name,phone,email,tags,note")
+      .eq("company_id", access.company.id)
+      .in("id", ids);
+    if (directory.error)
+      throw new AccessError("暫時未能讀取共用客戶資料。", 503);
+    const records = new Map((directory.data ?? []).map((c) => [c.id, c]));
+    payload = {
+      ...payload,
+      inbox: {
+        ...payload.inbox,
+        contacts: payload.inbox.contacts.map((c: { id: string }) => ({
+          ...c,
+          ...records.get(c.id),
+        })),
+      },
+    };
+  }
+  if (extraCustomerId) {
+    z.string().min(1).max(100).parse(extraCustomerId);
+    const customer = await access.db.rpc("sv_customer_json", {
+      p_company: access.company.id,
+      p_id: extraCustomerId,
+    });
+    if (customer.error) throw new AccessError("暫時未能讀取客戶資料。", 503);
+    if (!customer.data) throw new AccessError("找不到此公司客戶。", 404);
+    payload = {
+      ...payload,
+      inbox: {
+        ...payload.inbox,
+        contacts: [
+          ...payload.inbox.contacts.filter(
+            (c: { id: string }) => c.id !== extraCustomerId,
+          ),
+          customer.data,
+        ],
+      },
+    };
+  }
+  const state = appSchema.parse(payload);
+  if (state.scope?.companyId !== access.company.id)
+    throw new AccessError("工作空間識別不一致。", 409);
+  return {
+    ...access,
+    state,
+    scope: scopeSchema.parse(state.scope),
+    revision: data.revision as number,
+  };
+}
+export async function loadCompany(
+  companyId: string,
+  product?: Product,
+  customerId?: string,
+) {
+  const access = await requireCompany(companyId);
+  if (product) requireProduct(access.products, product);
+  if (!access.products.length)
+    throw new AccessError("公司未有可使用嘅產品方案。");
+  const document = await readCompanyDocument(access, customerId);
+  return {
+    ...document,
+    state: appSchema.parse(projectWorkspace(document.state, access.products)),
+  };
+}
+/** Full aggregate stays server-side so an allowed product write cannot erase another product's retained data. */
+export async function loadCompanyForCommand(
+  companyId: string,
+  command: { type: string },
+) {
+  const access = await requireCompany(companyId);
+  requireCommandProduct(access.products, command);
+  const selected = z
+    .object({
+      type: z.literal("pos"),
+      command: z.object({ contactId: z.string().min(1).max(100) }),
+    })
+    .safeParse(command);
+  return readCompanyDocument(
+    access,
+    selected.success ? selected.data.command.contactId : undefined,
+  );
+}

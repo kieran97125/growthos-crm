@@ -24,7 +24,8 @@ jobs:
       - run: npm run test:operations
       - run: npm run typecheck
       - run: npm run lint
-      - run: npx playwright install --with-deps chromium
+      - name: Select and record acceptance browser
+        run: bash scripts/select-ci-browser.sh
       - run: npm run test:e2e
       - run: npm run build
       - run: npm run verify:production-boundary

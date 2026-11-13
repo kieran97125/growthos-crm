@@ -167,6 +167,15 @@ export function applyCompanyCommand(
     throw new AccessError("此操作未啟用或資料不完整，改動未有儲存。", 400);
   const command = checked.data;
   requireCommandProduct(products, command);
+  if (command.type === "studio" && command.action.type === "article") {
+    const article = command.action.article;
+    const previous = state.studio.articles.find((a) => a.id === article.id);
+    if (JSON.stringify(article.website) !== JSON.stringify(previous?.website))
+      throw new AccessError(
+        "網站來源由掃描流程保存，不能以手動編輯改寫。",
+        409,
+      );
+  }
   if (command.type === "pos") {
     const pos = applyPosCommand(state.pos, command.command, {
       companyId: state.scope.companyId,

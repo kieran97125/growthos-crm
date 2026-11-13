@@ -28,6 +28,8 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
+      - name: Verify public website scan without company writes
+        run: node --import tsx scripts/verify-public-website.ts https://convelta.io
       - run: npm run build
       - name: Select and record acceptance browser
         run: bash ../../scripts/select-ci-browser.sh

@@ -36,6 +36,8 @@ import { AssistantResultCard } from "./AssistantResult";
 import { StudioStatus } from "./StudioUI";
 import type { StudioController } from "./useStudioStore";
 import "./studio.css";
+import WebsiteKnowledgeImport from "@/components/website/WebsiteKnowledgeImport";
+import { canManage } from "@/lib/saas/identity";
 
 const modes = [
   {
@@ -468,6 +470,14 @@ export default function BotStudio({
                   新增知識
                 </button>
               </div>
+              {canManage(identity.actor.role) && (
+                <WebsiteKnowledgeImport
+                  key={brandId}
+                  companyId={identity.scope.companyId}
+                  brandId={brandId}
+                  connected={identity.connected}
+                />
+              )}
               <label className="st-search">
                 <Search size={15} />
                 <input
@@ -513,6 +523,15 @@ export default function BotStudio({
                       <footer>
                         <BookOpen size={12} />
                         <span>{a.source}</span>
+                        {a.website && (
+                          <a
+                            href={a.website.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            原網頁 ↗
+                          </a>
+                        )}
                         <span>有效至 {a.validUntil}</span>
                       </footer>
                     </article>

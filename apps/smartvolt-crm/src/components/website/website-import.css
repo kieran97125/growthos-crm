@@ -1,0 +1,352 @@
+.wi-card {
+  border: 1px solid #d4dfff;
+  border-radius: 18px;
+  background: linear-gradient(120deg, #f0f4ff, #fff 78%);
+  margin: 0 0 22px;
+  color: #183156;
+  overflow: hidden;
+}
+.wi-heading {
+  display: flex;
+  width: 100%;
+  gap: 13px;
+  align-items: center;
+  padding: 20px;
+  background: none;
+  border: 0;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.wi-globe {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: #2457e7;
+  color: white;
+  box-shadow: 0 6px 15px #2457e72a;
+  flex-shrink: 0;
+}
+.wi-heading > span:nth-child(2) {
+  display: grid;
+  gap: 5px;
+}
+.wi-heading strong {
+  font-size: 15px;
+}
+.wi-heading small,
+.wi-muted {
+  font-size: 11px;
+  color: #536b91;
+  line-height: 1.7;
+}
+.wi-heading-action {
+  margin-left: auto;
+  color: #2457e7;
+  font-size: 12px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.wi-heading svg {
+  flex-shrink: 0;
+}
+.wi-rotated {
+  transform: rotate(180deg);
+}
+.wi-body {
+  padding: 0 20px 20px;
+}
+.wi-url {
+  display: flex;
+  gap: 8px;
+}
+.wi-url label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: white;
+  border: 1px solid #cbd8f7;
+  border-radius: 11px;
+  padding: 0 12px;
+  min-width: 0;
+  flex: 1;
+  color: #536b91;
+}
+.wi-url input {
+  width: 100%;
+  min-width: 0;
+  border: 0 !important;
+  padding: 12px 0 !important;
+  background: transparent !important;
+  color: #183156;
+  font-size: 12px;
+  outline: none;
+}
+.wi-url label:focus-within {
+  outline: 2px solid #2457e7;
+  outline-offset: 2px;
+}
+.wi-progress {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 20px 0 9px;
+  font-size: 12px;
+}
+.wi-progress b {
+  color: #2457e7;
+}
+.wi-track {
+  height: 4px;
+  border-radius: 6px;
+  background: #dbe5fe;
+  overflow: hidden;
+}
+.wi-track i {
+  display: block;
+  height: 100%;
+  background: #2457e7;
+  transition: width 0.4s;
+}
+.wi-pause {
+  font-size: 11px;
+  color: #2457e7;
+  margin-top: 8px;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.wi-profile {
+  background: #fff;
+  border: 1px solid #dce5fb;
+  border-radius: 14px;
+  padding: 18px;
+  margin: 17px 0;
+}
+.wi-kicker {
+  font-size: 10px;
+  color: #2457e7;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.wi-profile h3 {
+  font-size: 18px;
+  line-height: 1.5;
+  margin: 8px 0;
+}
+.wi-profile p {
+  font-size: 12px;
+  color: #536b91;
+  line-height: 1.8;
+}
+.wi-profile > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.wi-profile > div > span {
+  font-size: 11px;
+  background: #f0f4ff;
+  padding: 6px 8px;
+  border-radius: 6px;
+  overflow-wrap: anywhere;
+}
+.wi-section-label {
+  display: flex;
+  justify-content: space-between;
+  margin: 18px 0 9px;
+  font-size: 12px;
+}
+.wi-section-label > span {
+  font-size: 11px;
+  color: #536b91;
+}
+.wi-page {
+  border: 1px solid #dce5fb;
+  border-radius: 12px;
+  background: #fff;
+  margin: 7px 0;
+  overflow: hidden;
+}
+.wi-page > summary {
+  list-style: none;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  cursor: pointer;
+  padding: 13px;
+}
+.wi-page > summary::-webkit-details-marker {
+  display: none;
+}
+.wi-page > summary > span:nth-child(2) {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  flex: 1;
+}
+.wi-page strong {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.wi-page small {
+  font-size: 10px;
+  color: #536b91;
+}
+.wi-page-icon {
+  color: #2457e7;
+  background: #eef2ff;
+  padding: 8px;
+  border-radius: 9px;
+}
+.wi-page > a {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #2457e7;
+  font-size: 11px;
+  margin: 0 15px 15px;
+  width: fit-content;
+}
+.wi-candidate {
+  padding: 12px 15px;
+  border-top: 1px solid #e8edfa;
+}
+.wi-candidate label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.wi-candidate input {
+  accent-color: #2457e7;
+  width: 16px;
+  height: 16px;
+}
+.wi-candidate p {
+  white-space: pre-wrap;
+  max-height: 220px;
+  overflow: auto;
+  font-size: 11px;
+  line-height: 1.85;
+  color: #425d83;
+  margin: 11px 0 0;
+  overflow-wrap: anywhere;
+}
+.wi-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 17px 70px 8px 0;
+}
+.wi-footer p {
+  font-size: 10px;
+  color: #536b91;
+  line-height: 1.8;
+  flex: 1;
+  min-width: 160px;
+}
+.wi-error,
+.wi-success {
+  font-size: 12px;
+  line-height: 1.8;
+  padding: 10px 12px;
+  border-radius: 9px;
+  margin: 12px 0;
+}
+.wi-error {
+  color: #9f2343;
+  background: #fff0f3;
+}
+.wi-success {
+  color: #116649;
+  background: #edf9f2;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.wi-warnings {
+  color: #705516;
+  background: #fff8e8;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 11px;
+  margin: 12px 0;
+}
+.wi-warnings p {
+  overflow-wrap: anywhere;
+  line-height: 1.8;
+}
+.wi-spin {
+  animation: wi-spin 1s linear infinite;
+}
+.wi-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+.wi-card button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.wi-card button:focus-visible,
+.wi-card summary:focus-visible,
+.wi-card a:focus-visible {
+  outline: 2px solid #2457e7;
+  outline-offset: 3px;
+}
+@keyframes wi-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (max-width: 700px) {
+  .wi-heading {
+    padding: 15px;
+    gap: 10px;
+  }
+  .wi-heading-action {
+    font-size: 0;
+    gap: 0;
+  }
+  .wi-heading strong {
+    font-size: 13px;
+  }
+  .wi-body {
+    padding: 0 14px 16px;
+  }
+  .wi-url {
+    flex-wrap: wrap;
+  }
+  .wi-url label {
+    flex-basis: 100%;
+  }
+  .wi-url > button {
+    width: 100%;
+    justify-content: center;
+  }
+  .wi-footer {
+    padding-inline-end: 65px;
+  }
+  .wi-profile h3 {
+    font-size: 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wi-spin {
+    animation: none;
+  }
+  .wi-track i {
+    transition: none;
+  }
+}

@@ -18,6 +18,14 @@ import {
   type Product,
 } from "./products";
 import type { Actor, CompanyScope } from "./identity";
+import type { WebsiteImportSelection } from "@/lib/website/model";
+
+export const WebsiteImportCommitContext = createContext<
+  | ((
+      input: WebsiteImportSelection,
+    ) => Promise<{ added: number; skipped: number }>)
+  | null
+>(null);
 
 type Identity = {
   scope: CompanyScope;
@@ -80,7 +88,13 @@ function createCompanyStore(
   };
   const server = snapshot;
   const listeners = new Set<() => void>();
-  const queue: { id: string; action: AppAction }[] = [];
+  const queue: {
+    id: string;
+    action?: AppAction;
+    website?: WebsiteImportSelection;
+    resolve?: (result: { added: number; skipped: number }) => void;
+    reject?: (error: Error) => void;
+  }[] = [];
   let running = false,
     blocked = false;
   const emit = () => listeners.forEach((fn) => fn());
@@ -90,15 +104,23 @@ function createCompanyStore(
     const pending = queue[0];
     try {
       const response = await fetch(
-        `/api/companies/${initial.scope!.companyId}/workspace`,
+        `/api/companies/${initial.scope!.companyId}/${pending.website ? "knowledge/website/import" : "workspace"}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            revision: currentRevision,
-            commandId: pending.id,
-            command: pending.action,
-          }),
+          body: JSON.stringify(
+            pending.website
+              ? {
+                  ...pending.website,
+                  revision: currentRevision,
+                  commandId: pending.id,
+                }
+              : {
+                  revision: currentRevision,
+                  commandId: pending.id,
+                  command: pending.action,
+                },
+          ),
         },
       );
       const body = await response.json();
@@ -110,13 +132,21 @@ function createCompanyStore(
       snapshot = {
         ...snapshot,
         state: projectWorkspace(
-          queue.reduce((s, p) => appReducer(s, p.action, actor.name), saved),
+          queue.reduce(
+            (s, p) => (p.action ? appReducer(s, p.action, actor.name) : s),
+            saved,
+          ),
           products,
         ),
         storage: queue.length ? "正在儲存改動…" : "已儲存至公司工作空間",
         now: Date.now(),
       };
+      pending.resolve?.({ added: body.added ?? 0, skipped: body.skipped ?? 0 });
     } catch (error) {
+      pending.reject?.(
+        error instanceof Error ? error : Error("未能確認匯入結果。"),
+      );
+      pending.reject = undefined;
       blocked = true;
       // Keep the pending command in memory. Never silently retry against a newer revision.
       snapshot = {
@@ -168,6 +198,23 @@ function createCompanyStore(
         };
         emit();
       }
+    },
+    importWebsite(input: WebsiteImportSelection) {
+      if (blocked)
+        return Promise.reject(Error("尚有未儲存改動，請先重試儲存。"));
+      return new Promise<{ added: number; skipped: number }>(
+        (resolve, reject) => {
+          queue.push({
+            id: crypto.randomUUID(),
+            website: input,
+            resolve,
+            reject,
+          });
+          snapshot = { ...snapshot, storage: "正在儲存改動…", now: Date.now() };
+          emit();
+          void drain();
+        },
+      );
     },
     exportPending() {
       const file = new Blob(
@@ -245,31 +292,35 @@ export function CompanyProvider({
     <IdentityContext.Provider
       value={{ scope: state.scope!, actor, products, connected: true }}
     >
-      <WorkspaceContext.Provider value={store}>
-        <div className="sv-company-shell">
-          {!chrome && (
-            <div className="sv-company-toolbar">
-              <span>{state.scope!.companyName}</span>
-              <Link href="/">切換公司</Link>
-              {products.includes("crm") && (
-                <Link href={`/company/${state.scope!.companyId}/crm/whatsapp`}>
-                  WhatsApp 收件匣
+      <WebsiteImportCommitContext.Provider value={store.importWebsite}>
+        <WorkspaceContext.Provider value={store}>
+          <div className="sv-company-shell">
+            {!chrome && (
+              <div className="sv-company-toolbar">
+                <span>{state.scope!.companyName}</span>
+                <Link href="/">切換公司</Link>
+                {products.includes("crm") && (
+                  <Link
+                    href={`/company/${state.scope!.companyId}/crm/whatsapp`}
+                  >
+                    WhatsApp 收件匣
+                  </Link>
+                )}
+                <Link href={`/company/${state.scope!.companyId}/settings`}>
+                  公司設定
                 </Link>
-              )}
-              <Link href={`/company/${state.scope!.companyId}/settings`}>
-                公司設定
-              </Link>
-              <button onClick={store.retry}>重試儲存</button>
-              <button onClick={store.exportPending}>匯出未儲存改動</button>
-              <form action="/auth/signout" method="post">
-                <button>登出</button>
-              </form>
-            </div>
-          )}
-          {children}
-          <SaveStatus onRetry={store.retry} onExport={store.exportPending} />
-        </div>
-      </WorkspaceContext.Provider>
+                <button onClick={store.retry}>重試儲存</button>
+                <button onClick={store.exportPending}>匯出未儲存改動</button>
+                <form action="/auth/signout" method="post">
+                  <button>登出</button>
+                </form>
+              </div>
+            )}
+            {children}
+            <SaveStatus onRetry={store.retry} onExport={store.exportPending} />
+          </div>
+        </WorkspaceContext.Provider>
+      </WebsiteImportCommitContext.Provider>
     </IdentityContext.Provider>
   );
 }

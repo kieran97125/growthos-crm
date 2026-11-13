@@ -125,6 +125,21 @@ export const articleSchema = z.object({
   status: z.enum(["approved", "draft"]),
   validUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   revision: z.number().int().min(1),
+  website: z
+    .object({
+      importId: z.uuid(),
+      url: z
+        .url()
+        .max(2048)
+        .refine((value) => {
+          const u = new URL(value);
+          return u.protocol === "https:" && !u.username && !u.password;
+        }),
+      fetchedAt: z.iso.datetime(),
+      contentHash: z.string().regex(/^[a-f0-9]{64}$/),
+      truncated: z.boolean(),
+    })
+    .optional(),
 });
 export const botSchema = z.object({
   brandId: z.string().min(1).max(100),

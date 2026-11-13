@@ -56,17 +56,6 @@ export async function CompanyProductPage({
     );
   return (
     <>
-      {selected === "crm" && (
-        <nav className="sv-live-channels" aria-label="正式通訊渠道">
-          <Link href={`/company/${companyId}/crm/ai`}>AI 回覆工作室 →</Link>
-          <Link href={`/company/${companyId}/crm/meta`}>
-            Messenger／Instagram 收件匣 →
-          </Link>
-          <Link href={`/company/${companyId}/crm/whatsapp`}>
-            WhatsApp 收件匣 →
-          </Link>
-        </nav>
-      )}
       <CompanyProvider
         state={company.state}
         revision={company.revision}

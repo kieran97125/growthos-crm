@@ -1,4 +1,5 @@
 "use client";
+import { useWorkspaceChrome } from "@/components/workspace/context";
 import Link from "next/link";
 import { useIdentity } from "@/lib/saas/CompanyProvider";
 
@@ -105,6 +106,7 @@ export function ConversationWorkspace({
   requestedCustomer?: CustomerContext | null;
 }) {
   const identity = useIdentity();
+  const chrome = useWorkspaceChrome();
   const BRANDS = identity.scope.brands;
   const TEAM = identity.scope.team;
 
@@ -392,6 +394,7 @@ export function ConversationWorkspace({
 
   return (
     <main
+      data-shared-chrome={!!chrome}
       className={`fh-app ${view !== "inbox" ? "fh-studio-view" : ""} ${mobileChat && view === "inbox" ? "fh-mobile-chat" : ""} ${profileOpen && view === "inbox" ? "fh-profile-open" : ""}`}
     >
       <ProductHeader
@@ -404,140 +407,142 @@ export function ConversationWorkspace({
           })
         }
       />
-      <nav className="fh-rail" aria-label="CRM 功能">
-        {identity.connected ? (
-          <Link
-            href={`/company/${identity.scope.companyId}/crm`}
-            aria-label="訊息收件匣"
-            title="訊息收件匣"
-          >
-            <Inbox size={21} />
-            <span>訊息</span>
-          </Link>
-        ) : (
-          <button
-            aria-label="訊息收件匣"
-            title="訊息收件匣"
-            className={view === "inbox" ? "is-active" : ""}
-            onClick={() => {
-              setView("inbox");
-              setPanel(null);
-              setMobileChat(false);
-            }}
-          >
-            <Inbox size={21} />
-            <span>訊息</span>
-            <i />
-          </button>
-        )}
-        {!empty && (
-          <>
+      {!chrome && (
+        <nav className="fh-rail" aria-label="CRM 功能">
+          {identity.connected ? (
+            <Link
+              href={`/company/${identity.scope.companyId}/crm`}
+              aria-label="訊息收件匣"
+              title="訊息收件匣"
+            >
+              <Inbox size={21} />
+              <span>訊息</span>
+            </Link>
+          ) : (
             <button
-              hidden={identity.connected}
-              aria-label="Demo 體驗中心"
-              title="Demo 體驗中心"
-              className={view === "experience" ? "is-active" : ""}
+              aria-label="訊息收件匣"
+              title="訊息收件匣"
+              className={view === "inbox" ? "is-active" : ""}
               onClick={() => {
-                setView("experience");
-                setProfileOpen(false);
+                setView("inbox");
+                setPanel(null);
+                setMobileChat(false);
               }}
             >
-              <PlayCircle size={21} />
-              <span>體驗</span>
+              <Inbox size={21} />
+              <span>訊息</span>
+              <i />
+            </button>
+          )}
+          {!empty && (
+            <>
+              <button
+                hidden={identity.connected}
+                aria-label="Demo 體驗中心"
+                title="Demo 體驗中心"
+                className={view === "experience" ? "is-active" : ""}
+                onClick={() => {
+                  setView("experience");
+                  setProfileOpen(false);
+                }}
+              >
+                <PlayCircle size={21} />
+                <span>體驗</span>
+              </button>
+              <button
+                aria-label="推播與成效"
+                title="推播與成效"
+                className={view === "broadcasts" ? "is-active" : ""}
+                onClick={() => {
+                  setView("broadcasts");
+                  setProfileOpen(false);
+                }}
+              >
+                <Send size={21} />
+                <span>推播</span>
+              </button>
+              <button
+                aria-label="Flow 流程畫布"
+                title="Flow 流程畫布"
+                className={view === "flows" ? "is-active" : ""}
+                onClick={() => {
+                  setView("flows");
+                  setProfileOpen(false);
+                }}
+              >
+                <Workflow size={21} />
+                <span>Flow</span>
+              </button>
+              <button
+                aria-label="AI BOT 工作室"
+                title="AI BOT 工作室"
+                className={view === "bot" ? "is-active" : ""}
+                onClick={() => {
+                  setView("bot");
+                  setProfileOpen(false);
+                }}
+              >
+                <Bot size={21} />
+                <span>AI BOT</span>
+              </button>
+            </>
+          )}
+          {identity.connected ? (
+            <Link
+              href={`/company/${identity.scope.companyId}/crm/customers`}
+              aria-label="客戶通訊錄"
+              title="客戶通訊錄"
+            >
+              <ContactRound size={21} />
+              <span>客戶</span>
+            </Link>
+          ) : (
+            <button
+              aria-label="客戶通訊錄"
+              title="客戶通訊錄"
+              onClick={() => setPanel("contacts")}
+            >
+              <ContactRound size={21} />
+              <span>客戶</span>
+            </button>
+          )}
+          <button
+            aria-label="快捷回覆庫"
+            title="快捷回覆庫"
+            onClick={() => setPanel("replies")}
+          >
+            <BookOpen size={21} />
+            <span>回覆庫</span>
+          </button>
+          <button
+            aria-label="團隊工作量"
+            title="團隊工作量"
+            onClick={() => setPanel("team")}
+          >
+            <UsersRound size={21} />
+            <span>團隊</span>
+          </button>
+          <div className="fh-rail-bottom">
+            <button
+              aria-label="工作空間設定"
+              title="工作空間設定"
+              onClick={() => setPanel("settings")}
+            >
+              <Settings2 size={21} />
+              <span>設定</span>
             </button>
             <button
-              aria-label="推播與成效"
-              title="推播與成效"
-              className={view === "broadcasts" ? "is-active" : ""}
-              onClick={() => {
-                setView("broadcasts");
-                setProfileOpen(false);
-              }}
+              aria-label="示範說明"
+              title="示範說明"
+              onClick={() => setPanel("guide")}
             >
-              <Send size={21} />
-              <span>推播</span>
+              <HelpCircle size={21} />
+              <span>說明</span>
             </button>
-            <button
-              aria-label="Flow 流程畫布"
-              title="Flow 流程畫布"
-              className={view === "flows" ? "is-active" : ""}
-              onClick={() => {
-                setView("flows");
-                setProfileOpen(false);
-              }}
-            >
-              <Workflow size={21} />
-              <span>Flow</span>
-            </button>
-            <button
-              aria-label="AI BOT 工作室"
-              title="AI BOT 工作室"
-              className={view === "bot" ? "is-active" : ""}
-              onClick={() => {
-                setView("bot");
-                setProfileOpen(false);
-              }}
-            >
-              <Bot size={21} />
-              <span>AI BOT</span>
-            </button>
-          </>
-        )}
-        {identity.connected ? (
-          <Link
-            href={`/company/${identity.scope.companyId}/crm/customers`}
-            aria-label="客戶通訊錄"
-            title="客戶通訊錄"
-          >
-            <ContactRound size={21} />
-            <span>客戶</span>
-          </Link>
-        ) : (
-          <button
-            aria-label="客戶通訊錄"
-            title="客戶通訊錄"
-            onClick={() => setPanel("contacts")}
-          >
-            <ContactRound size={21} />
-            <span>客戶</span>
-          </button>
-        )}
-        <button
-          aria-label="快捷回覆庫"
-          title="快捷回覆庫"
-          onClick={() => setPanel("replies")}
-        >
-          <BookOpen size={21} />
-          <span>回覆庫</span>
-        </button>
-        <button
-          aria-label="團隊工作量"
-          title="團隊工作量"
-          onClick={() => setPanel("team")}
-        >
-          <UsersRound size={21} />
-          <span>團隊</span>
-        </button>
-        <div className="fh-rail-bottom">
-          <button
-            aria-label="工作空間設定"
-            title="工作空間設定"
-            onClick={() => setPanel("settings")}
-          >
-            <Settings2 size={21} />
-            <span>設定</span>
-          </button>
-          <button
-            aria-label="示範說明"
-            title="示範說明"
-            onClick={() => setPanel("guide")}
-          >
-            <HelpCircle size={21} />
-            <span>說明</span>
-          </button>
-          <span className="fh-rail-dot" />
-        </div>
-      </nav>
+            <span className="fh-rail-dot" />
+          </div>
+        </nav>
+      )}
       {view === "inbox" ? (
         <>
           <aside
@@ -1197,6 +1202,8 @@ export function ConversationWorkspace({
               studio={studio}
               onInbox={(id) => {
                 if (id) openConversation(id);
+                else if (identity.connected && chrome?.navigate)
+                  chrome.navigate(`/company/${identity.scope.companyId}/crm`);
                 else {
                   setView("inbox");
                   setMobileChat(false);
@@ -1217,6 +1224,10 @@ export function ConversationWorkspace({
             <BotStudio
               studio={studio}
               onInbox={() => {
+                if (identity.connected && chrome?.navigate) {
+                  chrome.navigate(`/company/${identity.scope.companyId}/crm`);
+                  return;
+                }
                 setView("inbox");
                 setMobileChat(false);
               }}

@@ -1,4 +1,8 @@
 "use client";
+import {
+  useWorkspaceChrome,
+  useWorkspaceCustomer,
+} from "@/components/workspace/context";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -68,6 +72,7 @@ export default function UnifiedInbox({
   initialProvider?: string;
   initialCustomer?: string;
 }) {
+  const chrome = useWorkspaceChrome();
   const base = `/api/companies/${companyId}`;
   const [overview, setOverview] = useState<InboxPage | null>(null),
     [detail, setDetail] = useState<InquiryDetail | null>(null),
@@ -109,6 +114,10 @@ export default function UnifiedInbox({
     refreshGeneration = useRef(0);
   const key = selected ? selected.provider + ":" + selected.id : "",
     query = new URLSearchParams({ queue, channel, search }).toString();
+  useWorkspaceCustomer("crm", {
+    contactId: detail?.customer.id ?? standalone?.customer.id,
+    brandId: detail?.thread.brand_id ?? standalone?.customer.brandIds[0],
+  });
   useEffect(() => {
     selectedRef.current = selected;
     queryRef.current = query;
@@ -396,48 +405,55 @@ export default function UnifiedInbox({
     }
   }
   return (
-    <main className="iq-app" data-mobile={mobile}>
-      <header className="iq-header">
-        <Link href={`/company/${companyId}/crm`} className="iq-brand">
-          <BrandMark />
-          <b>Convelta</b>
-          <span>CRM</span>
-        </Link>
-        <span className="iq-company">{companyName}</span>
-        <nav aria-label="產品及設定">
-          {hasPos && (
-            <Link href={`/company/${companyId}/pos`}>
-              <Store size={15} />
-              切換 POS
+    <main className="iq-app" data-mobile={mobile} data-shared-chrome={!!chrome}>
+      {!chrome && (
+        <>
+          <header className="iq-header">
+            <Link href={`/company/${companyId}/crm`} className="iq-brand">
+              <BrandMark />
+              <b>Convelta</b>
+              <span>CRM</span>
             </Link>
-          )}
-          <Link href={`/company/${companyId}/settings`} aria-label="公司設定">
-            <Settings2 size={17} />
-          </Link>
-        </nav>
-      </header>
-      <nav className="iq-rail" aria-label="CRM 功能">
-        <Link aria-current="page" href={`/company/${companyId}/crm`}>
-          <Inbox size={19} />
-          <span>收件匣</span>
-        </Link>
-        <Link href={`/company/${companyId}/crm/customers`}>
-          <UsersRound size={19} />
-          <span>客戶</span>
-        </Link>
-        <Link href={`/company/${companyId}/crm?view=flows`}>
-          <Workflow size={19} />
-          <span>Flow</span>
-        </Link>
-        <Link href={`/company/${companyId}/crm/ai`}>
-          <Bot size={19} />
-          <span>AI</span>
-        </Link>
-        <Link href={`/company/${companyId}/crm?view=broadcasts`}>
-          <Send size={19} />
-          <span>推播</span>
-        </Link>
-      </nav>
+            <span className="iq-company">{companyName}</span>
+            <nav aria-label="產品及設定">
+              {hasPos && (
+                <Link href={`/company/${companyId}/pos`}>
+                  <Store size={15} />
+                  切換 POS
+                </Link>
+              )}
+              <Link
+                href={`/company/${companyId}/settings`}
+                aria-label="公司設定"
+              >
+                <Settings2 size={17} />
+              </Link>
+            </nav>
+          </header>
+          <nav className="iq-rail" aria-label="CRM 功能">
+            <Link aria-current="page" href={`/company/${companyId}/crm`}>
+              <Inbox size={19} />
+              <span>收件匣</span>
+            </Link>
+            <Link href={`/company/${companyId}/crm/customers`}>
+              <UsersRound size={19} />
+              <span>客戶</span>
+            </Link>
+            <Link href={`/company/${companyId}/crm?view=flows`}>
+              <Workflow size={19} />
+              <span>Flow</span>
+            </Link>
+            <Link href={`/company/${companyId}/crm/ai`}>
+              <Bot size={19} />
+              <span>AI</span>
+            </Link>
+            <Link href={`/company/${companyId}/crm?view=broadcasts`}>
+              <Send size={19} />
+              <span>推播</span>
+            </Link>
+          </nav>
+        </>
+      )}
       <section className="iq-list" aria-label="全渠道查詢">
         <div className="iq-list-heading">
           <div>

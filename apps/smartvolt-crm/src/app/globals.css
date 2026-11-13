@@ -9,6 +9,7 @@
 @import "../components/crm/conversations/workspace.css";
 @import "../components/pos/pos.css";
 @import "../components/crm/studio/studio.css";
+@import "../components/workspace/workspace.css";
 * {
   box-sizing: border-box;
 }

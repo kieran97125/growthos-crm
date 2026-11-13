@@ -1,4 +1,5 @@
 "use client";
+import { useWorkspaceChrome } from "@/components/workspace/context";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BRAND } from "@/lib/brand";
@@ -91,6 +92,7 @@ const date = (value: number | string) =>
     hour12: false,
   }).format(new Date(value));
 export default function MetaInbox({ companyId }: { companyId: string }) {
+  const chrome = useWorkspaceChrome();
   const endpoint = `/api/companies/${encodeURIComponent(companyId)}/meta`;
   const [overview, setOverview] = useState<Overview | null>(null),
     [detail, setDetail] = useState<Detail | null>(null),
@@ -383,24 +385,34 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
   const threads = displayedOverview?.threads ?? [];
   return (
     <main className="meta-workspace">
-      <header className="meta-header">
-        <Link href={`/company/${companyId}`} className="meta-brand">
-          {BRAND.name}
-          <small>{overview?.companyName ?? "公司工作空間"}</small>
-        </Link>
-        <span>
-          社交收件匣 <b>Messenger · Instagram</b>
-        </span>
-        <div>
-          <Link href={`/company/${companyId}/settings`}>公司設定</Link>
-          <button
-            onClick={() => void refresh().catch((e) => setError(e.message))}
-            disabled={busy}
-          >
-            重新讀取
-          </button>
-        </div>
-      </header>
+      {chrome ? (
+        <header className="cq-module-heading">
+          <div>
+            <h1>Messenger／Instagram</h1>
+            <p>管理此公司嘅渠道接駁與收發記錄。</p>
+          </div>
+          <Link href={`/company/${companyId}/crm`}>開啟統一收件匣</Link>
+        </header>
+      ) : (
+        <header className="meta-header">
+          <Link href={`/company/${companyId}`} className="meta-brand">
+            {BRAND.name}
+            <small>{overview?.companyName ?? "公司工作空間"}</small>
+          </Link>
+          <span>
+            社交收件匣 <b>Messenger · Instagram</b>
+          </span>
+          <div>
+            <Link href={`/company/${companyId}/settings`}>公司設定</Link>
+            <button
+              onClick={() => void refresh().catch((e) => setError(e.message))}
+              disabled={busy}
+            >
+              重新讀取
+            </button>
+          </div>
+        </header>
+      )}
       {error && (
         <p className="meta-alert" role="alert">
           {error}

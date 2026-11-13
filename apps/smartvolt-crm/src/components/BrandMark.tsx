@@ -1,7 +1,13 @@
 import { BRAND, BRAND_MARK } from "@/lib/brand";
 
 /** Shared vector for the workspace, browser icon and home-screen identity. */
-export function BrandMark({ size = 40 }: { size?: number }) {
+export function BrandMark({
+  size = 40,
+  rounded = true,
+}: {
+  size?: number;
+  rounded?: boolean;
+}) {
   return (
     <svg
       width={size}
@@ -10,7 +16,12 @@ export function BrandMark({ size = 40 }: { size?: number }) {
       fill="none"
       aria-hidden="true"
     >
-      <path fill={BRAND.colors.accent} d="M0 0H40V40H0Z" />
+      <rect
+        width="40"
+        height="40"
+        rx={rounded ? 11 : 0}
+        fill={BRAND.colors.accent}
+      />
       <path fill={BRAND.colors.onAccent} d={BRAND_MARK.body} />
       <circle cx="30" cy="20" r="2.5" fill={BRAND.colors.onAccent} />
     </svg>

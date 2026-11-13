@@ -1,3 +1,5 @@
+"use client";
+import { useWorkspaceChrome } from "@/components/workspace/context";
 import {
   ArrowDown,
   ArrowLeft,
@@ -117,6 +119,7 @@ export default function WhatsAppInboxView({
 }: WhatsAppInboxViewProps) {
   const draftLength = Array.from(p.draft).length;
   const connected = p.connections.some((c) => c.state !== "disabled");
+  const chrome = useWorkspaceChrome();
   const selectedConnection = p.connections.find(
     (c) => c.id === p.selected?.connectionId,
   );
@@ -131,32 +134,42 @@ export default function WhatsAppInboxView({
     !p.canSend || !windowOpen || !!p.pending || !p.selected || !connectionReady;
   return (
     <main className={`wa-shell ${p.selected ? "wa-has-selection" : ""}`}>
-      <header className="wa-topbar">
-        <a
-          className="wa-backlink"
-          href={`/company/${p.companyId}`}
-          aria-label="返回 CRM 工作台"
-        >
-          <ArrowLeft size={16} aria-hidden="true" />
-          <span>CRM 工作台</span>
-        </a>
-        <div className="wa-topbrand">
-          <span className="wa-brand-icon">
-            <MessageCircle size={18} aria-hidden="true" />
-          </span>
+      {chrome ? (
+        <header className="cq-module-heading">
           <div>
-            <strong>WhatsApp 收件箱</strong>
-            <span>{p.companyName}</span>
+            <h1>WhatsApp</h1>
+            <p>管理此公司嘅渠道接駁與收發記錄。</p>
           </div>
-        </div>
-        <a
-          className="wa-icon-button"
-          href={`/company/${p.companyId}/settings/whatsapp`}
-          aria-label="WhatsApp 連接設定"
-        >
-          <Settings2 size={19} />
-        </a>
-      </header>
+          <a href={`/company/${p.companyId}/settings/whatsapp`}>連接設定</a>
+        </header>
+      ) : (
+        <header className="wa-topbar">
+          <a
+            className="wa-backlink"
+            href={`/company/${p.companyId}`}
+            aria-label="返回 CRM 工作台"
+          >
+            <ArrowLeft size={16} aria-hidden="true" />
+            <span>CRM 工作台</span>
+          </a>
+          <div className="wa-topbrand">
+            <span className="wa-brand-icon">
+              <MessageCircle size={18} aria-hidden="true" />
+            </span>
+            <div>
+              <strong>WhatsApp 收件箱</strong>
+              <span>{p.companyName}</span>
+            </div>
+          </div>
+          <a
+            className="wa-icon-button"
+            href={`/company/${p.companyId}/settings/whatsapp`}
+            aria-label="WhatsApp 連接設定"
+          >
+            <Settings2 size={19} />
+          </a>
+        </header>
+      )}
       {p.error && (
         <div className="wa-alert wa-page-alert" role="alert">
           <CircleAlert size={17} aria-hidden="true" />

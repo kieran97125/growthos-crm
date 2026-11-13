@@ -1,4 +1,8 @@
 "use client";
+import {
+  useWorkspaceChrome,
+  useWorkspaceCustomer,
+} from "@/components/workspace/context";
 import Link from "next/link";
 import { ArrowLeftRight, MessagesSquare, Store } from "lucide-react";
 import { BrandMark } from "@/components/BrandMark";
@@ -19,9 +23,12 @@ export function ProductHeader({
   onSwitch: (product: Product) => void;
   context?: CustomerContext;
 }) {
+  const chrome = useWorkspaceChrome();
+  useWorkspaceCustomer(product, context);
   const identity = useIdentity(),
     other = product === "crm" ? "pos" : "crm";
   const Icon = other === "pos" ? Store : MessagesSquare;
+  if (chrome) return null;
   return (
     <header className="sv-product-header fh-topbar">
       <a

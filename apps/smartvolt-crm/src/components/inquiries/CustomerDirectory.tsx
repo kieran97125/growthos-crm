@@ -1,4 +1,8 @@
 "use client";
+import {
+  useWorkspaceChrome,
+  useWorkspaceCustomer,
+} from "@/components/workspace/context";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
@@ -23,6 +27,7 @@ export default function CustomerDirectory({
   hasPos: boolean;
   canEdit: boolean;
 }) {
+  const chrome = useWorkspaceChrome();
   const [list, setList] = useState<
       { id: string; name: string; phone: string }[]
     >([]),
@@ -40,6 +45,10 @@ export default function CustomerDirectory({
     } | null>(null);
   const queryRef = useRef(query);
   const endpoint = `/api/companies/${companyId}/customers`;
+  useWorkspaceCustomer("crm", {
+    contactId: detail?.customer.id,
+    brandId: detail?.customer.brandIds[0],
+  });
   async function fetchData(
     path: string,
     data?: unknown,
@@ -137,33 +146,44 @@ export default function CustomerDirectory({
     }
   };
   return (
-    <main className="iq-app" data-mobile={mobile}>
-      <header className="iq-header">
-        <Link className="iq-brand" href={`/company/${companyId}/crm`}>
-          <BrandMark />
-          <b>Convelta</b>
-          <span>CRM</span>
-        </Link>
-        <span className="iq-company">{companyName}</span>
-        <nav>
-          {hasPos && (
-            <Link href={`/company/${companyId}/pos`}>
-              <Store size={15} />
-              切換 POS
+    <main
+      className="iq-app iq-directory-app"
+      data-mobile={mobile}
+      data-shared-chrome={!!chrome}
+    >
+      {!chrome && (
+        <>
+          <header className="iq-header">
+            <Link className="iq-brand" href={`/company/${companyId}/crm`}>
+              <BrandMark />
+              <b>Convelta</b>
+              <span>CRM</span>
             </Link>
-          )}
-        </nav>
-      </header>
-      <nav className="iq-rail" aria-label="CRM 功能">
-        <Link href={`/company/${companyId}/crm`}>
-          <Inbox size={19} />
-          <span>收件匣</span>
-        </Link>
-        <Link aria-current="page" href={`/company/${companyId}/crm/customers`}>
-          <UsersRound size={19} />
-          <span>客戶</span>
-        </Link>
-      </nav>
+            <span className="iq-company">{companyName}</span>
+            <nav>
+              {hasPos && (
+                <Link href={`/company/${companyId}/pos`}>
+                  <Store size={15} />
+                  切換 POS
+                </Link>
+              )}
+            </nav>
+          </header>
+          <nav className="iq-rail" aria-label="CRM 功能">
+            <Link href={`/company/${companyId}/crm`}>
+              <Inbox size={19} />
+              <span>收件匣</span>
+            </Link>
+            <Link
+              aria-current="page"
+              href={`/company/${companyId}/crm/customers`}
+            >
+              <UsersRound size={19} />
+              <span>客戶</span>
+            </Link>
+          </nav>
+        </>
+      )}
       <section className="iq-directory" aria-label="公司客戶目錄">
         <h1>每位客戶，一份完整記錄。</h1>
         <p>對話、預約同營運紀錄，沿同一個客戶身份連接。</p>

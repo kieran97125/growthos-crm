@@ -1,4 +1,5 @@
 "use client";
+import { useWorkspaceChrome } from "@/components/workspace/context";
 import Link from "next/link";
 import { useCallback, useState } from "react";
 import { Sparkles, ArrowUpRight, BookOpen } from "lucide-react";
@@ -31,6 +32,7 @@ export default function AIStudio({
   companyId: string;
   initialStatus: AIStatus;
 }) {
+  const chrome = useWorkspaceChrome();
   const [status, setStatus] = useState<AIStatus | null>(initialStatus),
     [error, setError] = useState(""),
     [brand, setBrand] = useState(initialStatus.brands[0]?.id ?? ""),
@@ -70,16 +72,28 @@ export default function AIStudio({
     knowledge = status?.knowledge.filter((a) => a.brandId === brand) ?? [];
   return (
     <main className="ai-studio">
-      <header className="ai-studio-header">
-        <Link href={`/company/${companyId}/crm`} className="ai-brand">
-          Convelta<span>{status?.companyName ?? "公司工作空間"}</span>
-        </Link>
-        <nav aria-label="AI 工作室導覽">
-          <Link href={`/company/${companyId}/crm/meta`}>社交收件匣</Link>
-          <Link href={`/company/${companyId}/crm?view=bot`}>管理知識</Link>
-        </nav>
-      </header>
+      {!chrome && (
+        <header className="ai-studio-header">
+          <Link href={`/company/${companyId}/crm`} className="ai-brand">
+            Convelta<span>{status?.companyName ?? "公司工作空間"}</span>
+          </Link>
+          <nav aria-label="AI 工作室導覽">
+            <Link href={`/company/${companyId}/crm/meta`}>社交收件匣</Link>
+            <Link href={`/company/${companyId}/crm?view=bot`}>管理知識</Link>
+          </nav>
+        </header>
+      )}
       <div className="ai-studio-body">
+        {chrome && (
+          <nav className="cq-ai-links" aria-label="AI 工作室功能">
+            <Link aria-current="page" href={`/company/${companyId}/crm/ai`}>
+              回覆助手
+            </Link>
+            <Link href={`/company/${companyId}/crm?view=bot`}>
+              BOT 與核准知識
+            </Link>
+          </nav>
+        )}
         <div className="ai-hero">
           <div className="ai-eyebrow">
             <Sparkles size={15} aria-hidden="true" />

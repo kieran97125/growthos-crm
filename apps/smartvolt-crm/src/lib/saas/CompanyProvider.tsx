@@ -1,4 +1,5 @@
 "use client";
+import { useWorkspaceChrome } from "@/components/workspace/context";
 import Link from "next/link";
 import { BRAND } from "@/lib/brand";
 import { createContext, useContext, useState, type ReactNode } from "react";
@@ -195,9 +196,17 @@ function createCompanyStore(
     },
   };
 }
-function SaveStatus() {
+function SaveStatus({
+  onRetry,
+  onExport,
+}: {
+  onRetry: () => void;
+  onExport: () => void;
+}) {
+  const chrome = useWorkspaceChrome();
   const { storage } = useDemo();
   const error = /未能|未有|未儲存|未通過|需要|尚未|無權|請|證據/.test(storage);
+  if (chrome && !error && storage === "已儲存至公司工作空間") return null;
   return (
     <div
       className={`sv-save-status ${error ? "is-error" : ""}`}
@@ -205,6 +214,12 @@ function SaveStatus() {
       aria-live="polite"
     >
       {storage}
+      {chrome && error && (
+        <>
+          <button onClick={onRetry}>重試儲存</button>
+          <button onClick={onExport}>匯出未儲存改動</button>
+        </>
+      )}
     </div>
   );
 }
@@ -221,6 +236,7 @@ export function CompanyProvider({
   products: Product[];
   children: ReactNode;
 }) {
+  const chrome = useWorkspaceChrome();
   const [store] = useState(() =>
     createCompanyStore(state, revision, actor, products),
   );
@@ -230,25 +246,27 @@ export function CompanyProvider({
     >
       <WorkspaceContext.Provider value={store}>
         <div className="sv-company-shell">
-          <div className="sv-company-toolbar">
-            <span>{state.scope!.companyName}</span>
-            <Link href="/">切換公司</Link>
-            {products.includes("crm") && (
-              <Link href={`/company/${state.scope!.companyId}/crm/whatsapp`}>
-                WhatsApp 收件匣
+          {!chrome && (
+            <div className="sv-company-toolbar">
+              <span>{state.scope!.companyName}</span>
+              <Link href="/">切換公司</Link>
+              {products.includes("crm") && (
+                <Link href={`/company/${state.scope!.companyId}/crm/whatsapp`}>
+                  WhatsApp 收件匣
+                </Link>
+              )}
+              <Link href={`/company/${state.scope!.companyId}/settings`}>
+                公司設定
               </Link>
-            )}
-            <Link href={`/company/${state.scope!.companyId}/settings`}>
-              公司設定
-            </Link>
-            <button onClick={store.retry}>重試儲存</button>
-            <button onClick={store.exportPending}>匯出未儲存改動</button>
-            <form action="/auth/signout" method="post">
-              <button>登出</button>
-            </form>
-          </div>
+              <button onClick={store.retry}>重試儲存</button>
+              <button onClick={store.exportPending}>匯出未儲存改動</button>
+              <form action="/auth/signout" method="post">
+                <button>登出</button>
+              </form>
+            </div>
+          )}
           {children}
-          <SaveStatus />
+          <SaveStatus onRetry={store.retry} onExport={store.exportPending} />
         </div>
       </WorkspaceContext.Provider>
     </IdentityContext.Provider>

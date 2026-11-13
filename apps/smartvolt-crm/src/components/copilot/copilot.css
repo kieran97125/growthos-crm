@@ -1300,7 +1300,7 @@
   flex: 1;
   min-height: 0;
 }
-.is-compact .cc-workroom-body {
+.is-compact .cc-workroom-body[data-observations] {
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -1332,17 +1332,17 @@
   padding: 12px 22px 20px;
 }
 .is-compact .cc-welcome {
-  padding: 8px 0 15px;
+  padding: 4px 0 10px;
 }
 .is-compact .cc-hero-mark {
-  width: 60px;
-  height: 60px;
-  border-radius: 20px;
-  margin-bottom: 19px;
-}
-.is-compact .cc-hero-mark > svg {
   width: 48px;
   height: 48px;
+  border-radius: 16px;
+  margin-bottom: 12px;
+}
+.is-compact .cc-hero-mark > svg {
+  width: 39px;
+  height: 39px;
 }
 .is-compact .cc-hero-mark i {
   width: 22px;
@@ -1352,7 +1352,7 @@
   top: -6px;
 }
 .is-compact .cc-welcome h1 {
-  font-size: 26px;
+  font-size: 24px;
   letter-spacing: -0.8px;
 }
 .is-compact .cc-welcome > p:first-of-type {
@@ -1360,7 +1360,7 @@
   margin-bottom: 8px;
 }
 .is-compact .cc-category {
-  margin: 20px 0 13px;
+  margin: 14px 0 10px;
 }
 .is-compact .cc-category button {
   padding: 7px 8px;
@@ -1368,19 +1368,19 @@
 }
 .is-compact .cc-example-grid {
   grid-template-columns: minmax(0, 1fr);
-  gap: 7px;
+  gap: 6px;
 }
 .is-compact .cc-example-grid button {
-  min-height: 53px;
+  min-height: 48px;
   flex-direction: row;
   align-items: center;
   gap: 12px;
-  padding: 12px 13px;
+  padding: 10px 13px;
   border-radius: 11px;
 }
 .is-compact .cc-example-grid b {
   flex: 1;
-  font-size: 11px;
+  font-size: 12px;
 }
 .is-compact .cc-example-number {
   font-size: 9px;

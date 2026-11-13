@@ -338,6 +338,7 @@ for (const mobile of [false, true])
     await page.screenshot({
       path: info.outputPath(`${mobile ? "mobile" : "desktop"}-c-welcome.png`),
       fullPage: true,
+      animations: "disabled",
     });
     const input = page.getByRole("textbox", { name: "同 C 講你想做到乜" });
     await input.fill("幫我建立一個再互動活動");
@@ -413,9 +414,13 @@ for (const mobile of [false, true])
     });
     await expect(dock).toBeInViewport();
     await expect(dock.getByRole("textbox")).toBeInViewport();
+    await expect(
+      dock.getByRole("button", { name: /現客再次預約/ }),
+    ).toBeInViewport({ ratio: 1 });
     await page.screenshot({
       path: info.outputPath(`${mobile ? "mobile" : "desktop"}-c-floating.png`),
       fullPage: true,
+      animations: "disabled",
     });
     await dock.getByRole("textbox").fill("未完成嘅活動想法");
     await page

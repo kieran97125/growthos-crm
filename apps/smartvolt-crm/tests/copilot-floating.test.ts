@@ -71,6 +71,19 @@ test("corrupt or unbounded stored coordinates cannot move C outside its usable a
     assert.equal(readPosition(raw), null);
   assert.deepEqual(readPosition('{"x":0.3,"y":1}'), { x: 0.3, y: 1 });
 });
+test("half-pixel touch coordinates retain the displayed pixel through repeated stored round trips", () => {
+  const b = { left: 16, top: 70, right: 319, bottom: 711, size: 55 };
+  let point = { x: 32.5, y: 232.5 };
+  for (let n = 0; n < 50; n++) {
+    const saved = readPosition(JSON.stringify(relativePosition(point, b)));
+    assert.ok(saved);
+    point = restorePosition(saved, b);
+    assert.deepEqual(
+      { x: Math.round(point.x), y: Math.round(point.y) },
+      { x: 33, y: 233 },
+    );
+  }
+});
 test("companion follows the chosen side and remains inside desktop and portrait viewports", () => {
   for (const [width, height, mobile, floor] of [
     [1440, 1000, false, 24],

@@ -97,6 +97,8 @@ export function useFloatingLauncher(scope: string, product: string) {
     };
     const persist = () => {
       saved = relativePosition(point, bounds);
+      point = restorePosition(saved, bounds);
+      apply();
       try {
         localStorage.setItem(storageKey, JSON.stringify(saved));
       } catch {
@@ -173,7 +175,6 @@ export function useFloatingLauncher(scope: string, product: string) {
       delete layer.dataset.dragging;
       if (ended.moved) {
         point = snapPosition(ended.next, bounds);
-        apply();
         persist();
         suppressClick = true;
         e.preventDefault();
@@ -216,7 +217,6 @@ export function useFloatingLauncher(scope: string, product: string) {
           { x: point.x + delta[e.key].x, y: point.y + delta[e.key].y },
           bounds,
         );
-        apply();
         persist();
       }
     };

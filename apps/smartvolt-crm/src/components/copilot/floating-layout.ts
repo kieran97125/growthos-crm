@@ -54,7 +54,9 @@ export function restorePosition(p: Point | null, b: FloatingBounds): Point {
     : { x: b.right, y: b.bottom };
 }
 export function relativePosition(p: Point, b: FloatingBounds): Point {
-  const q = clampPosition(p, b);
+  // Persist the displayed CSS pixel, not a half-pixel touch coordinate whose
+  // floating-point round trip could land on the other side of Math.round.
+  const q = clampPosition({ x: Math.round(p.x), y: Math.round(p.y) }, b);
   return {
     x: (q.x - b.left) / (b.right - b.left || 1),
     y: (q.y - b.top) / (b.bottom - b.top || 1),

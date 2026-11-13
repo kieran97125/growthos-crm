@@ -39,6 +39,7 @@ export default function WebsiteKnowledgeImport({
   const [selected, setSelected] = useState<string[]>([]);
   const live = useRef(true),
     stop = useRef(false),
+    initialRead = useRef<AbortController | null>(null),
     requestController = useRef<AbortController | null>(null);
   const endpoint = `/api/companies/${companyId}/knowledge/website`;
   function adopt(next: WebsiteJob | null) {
@@ -49,6 +50,7 @@ export default function WebsiteKnowledgeImport({
     live.current = true;
     if (!connected) return;
     const controller = new AbortController();
+    initialRead.current = controller;
     void fetch(`${endpoint}?brand=${encodeURIComponent(brandId)}`, {
       signal: controller.signal,
       cache: "no-store",
@@ -87,6 +89,7 @@ export default function WebsiteKnowledgeImport({
   }
   async function scan(resume = false) {
     if (busy) return;
+    initialRead.current?.abort();
     setBusy(true);
     setError("");
     setNotice("");

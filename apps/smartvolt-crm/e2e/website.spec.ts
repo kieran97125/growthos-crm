@@ -140,7 +140,7 @@ async function fixture(page: Page, lost = false) {
   await page.route("**/__acceptance/website", (r) =>
     r.fulfill({
       contentType: "text/html",
-      body: `<!doctype html><html lang="zh-HK"><head><title>Brand knowledge import</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>:root{${vars}}*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f6f8ff;color:#183156}main{max-width:900px;margin:auto;padding:20px}button,input{font:inherit}${css}</style></head><body><main id="fixture"></main><script src="/__acceptance/website-fixture.js"></script></body></html>`,
+      body: `<!doctype html><html lang="zh-HK"><head><title>Brand knowledge import</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>:root{${vars}}*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f6f8ff;color:#183156}main{max-width:900px;margin:auto;padding:20px}button,input{font:inherit}${css}</style></head><body><main id="fixture" class="fh-app"></main><script src="/__acceptance/website-fixture.js"></script></body></html>`,
     }),
   );
   await page.goto("/__acceptance/website");

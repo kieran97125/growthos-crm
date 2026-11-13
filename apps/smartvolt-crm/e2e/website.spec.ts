@@ -204,6 +204,9 @@ test("an unknown import response freezes the original command and retry cannot d
   await expect(page.getByText(/尚有未儲存改動/)).toBeVisible();
   await page.getByRole("button", { name: "重試儲存", exact: true }).click();
   await expect(page.getByLabel("已保存知識")).toContainText("draft");
+  await expect(
+    page.getByRole("button", { name: "已加入知識庫", exact: true }),
+  ).toBeDisabled();
   expect(f.ids).toHaveLength(2);
   expect(new Set(f.ids).size).toBe(1);
   expect(f.state().studio.articles).toHaveLength(1);

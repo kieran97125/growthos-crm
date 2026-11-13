@@ -93,7 +93,6 @@ function createCompanyStore(
     action?: AppAction;
     website?: WebsiteImportSelection;
     resolve?: (result: { added: number; skipped: number }) => void;
-    reject?: (error: Error) => void;
   }[] = [];
   let running = false,
     blocked = false;
@@ -143,10 +142,8 @@ function createCompanyStore(
       };
       pending.resolve?.({ added: body.added ?? 0, skipped: body.skipped ?? 0 });
     } catch (error) {
-      pending.reject?.(
-        error instanceof Error ? error : Error("未能確認匯入結果。"),
-      );
-      pending.reject = undefined;
+      // Keep the external promise pending while its original command is frozen.
+      // Same-UUID recovery must still settle the importer's visible state.
       blocked = true;
       // Keep the pending command in memory. Never silently retry against a newer revision.
       snapshot = {
@@ -202,19 +199,16 @@ function createCompanyStore(
     importWebsite(input: WebsiteImportSelection) {
       if (blocked)
         return Promise.reject(Error("尚有未儲存改動，請先重試儲存。"));
-      return new Promise<{ added: number; skipped: number }>(
-        (resolve, reject) => {
-          queue.push({
-            id: crypto.randomUUID(),
-            website: input,
-            resolve,
-            reject,
-          });
-          snapshot = { ...snapshot, storage: "正在儲存改動…", now: Date.now() };
-          emit();
-          void drain();
-        },
-      );
+      return new Promise<{ added: number; skipped: number }>((resolve) => {
+        queue.push({
+          id: crypto.randomUUID(),
+          website: input,
+          resolve,
+        });
+        snapshot = { ...snapshot, storage: "正在儲存改動…", now: Date.now() };
+        emit();
+        void drain();
+      });
     },
     exportPending() {
       const file = new Blob(

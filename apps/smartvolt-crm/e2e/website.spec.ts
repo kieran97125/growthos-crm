@@ -169,7 +169,7 @@ async function fixture(
   await page.route("**/__acceptance/website", (r) =>
     r.fulfill({
       contentType: "text/html",
-      body: `<!doctype html><html lang="zh-HK"><head><meta charset="utf-8"><title>Brand knowledge import</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>:root{${vars}}*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f6f8ff;color:#183156}.fh-app{height:900px;display:block}button,input{font:inherit}${css}</style></head><body><main id="fixture"></main><script id="seed" type="application/json">${JSON.stringify({ state, revision })}</script><script src="/__acceptance/website-fixture.js"></script></body></html>`,
+      body: `<!doctype html><html lang="zh-HK"><head><meta charset="utf-8"><title>Brand knowledge import</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>:root{${vars}}*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f6f8ff;color:#183156}.fh-app{height:900px;display:block}button,input{font:inherit}button{border:0;background:transparent;padding:0}${css}</style></head><body><main id="fixture"></main><script id="seed" type="application/json">${JSON.stringify({ state, revision })}</script><script src="/__acceptance/website-fixture.js"></script></body></html>`,
     }),
   );
   await page.goto("/__acceptance/website");

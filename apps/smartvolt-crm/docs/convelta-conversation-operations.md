@@ -55,3 +55,30 @@ register mappings and client financial projections stay Enterprise/configurable;
 they are not copied into Core. No client records, pricing, brand identity,
 credentials, source code or runtime are imported. The checkpoint is updated
 through canonical draft PR #88; unfinished capabilities remain system cards.
+
+
+## Hosted schema readback
+
+Migration `20261113162451_convelta_conversation_operations.sql` is recorded in the
+hosted project as `convelta_conversation_operations`. The repository bytes and
+hosted migration statements share SHA-256
+`f7e82f27d86e72622f1eecf2df1dc865713526317a68c782a550531797510a8e`.
+The version rename changes no SQL bytes.
+
+Readback verifies all seven new tables have RLS and no anonymous/authenticated
+read grants. All seven operations RPCs are security invoker and deny direct
+browser execution. Service-role UPDATE, DELETE and TRUNCATE are absent on
+accepted AI handoffs. Existing active membership and CRM/POS entitlement checks
+remain inside the RPC boundary.
+
+The actual company remains empty: no customers, linked threads, booking requests,
+payments, named tasks or accepted handoffs were seeded. Five neutral stages have
+zero counts; all outcome counters are zero. Routing and stage-created follow-ups
+start disabled, and presence is offline. This privileged readback is not an
+Owner browser login or a customer/model/provider write.
+
+Post-change advisors introduce no new security warning and no missing foreign-key
+index. The seven additional RLS-without-policy INFO findings describe deliberate
+service-only tables with no browser grants. Existing account/auth warnings remain
+outside this delivery. New indexes are currently unused because the company has
+no operational rows; no synthetic business records are inserted to exercise them.

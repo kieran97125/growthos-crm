@@ -17,8 +17,7 @@ closed object properties. It fails on the original schema and passes on the fix.
 
 The failed production receipt is retained. It created no customer, booking,
 transaction, provider message or campaign execution. Gateway reported no usage
-and no charge for the rejected schema. A successful real C response and durable
-draft acceptance are still required before marking live activation complete.
+and no charge for the rejected schema. Authenticated production acceptance is recorded below.
 
 Product Learning Sync checked: canonical protocol, index, main checkpoint and
 the existing review proposal #88 were read. Entries considered:
@@ -30,3 +29,27 @@ the existing review proposal #88 were read. Entries considered:
 `2026-11-11-account-owned-report-segments.md`. Only neutral evidence and runtime
 acceptance principles are used. No client records, identity, prices, domains,
 credentials or implementation are imported.
+
+## Accepted production result
+
+Runtime `4c92426d42aae8c0dc0c4d7e0ffdc9fd5a560941` is READY as
+`dpl_852axnimDSYoySjUXQvMKRy6SQ9X` at https://app.convelta.io. Both source
+workflows pass: [Convelta](https://github.com/kieran97125/growthos-crm/actions/runs/43408816470)
+and [original CRM](https://github.com/kieran97125/growthos-crm/actions/runs/43408816391).
+The exact runtime passes typecheck, lint, build, 221 unit/PostgreSQL checks,
+83 browser checks and four production initial-paint/refresh checks.
+
+The actual Owner request completed at 18:27:41 HKT on 2026-11-13, using
+5,914 input and 2,071 output tokens. It produced a business demonstration plan
+with 11 verified facts, including four approved company knowledge articles.
+A second Owner request also completed. Both internal briefs remain drafts;
+the native saved-brief view and database independently confirm persistence.
+No message, booking, transaction or customer record was created by acceptance.
+
+Native navigation from C to the customer directory and its C side panel
+preserved an unsent composer. The temporary test text was cleared. The final
+saved-brief screen was visually checked. The initial production error/fatal scan
+is empty. Company system cards record C and navigation as complete; offline
+observations, populated-company latency, real channel/customer acceptance and
+round-two journeys remain separate pending work. Canonical checkpoint evidence
+is retained in the existing private review proposal #88.

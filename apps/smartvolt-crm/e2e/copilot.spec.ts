@@ -207,7 +207,7 @@ async function fixture(
         const createdAt = new Date().toISOString();
         answer = {
           answer: options.unsafe
-            ? "<script>window.cInjected=true</script> **安全測試** ![tracking](https://unsafe.invalid/pixel)"
+            ? "<script>window.cInjected=true</script>\n\n**安全測試** ![tracking](https://unsafe.invalid/pixel)\n\n[已核准來源](https://convelta.io/)"
             : "我留意到有查詢等緊跟進，可以先準備一個有針對性嘅活動。[overdue]",
           factIds: ["overdue"],
           evidence: [],
@@ -354,6 +354,19 @@ for (const mobile of [false, true])
       page.getByRole("heading", { name: "停滯查詢再互動" }),
     ).toBeVisible();
     expect(state.askCalls()).toHaveLength(1);
+    await expect(input).toBeInViewport();
+    if (mobile) {
+      await page
+        .getByRole("button", { name: "開啟 C 工作觀察", exact: true })
+        .click();
+      await expect(
+        page.getByRole("complementary", { name: "C 工作觀察", exact: true }),
+      ).toBeVisible();
+      await page
+        .getByRole("button", { name: "返回 C 對話", exact: true })
+        .click();
+      await expect(input).toBeInViewport();
+    }
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
@@ -451,6 +464,9 @@ test("native customer tagging exposes an explanation and a review step before ap
     name: "C 全能助手",
     exact: true,
   });
+  await dock
+    .getByRole("button", { name: "開啟 C 工作觀察", exact: true })
+    .click();
   await dock.getByRole("button", { name: "檢視加「預約意向」" }).click();
   expect(state.customer.tags).toHaveLength(0);
   await dock.getByRole("button", { name: "確認加入標籤", exact: true }).click();
@@ -514,6 +530,9 @@ test("AI response rendering ignores injected HTML and remote image beacons", asy
     .fill("排版測試");
   await page.getByRole("button", { name: "交畀 C 處理" }).click();
   await expect(page.locator(".cc-answer-text strong")).toHaveText("安全測試");
+  await expect(
+    page.getByRole("link", { name: "已核准來源", exact: true }),
+  ).toHaveAttribute("href", "https://convelta.io/");
   expect(await page.evaluate(() => "cInjected" in window)).toBe(false);
   await expect(
     page.locator(".cc-answer-text img,.cc-answer-text script"),

@@ -18,6 +18,7 @@ import {
   RefreshCw,
   BookOpen,
   ChevronRight,
+  X,
   ClipboardCopy,
 } from "lucide-react";
 import { BrandMark } from "@/components/BrandMark";
@@ -33,6 +34,10 @@ const time = (v: string) =>
     hour12: false,
   }).format(new Date(v));
 const markdownComponents = {
+  strong: ({ children }: ComponentProps<"strong">) => (
+    <strong>{children}</strong>
+  ),
+  em: ({ children }: ComponentProps<"em">) => <em>{children}</em>,
   a: ({ href, children }: ComponentProps<"a">) =>
     href && /^https:\/\//.test(href) ? (
       <a href={href} target="_blank" rel="noopener noreferrer">
@@ -88,12 +93,18 @@ const examples = {
   ],
 } as const;
 function readable(answer: CopilotAnswer) {
-  return answer.answer.replace(/\[([^\]]+)\]/g, (_, id: string) => {
+  return answer.answer.replace(/\[([^\]]+)\]/g, (match, id: string) => {
     const i = answer.facts.findIndex((f) => f.id === id);
-    return i >= 0 ? `〔${i + 1}〕` : "";
+    return i >= 0 ? `〔${i + 1}〕` : match;
   });
 }
-function Signal({ signal: o }: { signal: Observation }) {
+function Signal({
+  signal: o,
+  onUse,
+}: {
+  signal: Observation;
+  onUse?: () => void;
+}) {
   const c = useCopilot(),
     [confirm, setConfirm] = useState(false);
   if (!c) return null;
@@ -127,7 +138,10 @@ function Signal({ signal: o }: { signal: Observation }) {
         <button
           className="cc-inline"
           disabled={c.busy}
-          onClick={() => c.useObservation(o)}
+          onClick={() => {
+            c.useObservation(o);
+            onUse?.();
+          }}
         >
           同 C 一齊做
           <ArrowUpRight size={14} />
@@ -324,8 +338,10 @@ export default function CopilotSurface({
     [category, setCategory] = useState<keyof typeof examples>("activity"),
     [tab, setTab] = useState<"threads" | "plans">("threads"),
     [selectedPlan, setSelectedPlan] = useState<Task | null>(null),
-    [mobileList, setMobileList] = useState(false);
+    [mobileList, setMobileList] = useState(false),
+    [showObservations, setShowObservations] = useState(false);
   const input = useRef<HTMLTextAreaElement>(null);
+  const observationToggle = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (compact) input.current?.focus();
   }, [compact]);
@@ -479,6 +495,16 @@ export default function CopilotSurface({
             >
               <Layers size={15} />
               工作記憶
+            </button>
+            <button
+              ref={observationToggle}
+              className="cc-show-observations"
+              aria-label="開啟 C 工作觀察"
+              aria-expanded={showObservations}
+              onClick={() => setShowObservations(true)}
+            >
+              <Sparkles size={14} />
+              工作觀察
             </button>
             <span>
               {b?.companyName ?? "公司工作空間"} ·{" "}
@@ -751,18 +777,40 @@ export default function CopilotSurface({
             </>
           )}
         </section>
-        <aside className="cc-observations" aria-label="C 工作觀察">
+        <aside
+          className={`cc-observations${showObservations ? " is-open" : ""}`}
+          aria-label="C 工作觀察"
+        >
           <div className="cc-observations-heading">
             <span>
               <Sparkles size={16} />
               我留意到
             </span>
             <small>隨你嘅工作更新</small>
+            <button
+              className="cc-close-observations"
+              aria-label="返回 C 對話"
+              onClick={() => {
+                setShowObservations(false);
+                observationToggle.current?.focus();
+              }}
+            >
+              <X size={18} />
+            </button>
           </div>
           {c.loading && !b ? (
             <p className="cc-status">正在核對工作資料…</p>
           ) : (
-            b?.observations.map((o) => <Signal key={o.key} signal={o} />)
+            b?.observations.map((o) => (
+              <Signal
+                key={o.key}
+                signal={o}
+                onUse={() => {
+                  setShowObservations(false);
+                  input.current?.focus();
+                }}
+              />
+            ))
           )}
           {b && !b.observations.length && (
             <p className="cc-list-empty">

@@ -460,7 +460,7 @@ export function CopilotProvider({
     setNotice("");
   }
   function useObservation(o: Observation) {
-    setOpen(true);
+    if (pageContext.section !== "ai") setOpen(true);
     setComposer(o.prompt);
     setPeek(null);
     if (bundle?.ai.canGenerate)
@@ -499,43 +499,47 @@ export function CopilotProvider({
   return (
     <Context.Provider value={state}>
       {children}
-      {peek && peek.scope === workScope && !open && (
-        <aside className="cc-peek" aria-label="C 主動觀察">
-          <div>
-            <BrandMark size={26} />
-            <b>C 留意到一件事</b>
+      {peek &&
+        peek.scope === workScope &&
+        !open &&
+        currentBundle?.context.brandId === context.brandId &&
+        currentBundle?.observations.some((o) => o.key === peek.signal.key) && (
+          <aside className="cc-peek" aria-label="C 主動觀察">
+            <div>
+              <BrandMark size={26} />
+              <b>C 留意到一件事</b>
+              <button
+                aria-label="稍後提醒呢個觀察"
+                onClick={() => {
+                  void act({
+                    action: "feedback",
+                    key: peek.signal.key,
+                    family: peek.signal.family,
+                    subject: peek.signal.subject,
+                    status: "snoozed",
+                  });
+                  setPeek(null);
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <strong>{peek.signal.title}</strong>
+            <p>{peek.text.replace(/\[[^\]]+\]/g, "")}</p>
             <button
-              aria-label="稍後提醒呢個觀察"
+              className="cc-inline"
               onClick={() => {
-                void act({
-                  action: "feedback",
-                  key: peek.signal.key,
-                  family: peek.signal.family,
-                  subject: peek.signal.subject,
-                  status: "snoozed",
-                });
+                if (peek.thread) setThreadId(peek.thread);
+                else setComposer(peek.signal.prompt);
+                setOpen(true);
                 setPeek(null);
               }}
             >
-              <X size={16} />
+              同 C 一齊睇
+              <ArrowUpRight size={14} />
             </button>
-          </div>
-          <strong>{peek.signal.title}</strong>
-          <p>{peek.text.replace(/\[[^\]]+\]/g, "")}</p>
-          <button
-            className="cc-inline"
-            onClick={() => {
-              if (peek.thread) setThreadId(peek.thread);
-              else setComposer(peek.signal.prompt);
-              setOpen(true);
-              setPeek(null);
-            }}
-          >
-            同 C 一齊睇
-            <ArrowUpRight size={14} />
-          </button>
-        </aside>
-      )}
+          </aside>
+        )}
       {open && (
         <aside className="cc-dock" aria-label="C 全能助手">
           <header>

@@ -295,6 +295,32 @@
 .cc-close-list {
   display: none;
 }
+.cc-show-observations,
+.cc-close-observations {
+  display: none;
+  border: 0;
+  background: none;
+  color: var(--kies-strong);
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  white-space: nowrap;
+  font: inherit;
+  font-size: 10px;
+}
+.cc-surface .cc-observations.is-open {
+  display: block !important;
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  overflow-y: auto;
+  border: 0;
+}
+.cc-observations.is-open .cc-close-observations {
+  display: inline-flex;
+  margin-left: auto;
+  padding: 6px;
+}
 .cc-chat {
   flex: 1;
   min-height: 0;
@@ -1006,14 +1032,18 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
+  overflow: hidden;
 }
 .is-compact .cc-history {
   display: none;
 }
 .is-compact .cc-main {
   flex: 1;
-  min-height: 470px;
+  min-height: 0;
+  height: 100%;
+}
+.is-compact .cc-show-observations {
+  display: inline-flex;
 }
 .is-compact .cc-top-line {
   padding: 12px 18px;
@@ -1029,7 +1059,7 @@
 }
 .is-compact .cc-chat {
   padding: 8px 20px 18px;
-  overflow: visible;
+  overflow-y: auto;
   flex: 1;
 }
 .is-compact .cc-welcome {
@@ -1064,6 +1094,7 @@
   margin: 0 18px;
 }
 .is-compact .cc-observations {
+  display: none;
   border-left: 0;
   border-top: 1px solid var(--kies-line);
   overflow: visible;
@@ -1215,6 +1246,9 @@
   }
 }
 @media (max-width: 1130px) {
+  .cc-show-observations {
+    display: inline-flex;
+  }
   .cc-workroom-body {
     grid-template-columns: 190px minmax(0, 1fr);
   }
@@ -1261,7 +1295,7 @@
   .cc-workroom-body {
     display: block;
     height: calc(100% - 46px);
-    overflow-y: auto;
+    overflow: hidden;
   }
   .cc-history {
     display: none;
@@ -1278,17 +1312,17 @@
     font-size: 10px;
   }
   .cc-main {
-    min-height: calc(100dvh - 166px);
-    height: auto;
+    min-height: 0;
+    height: 100%;
   }
   .cc-top-line {
     padding: 13px 16px;
   }
   .cc-top-line > span {
-    font-size: 9px;
+    display: none;
   }
   .cc-chat {
-    overflow: visible;
+    overflow-y: auto;
     padding: 12px 18px 20px;
   }
   .cc-welcome {
@@ -1341,7 +1375,7 @@
     margin-left: 10%;
   }
   .cc-observations {
-    display: block !important;
+    display: none !important;
     padding: 18px;
     border-left: 0;
     border-top: 1px solid var(--kies-line);

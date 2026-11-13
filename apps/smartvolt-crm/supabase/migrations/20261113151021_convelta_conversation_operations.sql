@@ -51,6 +51,7 @@ create table public.sv_routing_queue(
 create index sv_routing_queue_attempt on public.sv_routing_queue(company_id,last_attempt_at)where state='queued';
 create index sv_followups_due on public.sv_followup_tasks(company_id,due_at,id)where status='open';
 create index sv_followups_owner on public.sv_followup_tasks(company_id,owner_id,due_at)where status='open';
+create index sv_followups_owner_fk on public.sv_followup_tasks(company_id,owner_id);
 create index sv_followups_customer on public.sv_followup_tasks(company_id,customer_id,brand_id);
 create index sv_followups_thread on public.sv_followup_tasks(company_id,provider,thread_id);
 create table public.sv_ai_handoffs(

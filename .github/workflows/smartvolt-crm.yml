@@ -14,19 +14,6 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_DB: convelta_operations
-          POSTGRES_PASSWORD: isolated-ci-password
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
     defaults:
       run:
         working-directory: apps/smartvolt-crm
@@ -41,14 +28,6 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
-      - name: Verify real PostgreSQL concurrent assignment
-        run: node --import tsx scripts/verify-operations-postgres.ts
-        env:
-          PGHOST: 127.0.0.1
-          PGPORT: 5432
-          PGDATABASE: convelta_operations
-          PGUSER: postgres
-          PGPASSWORD: isolated-ci-password
       - run: npm run build
       - name: Select and record acceptance browser
         run: bash ../../scripts/select-ci-browser.sh
@@ -63,3 +42,39 @@ jobs:
             apps/smartvolt-crm/test-results/
             apps/smartvolt-crm/paint-test-results/
           retention-days: 7
+
+  postgres-operations:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: apps/smartvolt-crm
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: convelta_operations
+          POSTGRES_PASSWORD: isolated-ci-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d convelta_operations"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/smartvolt-crm/package-lock.json
+      - run: npm ci
+      - name: Verify real PostgreSQL concurrent assignment
+        run: node --import tsx scripts/verify-operations-postgres.ts
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: 5432
+          PGDATABASE: convelta_operations
+          PGUSER: postgres
+          PGPASSWORD: isolated-ci-password

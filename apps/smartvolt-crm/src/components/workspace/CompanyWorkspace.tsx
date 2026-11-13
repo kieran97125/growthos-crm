@@ -7,6 +7,7 @@ import {
   BookOpen,
   Bot,
   ChevronDown,
+  ChartNoAxesCombined,
   Inbox,
   LogOut,
   MessagesSquare,
@@ -22,6 +23,7 @@ import type { Product } from "@/lib/saas/products";
 import { WorkspaceChromeContext, type WorkspaceCustomer } from "./context";
 import { crmSections, workspaceLocation } from "./navigation";
 import { CopilotProvider } from "@/components/copilot/CopilotProvider";
+import OperationsPresence from "@/components/operations/OperationsPresence";
 type Props = {
   companyId: string;
   companyName: string;
@@ -33,6 +35,7 @@ type Props = {
 const icons = {
   inbox: Inbox,
   customers: UsersRound,
+  operations: ChartNoAxesCombined,
   flows: Workflow,
   ai: Bot,
   knowledge: BookOpen,
@@ -131,6 +134,12 @@ export function CompanyWorkspaceChrome({
               <span className="cq-company">{companyName}</span>
             )}
             <div className="cq-header-actions">
+              {products.includes("crm") && (
+                <OperationsPresence
+                  companyId={companyId}
+                  actorId={actorId ?? actorName}
+                />
+              )}
               {products.includes(other) && (
                 <Link
                   className="cq-switch"

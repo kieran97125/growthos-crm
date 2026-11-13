@@ -21,11 +21,13 @@ export default function CustomerDirectory({
   companyName,
   hasPos,
   canEdit,
+  initialCustomer,
 }: {
   companyId: string;
   companyName: string;
   hasPos: boolean;
   canEdit: boolean;
+  initialCustomer?: string;
 }) {
   const chrome = useWorkspaceChrome();
   const [list, setList] = useState<
@@ -34,11 +36,11 @@ export default function CustomerDirectory({
     [after, setAfter] = useState<string | null>(null),
     [search, setSearch] = useState(""),
     [query, setQuery] = useState(""),
-    [selected, setSelected] = useState<string | null>(null),
+    [selected, setSelected] = useState<string | null>(initialCustomer ?? null),
     [detail, setDetail] = useState<CustomerDetail | null>(null),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
-    [mobile, setMobile] = useState("list"),
+    [mobile, setMobile] = useState(initialCustomer ? "profile" : "list"),
     [pending, setPending] = useState<{
       kind: "inbox" | "customers";
       data: unknown;

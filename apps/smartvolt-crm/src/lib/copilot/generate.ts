@@ -16,6 +16,13 @@ import {
 
 export const capabilities: Fact[] = [
   {
+    id: "help:operations",
+    label: "跟進與轉化",
+    value:
+      "CRM 左側「跟進」提供客戶階段、流失原因、跟進事項、團隊接客及自動流程。主管可以設定品牌、渠道、客戶標籤、團隊、輪流／工作量派客、在線限制及接客上限。對話內可核實並採納已保存的 AI 交接重點。階段標籤與真實預約、到店及收付款分開；C 提供建議，設定及交接由同事確認。",
+    source: "Convelta 已實作能力",
+  },
+  {
     id: "help:inbox",
     label: "收件匣與回覆",
     value:

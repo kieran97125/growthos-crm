@@ -65,6 +65,17 @@ export const snapshotSchema = z.object({
   channels: z.object({ connected: count }),
   lastBroadcastAt: z.string().nullable(),
   broadcastCoverage: z.enum(["verified", "unavailable"]),
+  followupTasks: count.nullable().optional(),
+  lifecycleStages: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        kind: z.enum(["open", "won", "lost"]),
+        count,
+      }),
+    )
+    .optional(),
 });
 export type Snapshot = z.infer<typeof snapshotSchema>;
 export type Observation = {

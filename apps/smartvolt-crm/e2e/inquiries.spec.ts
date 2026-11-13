@@ -3,6 +3,12 @@ import AxeBuilder from "@axe-core/playwright";
 import { build } from "esbuild";
 import { readFileSync } from "node:fs";
 import { BRAND_CSS } from "../src/lib/brand";
+import {
+  defaultSettings,
+  operationsAction,
+  type OperationsAction,
+  type OperationsContext,
+} from "../src/lib/operations/model";
 import type {
   InboxPage,
   InquiryDetail,
@@ -15,7 +21,12 @@ const company = "11111111-1111-4111-8111-111111111111",
   second = "33333333-3333-4333-8333-333333333333",
   message = "44444444-4444-4444-8444-444444444444";
 let bundle = "";
-const css = ["inquiries/inquiries.css", "meta/meta.css", "ai/ai.css"]
+const css = [
+  "inquiries/inquiries.css",
+  "meta/meta.css",
+  "ai/ai.css",
+  "operations/operations.css",
+]
   .map((f) => readFileSync("src/components/" + f, "utf8"))
   .join("\n");
 test.beforeAll(async () => {
@@ -167,8 +178,72 @@ async function mock(
     commands: InquiryAction[] = [],
     sendIds: string[] = [];
   let lost = !!options.lostSend;
+  const operationCommands: OperationsAction[] = [];
+  const operationContext: OperationsContext = {
+    canEdit: options.canEdit !== false,
+    canManage: options.canEdit !== false,
+    actorId: owner,
+    lifecycle: {
+      customer_id: "customer-one",
+      brand_id: "main",
+      stage_id: "new",
+      revision: 0,
+      reason: "",
+    },
+    stages: defaultSettings.stages,
+    followups: [],
+    handoff: null,
+  };
   await page.route("**/api/companies/**", async (r) => {
     const url = new URL(r.request().url());
+    if (url.pathname.endsWith("/operations")) {
+      if (r.request().method() === "POST") {
+        const c = operationsAction.parse(r.request().postDataJSON());
+        operationCommands.push(c);
+        if (c.action === "handoff")
+          operationContext.handoff = {
+            summary: "客戶想了解星期六試堂",
+            interest: "high",
+            next_step: "核對方便時段",
+            created_at: new Date().toISOString(),
+          };
+        if (c.action === "stage") {
+          operationContext.lifecycle.stage_id = c.stageId;
+          operationContext.lifecycle.revision++;
+          operationContext.lifecycle.reason = c.reason;
+        }
+        if (c.action === "followup-create")
+          operationContext.followups.push({
+            id: c.commandId,
+            customer_id: "customer-one",
+            brand_id: "main",
+            provider: c.provider,
+            thread_id: c.threadId,
+            title: c.title,
+            due_at: c.dueAt,
+            owner_id: c.ownerId,
+            owner_name: null,
+            status: "open",
+            revision: 0,
+            name: "Casey Chan",
+          });
+        await r.fulfill({ json: { saved: true } });
+        return;
+      }
+      await r.fulfill({
+        json: {
+          ...operationContext,
+          lifecycle: {
+            ...operationContext.lifecycle,
+            customer_id:
+              url.searchParams.get("thread") === second
+                ? "customer-two"
+                : f.detail.thread.customer_id,
+          },
+        },
+      });
+      return;
+    }
     if (r.request().method() === "POST") {
       const c = r.request().postDataJSON() as InquiryAction;
       commands.push(c);
@@ -310,7 +385,7 @@ async function mock(
     };
     await r.fulfill({ json: overview });
   });
-  return { ...f, commands, sendIds };
+  return { ...f, commands, sendIds, operationCommands };
 }
 for (const mobile of [false, true])
   test(`${mobile ? "mobile" : "desktop"}: actual inbox controller connects customer, appointment and POS`, async ({
@@ -450,4 +525,76 @@ test("viewer can read customer context but cannot send, edit, assign or create a
     page.getByRole("button", { name: "按在手查詢量分派" }),
   ).toBeDisabled();
   expect(f.commands).toHaveLength(0);
+});
+
+test("staff adopts saved AI context, sets an operational stage and schedules a follow-up without sending", async ({
+  page,
+}, info) => {
+  const f = await mock(page);
+  let requestId = "";
+  await page.route("**/api/assistant", (r) => {
+    const input = r.request().postDataJSON();
+    requestId = input.requestId;
+    return r.fulfill({
+      json: {
+        requestId,
+        decision: "draft",
+        reply: "想了解你星期六方便嘅時段，再由同事核對安排。",
+        reason: "Synthetic approved knowledge",
+        summary: "客戶想了解星期六試堂",
+        nextStep: "核對方便時段",
+        interest: "high",
+        missing: [],
+        sources: [],
+        evidence: [],
+        model: "synthetic/model",
+        goal: input.goal,
+      },
+    });
+  });
+  await mount(page);
+  await page.getByRole("button", { name: /Casey Chan/ }).click();
+  await page
+    .locator(".iq-context")
+    .getByRole("button", { name: "AI 及跟進", exact: true })
+    .click();
+  await expect(page.getByLabel("對話客戶階段")).toBeEnabled();
+  await page.getByRole("button", { name: "準備 AI 回覆建議" }).click();
+  await page.getByRole("button", { name: "採納交接重點" }).click();
+  await expect(page.getByRole("button", { name: "已保存交接" })).toBeDisabled();
+  await expect(page.locator(".co-handoff")).toContainText(
+    "客戶想了解星期六試堂",
+  );
+  const adopted = f.operationCommands.find((c) => c.action === "handoff");
+  expect(adopted).toMatchObject({
+    requestId,
+    threadId: thread,
+    customerId: "customer-one",
+    stageId: null,
+  });
+  expect(adopted).not.toHaveProperty("summary");
+  await page.getByLabel("對話客戶階段").selectOption("qualified");
+  await page.getByLabel("原因", { exact: true }).fill("已核對客戶試堂需要");
+  await page.getByRole("button", { name: "儲存階段", exact: true }).click();
+  await expect
+    .poll(() => f.operationCommands.filter((c) => c.action === "stage").length)
+    .toBe(1);
+  await page.getByText("新增跟進事項", { exact: true }).click();
+  await page.getByLabel("下一步", { exact: true }).fill("核對星期六時段");
+  const day = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  await page.getByLabel("香港跟進時間").fill(day + "T10:30");
+  await page.getByRole("button", { name: "加入跟進", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "完成 核對星期六時段" }),
+  ).toBeVisible();
+  const task = f.operationCommands.find((c) => c.action === "followup-create");
+  expect(task).toMatchObject({
+    dueAt: day + "T02:30:00.000Z",
+    title: "核對星期六時段",
+  });
+  expect(f.sendIds).toHaveLength(0);
+  await page.screenshot({
+    path: info.outputPath("inquiry-ai-handoff-followup.png"),
+    fullPage: true,
+  });
 });

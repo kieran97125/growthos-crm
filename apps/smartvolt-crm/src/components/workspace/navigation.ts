@@ -2,6 +2,7 @@ import type { Product } from "@/lib/saas/products";
 export type CrmSection =
   | "inbox"
   | "customers"
+  | "operations"
   | "flows"
   | "ai"
   | "knowledge"
@@ -11,6 +12,7 @@ export const crmSections: { id: CrmSection; label: string; suffix: string }[] =
   [
     { id: "inbox", label: "收件匣", suffix: "/crm" },
     { id: "customers", label: "客戶", suffix: "/crm/customers" },
+    { id: "operations", label: "跟進", suffix: "/crm/operations" },
     { id: "flows", label: "Flow", suffix: "/crm?view=flows" },
     { id: "ai", label: "AI 助理", suffix: "/crm/ai" },
     { id: "knowledge", label: "BOT／知識庫", suffix: "/crm?view=bot" },
@@ -43,6 +45,7 @@ export function workspaceLocation(
   )
     section = "settings";
   else if (relative === "/crm/customers") section = "customers";
+  else if (relative === "/crm/operations") section = "operations";
   else if (relative === "/crm/ai" || relative === "/copilot") section = "ai";
   else if (view === "flows") section = "flows";
   else if (view === "bot") section = "knowledge";

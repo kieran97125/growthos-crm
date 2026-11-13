@@ -39,6 +39,13 @@ function EventText({
   kind: string;
   detail: Record<string, unknown>;
 }) {
+  const operational: Record<string, string> = {
+    "lifecycle-changed": "更新客戶階段",
+    "routing-assigned": "派發對話負責人",
+    "ai-handoff": "採納 AI 交接重點",
+    "followup-created": "加入跟進事項",
+    "followup-updated": "更新跟進事項",
+  };
   const text =
     kind === "pos-payment"
       ? `人工核實收款 HK$${Number(detail.amountCents ?? 0) / 100}`
@@ -60,7 +67,7 @@ function EventText({
                       ? "確認基本預約"
                       : kind === "booking-cancel"
                         ? "取消預約意向"
-                        : kind;
+                        : (operational[kind] ?? kind);
   return (
     <>
       <b>{text}</b>

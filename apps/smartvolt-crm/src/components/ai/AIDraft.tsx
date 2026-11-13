@@ -20,18 +20,22 @@ export default function AIDraft({
   onInsert,
   onGenerated,
   onRequestState,
+  onHandoff,
 }: {
   context: Context;
   disabled?: boolean;
   onInsert?: (text: string) => void;
   onGenerated?: () => void;
   onRequestState?: (locked: boolean) => void;
+  onHandoff?: (answer: CompanyAnswer) => Promise<boolean | void>;
 }) {
   const [result, setResult] = useState<CompanyAnswer | null>(null),
     [goal, setGoal] = useState<ReplyGoal>("answer"),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [notice, setNotice] = useState("");
+  const [adopting, setAdopting] = useState(false),
+    [adoptedRequest, setAdoptedRequest] = useState<string | null>(null);
   const [pending, setPending] = useState<
     (Context & { requestId: string; goal: ReplyGoal }) | null
   >(null);
@@ -156,6 +160,32 @@ export default function AIDraft({
               <ClipboardCopy size={14} aria-hidden="true" />
               {onInsert ? "加入回覆草稿" : "複製建議"}
             </button>
+            {onHandoff && result.requestId && (
+              <button
+                disabled={
+                  disabled || adopting || adoptedRequest === result.requestId
+                }
+                onClick={() => {
+                  setAdopting(true);
+                  void onHandoff(result)
+                    .then((ok) => {
+                      if (ok) {
+                        setAdoptedRequest(result.requestId!);
+                        setNotice("交接重點已保存，團隊可以繼續跟進。");
+                      }
+                    })
+                    .catch(() => setError("交接結果未確認，請核對同一操作。"))
+                    .finally(() => setAdopting(false));
+                }}
+              >
+                <Check size={14} aria-hidden="true" />
+                {adoptedRequest === result.requestId
+                  ? "已保存交接"
+                  : adopting
+                    ? "保存中…"
+                    : "採納交接重點"}
+              </button>
+            )}
           </div>
           <dl className="ai-result-details">
             <div>

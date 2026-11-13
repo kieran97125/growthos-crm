@@ -25,7 +25,7 @@ export function factsFor(s: Snapshot): Fact[] {
       id: "overdue",
       label: "到期未處理",
       value: `${s.overdue} 段對話`,
-      source,
+      source: "目前未完成工作佇列 · 香港時間",
     },
     {
       id: "dormant",
@@ -51,6 +51,23 @@ export function factsFor(s: Snapshot): Fact[] {
     },
   ];
   if (s.product !== "crm") facts.splice(1, 6);
+  if (s.product === "crm") {
+    if (s.followupTasks != null)
+      facts.push({
+        id: "followup-tasks",
+        label: "待處理跟進事項",
+        value: `${s.followupTasks} 項；同一段對話可有多項事項`,
+        source: "目前正式跟進紀錄",
+      });
+    for (const stage of s.lifecycleStages ?? [])
+      if (stage.count)
+        facts.push({
+          id: `lifecycle:${stage.id}`,
+          label: `客戶階段 · ${stage.name}`,
+          value: `${stage.count} 個品牌客戶；每客戶每品牌一次，跨品牌可重疊。客服階段標記，不代表實際預約、到店或付款。`,
+          source: "公司目前客戶階段紀錄",
+        });
+  }
   for (const segment of s.segments)
     facts.push({
       id: `segment:${segment.key}`,

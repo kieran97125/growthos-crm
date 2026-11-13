@@ -14,6 +14,19 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: convelta_operations
+          POSTGRES_PASSWORD: isolated-ci-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     defaults:
       run:
         working-directory: apps/smartvolt-crm
@@ -28,6 +41,14 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
+      - name: Verify real PostgreSQL concurrent assignment
+        run: node --import tsx scripts/verify-operations-postgres.ts
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: 5432
+          PGDATABASE: convelta_operations
+          PGUSER: postgres
+          PGPASSWORD: isolated-ci-password
       - run: npm run build
       - name: Select and record acceptance browser
         run: bash ../../scripts/select-ci-browser.sh

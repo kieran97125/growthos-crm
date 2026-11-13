@@ -7,8 +7,10 @@ import CustomerDirectory from "@/components/inquiries/CustomerDirectory";
 export const dynamic = "force-dynamic";
 export default async function CustomersPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ companyId: string }>;
+  searchParams: Promise<{ contact?: string }>;
 }) {
   const { companyId } = await params;
   let a;
@@ -25,8 +27,13 @@ export default async function CustomersPage({
       </main>
     );
   }
+  const q = await searchParams;
+  const initialCustomer =
+    q.contact && q.contact.length <= 100 ? q.contact : undefined;
   return (
     <CustomerDirectory
+      key={initialCustomer ?? "directory"}
+      initialCustomer={initialCustomer}
       companyId={companyId}
       companyName={a.company.name}
       hasPos={a.products.includes("pos")}

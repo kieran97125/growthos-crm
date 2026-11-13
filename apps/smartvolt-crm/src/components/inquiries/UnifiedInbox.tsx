@@ -24,7 +24,7 @@ import { BrandMark } from "@/components/BrandMark";
 import ThreadOperationsPanel, {
   type OperationDraft,
 } from "@/components/meta/ThreadOperations";
-import AIDraft from "@/components/ai/AIDraft";
+import InquiryOperations from "@/components/operations/InquiryOperations";
 import { inboxQueues } from "@/lib/meta/operations";
 import {
   actionSchema,
@@ -272,7 +272,7 @@ export default function UnifiedInbox({
     setNotice("");
     setPending({ endpoint, data });
     try {
-      await request(endpoint, data);
+      const outcome = await request<{ queued?: boolean }>(endpoint, data);
       setPending(null);
       const saved = actionSchema.safeParse(data);
       if (
@@ -283,7 +283,11 @@ export default function UnifiedInbox({
           k = s.provider + ":" + s.threadId;
         setDrafts((old) => ({ ...old, [k]: old[k] === s.body ? "" : old[k] }));
       }
-      setNotice("已儲存並同步公司資料。");
+      setNotice(
+        outcome.queued
+          ? "暫時未有符合規則嘅同事，對話保留喺待分派。"
+          : "已儲存並同步公司資料。",
+      );
       window.dispatchEvent(new Event("convelta:data-changed"));
       try {
         await refresh();
@@ -877,7 +881,7 @@ export default function UnifiedInbox({
                   >
                     按在手查詢量分派
                   </button>
-                  <small>只會選擇在職、有操作權限嘅同事。</small>
+                  <small>按公司派客規則分派。</small>
                 </div>
                 <ThreadOperationsPanel
                   key={key}
@@ -896,17 +900,11 @@ export default function UnifiedInbox({
                     mutate("inbox", { ...c, provider: detail.thread.provider })
                   }
                   assistant={
-                    <AIDraft
+                    <InquiryOperations
                       key={key}
-                      context={{
-                        companyId,
-                        brandId: detail.thread.brand_id,
-                        source:
-                          detail.thread.provider === "meta"
-                            ? "meta"
-                            : "whatsapp",
-                        threadId: detail.thread.id,
-                      }}
+                      companyId={companyId}
+                      actorId={overview.actorId}
+                      thread={detail.thread}
                       disabled={!canEdit || locked}
                       onInsert={(text) => {
                         setDrafts((old) => ({ ...old, [key]: text }));

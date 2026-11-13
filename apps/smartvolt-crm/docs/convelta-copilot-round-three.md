@@ -85,13 +85,24 @@ or unused code/math/diagram plugins. Existing AI SDK and Next packages are retai
 
 ## Verification and rollout
 
-Local typecheck, lint, 220 unit/PostgreSQL tests and the production build pass.
+Local typecheck, lint, 221 unit/PostgreSQL tests and the production build pass.
 New tests cover complete aggregates, tenant/actor/product boundaries, immutable
 replay, shared quota, stale worker recovery, explicit tag confirmation, owned
 campaign plans, proactive limits, source/price validation and a real SDK mock
 two-step tool loop. Browser acceptance composes the actual production components
 with browser-only synthetic data; no fixture/auth bypass ships in the app.
-Hosted browser/deployment evidence is recorded below when completed.
+The accepted runtime `4c92426d42aae8c0dc0c4d7e0ffdc9fd5a560941` passes both
+[Convelta CI](https://github.com/kieran97125/growthos-crm/actions/runs/43408816470)
+and [original CRM regression](https://github.com/kieran97125/growthos-crm/actions/runs/43408816391),
+including all 83 browser checks and four production load/refresh checks.
+Desktop/mobile evidence was visually reviewed. Production
+`dpl_852axnimDSYoySjUXQvMKRy6SQ9X` is READY at app.convelta.io. The provider-facing
+schema requires every output field, including empty evidence; a regression uses
+the actual installed SDK's JSON Schema conversion. See
+[live acceptance](convelta-c-live-acceptance.md) for the retained initial failure,
+three successful model responses, source checks, saved drafts, and native
+cross-page/reload acceptance. Public login returns 200, anonymous C access 401,
+foreign-origin C mutation 403 and a non-shipped fixture URL 404.
 
 Dedicated hosted migration `20261113093933_convelta_copilot` was installed on
 2026-11-13. SQL SHA-256:

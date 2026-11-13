@@ -42,9 +42,12 @@ The exact runtime passes typecheck, lint, build, 221 unit/PostgreSQL checks,
 The actual Owner request completed at 18:27:41 HKT on 2026-11-13, using
 5,914 input and 2,071 output tokens. It produced a business demonstration plan
 with 11 verified facts, including four approved company knowledge articles.
-A second Owner request also completed. Both internal briefs remain drafts;
+A second campaign request and a configuration-only follow-up also completed.
+The configuration answer cites the actual saved Flow and BOT facts. Eight quoted
+passages across the two campaign answers were independently rechecked against
+the approved articles and all match exactly. Both internal briefs remain drafts;
 the native saved-brief view and database independently confirm persistence.
-No message, booking, transaction or customer record was created by acceptance.
+No provider message, booking, transaction or customer record was created by acceptance.
 
 Native navigation from C to the customer directory and its C side panel
 preserved an unsent composer. The temporary test text was cleared. The final
@@ -53,3 +56,16 @@ is empty. Company system cards record C and navigation as complete; offline
 observations, populated-company latency, real channel/customer acceptance and
 round-two journeys remain separate pending work. Canonical checkpoint evidence
 is retained in the existing private review proposal #88.
+
+The same thread was also checked through native Flow navigation: both the
+conversation and an unsent composer survived opening C beside the real editor.
+After clearing the test input and refreshing the AI page, the saved
+`IG／FB 查詢管理產品示範` brief could be opened again from activity history.
+
+One mixed configuration/knowledge answer was rejected by evidence validation;
+it was not accepted as an assistant answer or used for any action. The focused
+configuration follow-up then succeeded without relaxing validation. The
+`copilot-answer-quality` card tracks evaluation, clearer safe diagnostics,
+known usage retention on rejected answers, and bounded repair design. Null token
+fields on a rejected answer do not establish zero provider cost. C is not
+represented as infallible or an offline autonomous operator.

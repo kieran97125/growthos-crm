@@ -584,6 +584,38 @@ test.describe("touch placement", () => {
     );
     await expect(dock).toBeVisible();
     await dock.getByRole("textbox").fill("觸控移動時保留內容");
+    await page.evaluate(() => {
+      const log: Record<string, unknown>[] = [];
+      (window as unknown as { cTouchEvents: typeof log }).cTouchEvents = log;
+      for (const capture of [true, false])
+        for (const type of [
+          "pointerdown",
+          "pointerup",
+          "pointercancel",
+          "click",
+        ]) {
+          document.addEventListener(
+            type,
+            (e) => {
+              const p = e as PointerEvent;
+              log.push({
+                type,
+                capture,
+                pointerId: p.pointerId,
+                primary: p.isPrimary,
+                detail: p.detail,
+                pointerType: p.pointerType,
+                target:
+                  e.target instanceof Element
+                    ? e.target.closest("button")?.className
+                    : null,
+                prevented: e.defaultPrevented,
+              });
+            },
+            { capture },
+          );
+        }
+    });
     box = (await launcher.boundingBox())!;
     await touch("touchStart", box.x + box.width / 2, box.y + box.height / 2);
     await touch("touchMove", 300, 245);
@@ -592,7 +624,23 @@ test.describe("touch placement", () => {
     await expect(dock.getByRole("textbox")).toHaveValue("觸控移動時保留內容");
     await expect(dock.getByRole("textbox")).toBeInViewport({ ratio: 1 });
     box = (await launcher.boundingBox())!;
+    expect(
+      await launcher.evaluate((el) => {
+        const r = el.getBoundingClientRect();
+        return el.contains(
+          document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2),
+        );
+      }),
+    ).toBe(true);
     await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+    await info.attach("touch-activation.json", {
+      body: JSON.stringify(
+        await page.evaluate(
+          () => (window as unknown as { cTouchEvents: unknown }).cTouchEvents,
+        ),
+      ),
+      contentType: "application/json",
+    });
     await expect(dock).toHaveCount(0);
     const saved = (await launcher.boundingBox())!;
     await page.setViewportSize({ width: 844, height: 390 });

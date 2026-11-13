@@ -176,9 +176,21 @@ export function useFloatingLauncher(scope: string, product: string) {
       if (ended.moved) {
         point = snapPosition(ended.next, bounds);
         persist();
-        suppressClick = true;
-        e.preventDefault();
+      } else {
+        const rect = button.getBoundingClientRect();
+        if (
+          e.clientX >= rect.left &&
+          e.clientX <= rect.right &&
+          e.clientY >= rect.top &&
+          e.clientY <= rect.bottom
+        )
+          button.click();
       }
+      // Own activation for a captured gesture. Mobile browsers can omit their
+      // compatibility click after a drag, or send it later; neither should
+      // change a following tap. Keyboard/assistive activation stays native.
+      suppressClick = true;
+      e.preventDefault();
       if (button.hasPointerCapture(e.pointerId))
         button.releasePointerCapture(e.pointerId);
     };
@@ -186,7 +198,9 @@ export function useFloatingLauncher(scope: string, product: string) {
       if (gesture?.id === e.pointerId) cancel();
     };
     const click = (e: MouseEvent) => {
-      if (suppressClick && e.detail !== 0) {
+      const fromPointer =
+        e.detail !== 0 || (e instanceof PointerEvent && !!e.pointerType);
+      if (suppressClick && fromPointer) {
         e.preventDefault();
         e.stopImmediatePropagation();
       }

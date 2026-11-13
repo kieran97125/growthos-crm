@@ -344,10 +344,7 @@ export default function FlowStudio({
             <Workflow size={23} />
           </span>
           <div>
-            <h1>
-              Flow Studio<span>流程設計工作室</span>
-            </h1>
-            <p>將每個查詢，接到清楚嘅下一步。</p>
+            <h1>Flow Studio</h1>
           </div>
         </div>
         <div className="st-header-actions">

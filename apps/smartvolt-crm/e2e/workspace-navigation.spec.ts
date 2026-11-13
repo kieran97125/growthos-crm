@@ -19,6 +19,7 @@ const css = [
   "src/components/crm/studio/broadcast.css",
   "src/components/ui/dialog.css",
   "node_modules/@xyflow/react/dist/style.css",
+  "src/components/copilot/copilot.css",
   "src/components/workspace/workspace.css",
 ]
   .map((p) => readFileSync(p, "utf8"))
@@ -156,6 +157,9 @@ for (const mobile of [false, true])
       });
       await rail.getByRole("link", { name: label, exact: true }).click();
       await expect(page.locator(".cq-header")).toHaveCount(1);
+      await expect(page.locator(".cc-launcher")).toHaveCount(1);
+      await expect(page.locator(".cq-header .cc-launcher")).toHaveCount(0);
+      await expect(page.locator(".cc-launcher")).toHaveCSS("position", "fixed");
       await expect(rail.getByRole("link")).toHaveText(expected);
       await expect(rail.locator('[aria-current="page"]')).toHaveAttribute(
         "data-section",
@@ -172,11 +176,11 @@ for (const mobile of [false, true])
         ).toBeVisible();
       if (section === "knowledge")
         await expect(
-          page.getByRole("heading", { name: /AI BOT Studio/ }),
+          page.getByRole("heading", { name: "BOT／知識庫", exact: true }),
         ).toBeVisible();
       if (section === "broadcasts")
         await expect(
-          page.getByRole("heading", { name: /推播工作室/ }),
+          page.getByRole("heading", { name: "推播", exact: true }),
         ).toBeVisible();
       expect(
         await page.evaluate(
@@ -204,6 +208,12 @@ test("POS remains an independently purchased product within the same company ide
   await page.goto(base + "/pos?plan=pos");
   await expect(page.locator(".cq-header")).toHaveCount(1);
   await expect(page.locator(".cq-product")).toHaveText("POS");
+  await expect(page.locator(".cc-launcher")).toHaveCount(1);
+  await expect(page.locator(".cc-launcher")).toHaveAttribute(
+    "data-product",
+    "pos",
+  );
+  await expect(page.locator(".cc-launcher")).toHaveCSS("position", "fixed");
   await expect(
     page.getByRole("navigation", { name: "CRM 功能", exact: true }),
   ).toHaveCount(0);

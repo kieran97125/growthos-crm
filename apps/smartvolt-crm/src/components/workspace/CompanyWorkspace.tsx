@@ -17,14 +17,11 @@ import {
   Workflow,
 } from "lucide-react";
 import { BRAND } from "@/lib/brand";
+import { BrandMark } from "@/components/BrandMark";
 import type { Product } from "@/lib/saas/products";
 import { WorkspaceChromeContext, type WorkspaceCustomer } from "./context";
 import { crmSections, workspaceLocation } from "./navigation";
-import {
-  CopilotProvider,
-  CLauncher,
-  CHeaderButton,
-} from "@/components/copilot/CopilotProvider";
+import { CopilotProvider } from "@/components/copilot/CopilotProvider";
 type Props = {
   companyId: string;
   companyName: string;
@@ -114,11 +111,11 @@ export function CompanyWorkspaceChrome({
           </a>
           <header className="cq-header">
             <div className="cq-brand">
-              <CLauncher />
               <Link
                 href={`${current.base}/${current.product}`}
                 aria-label={`${BRAND.name} ${current.product.toUpperCase()}`}
               >
+                <BrandMark size={34} />
                 <strong>{BRAND.name}</strong>
               </Link>
             </div>
@@ -130,9 +127,10 @@ export function CompanyWorkspaceChrome({
               )}
               <b>{current.product.toUpperCase()}</b>
             </span>
-            <span className="cq-company">{companyName}</span>
+            {companyName.trim().toLowerCase() !== BRAND.name.toLowerCase() && (
+              <span className="cq-company">{companyName}</span>
+            )}
             <div className="cq-header-actions">
-              <CHeaderButton />
               {products.includes(other) && (
                 <Link
                   className="cq-switch"

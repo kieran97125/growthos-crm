@@ -499,15 +499,20 @@ export function CopilotProvider({
   return (
     <Context.Provider value={state}>
       {children}
+      <CLauncher />
       {peek &&
         peek.scope === workScope &&
         !open &&
         currentBundle?.context.brandId === context.brandId &&
         currentBundle?.observations.some((o) => o.key === peek.signal.key) && (
-          <aside className="cc-peek" aria-label="C 主動觀察">
+          <aside
+            className="cc-peek"
+            data-product={context.product}
+            aria-label="C 主動觀察"
+          >
             <div>
               <BrandMark size={26} />
-              <b>C 留意到一件事</b>
+              <b>C 的新觀察</b>
               <button
                 aria-label="稍後提醒呢個觀察"
                 onClick={() => {
@@ -541,12 +546,17 @@ export function CopilotProvider({
           </aside>
         )}
       {open && (
-        <aside className="cc-dock" aria-label="C 全能助手">
+        <aside
+          id="convelta-c-dock"
+          className="cc-dock"
+          data-product={context.product}
+          aria-label="C 全能助手"
+        >
           <header>
             <BrandMark size={30} />
             <div>
               <b>C</b>
-              <small>你嘅 Convelta 營運夥伴</small>
+              <small>{context.customerId ? "目前客戶" : "Convelta AI"}</small>
             </div>
             <Link
               className="cc-expand"
@@ -570,30 +580,31 @@ export function CopilotProvider({
 }
 export function CLauncher() {
   const c = useCopilot();
+  if (!c) return null;
+  const count =
+    c.bundle?.observations.filter((o) => o.kind !== "setup").length ?? 0;
   return (
     <button
       className="cc-launcher"
-      aria-label="開啟 C 全能助手"
-      aria-expanded={c?.open ?? false}
-      onClick={() => c?.setOpen(!c.open)}
+      type="button"
+      data-open={c.open}
+      data-working={c.busy}
+      data-product={c.context.product}
+      aria-label={c.open ? "收起 C 全能助手" : "開啟 C 全能助手"}
+      aria-expanded={c.open}
+      aria-controls={c.open ? "convelta-c-dock" : undefined}
+      title={c.open ? "收起 C" : "同 C 傾"}
+      onClick={() => c.setOpen(!c.open)}
     >
-      <BrandMark size={34} />
-    </button>
-  );
-}
-export function CHeaderButton() {
-  const c = useCopilot(),
-    count =
-      c?.bundle?.observations.filter((o) => o.kind !== "setup").length ?? 0;
-  return (
-    <button
-      className="cc-header-button"
-      onClick={() => c?.setOpen(!c.open)}
-      aria-label={`C 工作觀察${count ? `，${count} 項` : ""}`}
-    >
-      <Sparkles size={17} />
-      <span>C</span>
-      {count > 0 && <i>{count}</i>}
+      <span className="cc-fab-label">同 C 傾</span>
+      <span className="cc-orb">
+        {c.open ? <X size={23} /> : <BrandMark size={42} />}
+      </span>
+      {count > 0 && !c.open && (
+        <i className="cc-fab-count" aria-label={`${count} 項新觀察`}>
+          {count > 9 ? "9+" : count}
+        </i>
+      )}
     </button>
   );
 }

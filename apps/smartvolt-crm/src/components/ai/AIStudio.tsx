@@ -87,23 +87,22 @@ export default function AIStudio({
         {chrome && (
           <nav className="cq-ai-links" aria-label="AI 工作室功能">
             <Link href={`/company/${companyId}/crm/ai`}>C 工作台</Link>
-            <Link aria-current="page" href={`/company/${companyId}/crm/ai?mode=replies`}>回覆測試</Link>
+            <Link
+              aria-current="page"
+              href={`/company/${companyId}/crm/ai?mode=replies`}
+            >
+              回覆測試
+            </Link>
             <Link href={`/company/${companyId}/crm?view=bot`}>
               BOT 與核准知識
             </Link>
           </nav>
         )}
         <div className="ai-hero">
-          <div className="ai-eyebrow">
-            <Sparkles size={15} aria-hidden="true" />
-            CONVELTA INTELLIGENCE
-          </div>
           <h1>
-            更快掌握需要，
-            <br />
-            更有根據咁回覆。
+            <Sparkles size={23} aria-hidden="true" />
+            回覆測試
           </h1>
-          <p>將核准知識、客戶查詢同下一步連起。你掌握最後決定。</p>
         </div>
         {error && (
           <p role="alert" className="ai-message ai-error">
@@ -117,13 +116,12 @@ export default function AIStudio({
           <div>
             <b>
               {status?.status === "ready"
-                ? "真實模型已通過連線驗證"
+                ? "AI 已連線"
                 : (status?.blocker ?? "正在核對公司 AI…")}
             </b>
             <small>
-              {status?.model ?? "未設定模型"}
               {status
-                ? ` · 今日 ${status.usage.used} / ${status.usage.limit} 次`
+                ? `今日 ${status.usage.used} / ${status.usage.limit} 次`
                 : ""}
             </small>
           </div>
@@ -136,8 +134,8 @@ export default function AIStudio({
         <div className="ai-studio-grid">
           <section className="ai-test-card">
             <div className="ai-card-heading">
-              <h2>先試一段查詢</h2>
-              <span>唔使等渠道審批</span>
+              <h2>測試查詢</h2>
+              <span>不會發送</span>
             </div>
             <label>
               品牌
@@ -164,9 +162,6 @@ export default function AIStudio({
                 placeholder="例如：我哋有幾個同事覆 IG 同 Facebook，想集中管理查詢，有咩方案適合？"
               />
             </label>
-            <p className="ai-input-hint">
-              呢度係獨立測試查詢，唔會建立客戶記錄或發送訊息。
-            </p>
             <AIDraft
               key={brand}
               context={{
@@ -192,11 +187,10 @@ export default function AIStudio({
             <div className="ai-card-heading">
               <h2>
                 <BookOpen size={17} aria-hidden="true" />
-                答案由邊度嚟
+                核准知識
               </h2>
               <span>{selected?.knowledgeCount ?? 0} 篇可用</span>
             </div>
-            <p>只有屬於呢個品牌、已核准而且未到期嘅資料，先會交畀 AI 參考。</p>
             {knowledge.length ? (
               knowledge.map((a) => (
                 <article key={a.id}>
@@ -211,9 +205,7 @@ export default function AIStudio({
                 </article>
               ))
             ) : (
-              <div className="ai-knowledge-empty">
-                先加入公司服務、常見問題同處理原則，AI 先有根據準備答案。
-              </div>
+              <div className="ai-knowledge-empty">暫未有核准知識</div>
             )}
             <Link
               className="ai-knowledge-link"
@@ -222,13 +214,6 @@ export default function AIStudio({
               管理品牌知識
               <ArrowUpRight size={14} aria-hidden="true" />
             </Link>
-            <div className="ai-human-note">
-              <b>有需要，交畀真人。</b>
-              <p>
-                資料不足、涉及未確認價格或預約時段，AI 會提示核實。AI
-                建議唔代表已預約或已覆客。
-              </p>
-            </div>
           </aside>
         </div>
       </div>

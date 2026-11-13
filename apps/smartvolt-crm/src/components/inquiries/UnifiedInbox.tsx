@@ -473,8 +473,7 @@ export default function UnifiedInbox({
       <section className="iq-list" aria-label="全渠道查詢">
         <div className="iq-list-heading">
           <div>
-            <small>CUSTOMER OPERATIONS</small>
-            <h1>每段對話，都有下一步。</h1>
+            <h1>收件匣</h1>
           </div>
           <button
             aria-label="重新整理收件匣"
@@ -535,8 +534,7 @@ export default function UnifiedInbox({
           ) : !overview?.threads.length ? (
             <div className="iq-empty">
               <Inbox size={32} />
-              <h2>呢個清單未有查詢</h2>
-              <p>已接駁渠道嘅真實來訊會顯示喺呢度。</p>
+              <h2>未有查詢</h2>
               <Link href={`/company/${companyId}/settings/whatsapp`}>
                 設定 WhatsApp
               </Link>
@@ -806,8 +804,7 @@ export default function UnifiedInbox({
             <span>
               <CalendarDays size={30} />
             </span>
-            <h2>{selected ? "正在讀取對話…" : "由對話開始，跟進每一步。"}</h2>
-            <p>選擇查詢，查看客戶資料、分派同事同安排預約。</p>
+            <h2>{selected ? "正在讀取對話…" : "揀一段對話"}</h2>
           </div>
         )}
       </section>
@@ -933,7 +930,7 @@ export default function UnifiedInbox({
         ) : (
           <div className="iq-empty-small">
             <UsersRound size={25} />
-            <p>客戶檔案、預約及交接紀錄會喺呢度顯示。</p>
+            <span>未選擇客戶</span>
           </div>
         )}
       </section>

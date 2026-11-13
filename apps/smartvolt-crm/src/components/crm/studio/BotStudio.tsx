@@ -202,10 +202,7 @@ export default function BotStudio({
             <Bot size={24} />
           </span>
           <div>
-            <h1>
-              AI BOT Studio<span>客服助手工作室</span>
-            </h1>
-            <p>讓回覆有依據，讓交接更清楚。</p>
+            <h1>BOT／知識庫</h1>
           </div>
         </div>
         <div className="st-header-actions">

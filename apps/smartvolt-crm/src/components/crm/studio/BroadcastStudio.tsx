@@ -178,10 +178,7 @@ export default function BroadcastStudio({
     <section className="bc-workspace st-workspace" aria-label="推播工作室">
       <header className="bc-header">
         <div>
-          <span className="bc-eyebrow">BROADCAST & ATTRIBUTION</span>
-          <h1>
-            推播工作室 <span>每個回覆，都追得到。</span>
-          </h1>
+          <h1>推播</h1>
         </div>
         <div>
           <span className="bc-test">
@@ -244,7 +241,7 @@ export default function BroadcastStudio({
         <div className="bc-boundary">
           <ShieldCheck size={18} />
           <strong>獨立 Demo 空間</strong>
-          <p>資料只存於此瀏覽器。未接 WhatsApp、Supabase 或任何公司資料。</p>
+          <p>示範模式 · 僅儲存於此瀏覽器</p>
         </div>
       </aside>
       <div className="bc-main">

@@ -124,10 +124,10 @@ function Signal({
         </span>
         <Sparkles size={14} />
       </div>
-      <h3>{o.title}</h3>
-      <p>{o.detail}</p>
+      <h3>{o.kind === "setup" ? "未有新動態" : o.title}</h3>
+      {o.kind !== "setup" && <p>{o.detail}</p>}
       <details>
-        <summary>點解會咁建議</summary>
+        <summary>查看依據</summary>
         <ul>
           {o.evidence.map((e) => (
             <li key={e}>{e}</li>
@@ -149,7 +149,6 @@ function Signal({
         <button
           title="明日再提醒"
           aria-label={`明日再提醒：${o.title}`}
-          disabled={c.busy}
           onClick={() =>
             void c.act({
               action: "feedback",
@@ -165,7 +164,6 @@ function Signal({
         <button
           title="今次唔需要"
           aria-label={`略過：${o.title}`}
-          disabled={c.busy}
           onClick={() =>
             void c.act({
               action: "feedback",
@@ -255,7 +253,7 @@ function Answer({ answer }: { answer: CopilotAnswer }) {
         <details className="cc-evidence">
           <summary>
             <BookOpen size={14} />
-            依據與資料範圍 · {answer.facts.length} 項
+            依據 · {answer.facts.length}
           </summary>
           {answer.facts.map((f, i) => (
             <div key={f.id}>
@@ -300,7 +298,6 @@ function Answer({ answer }: { answer: CopilotAnswer }) {
             <Layers size={15} />
             保存活動草稿
           </button>
-          <small>保存後可繼續跟進；未向客戶發送。</small>
         </section>
       )}
       <div className="cc-answer-actions">
@@ -318,7 +315,7 @@ function Answer({ answer }: { answer: CopilotAnswer }) {
       </div>
       {!!answer.nextQuestions.length && (
         <div className="cc-next-questions">
-          {answer.nextQuestions.map((q) => (
+          {answer.nextQuestions.slice(0, 2).map((q) => (
             <button key={q} onClick={() => c.setComposer(q)} disabled={c.busy}>
               {q}
               <ArrowUpRight size={12} />
@@ -367,14 +364,17 @@ export default function CopilotSurface({
           <Link href={`${base}/crm?view=bot`}>核准知識</Link>
         </nav>
       )}
-      <div className="cc-workroom-body">
+      <div
+        className="cc-workroom-body"
+        data-observations={!!b?.observations.some((o) => o.kind !== "setup")}
+      >
         <aside
           className={`cc-history ${mobileList ? "is-open" : ""}`}
           aria-label="C 任務記憶"
         >
           <div className="cc-history-heading">
             <b>
-              <BrandMark size={24} />C 工作記憶
+              <BrandMark size={24} />C
             </b>
             <button
               onClick={() => setMobileList(false)}
@@ -432,9 +432,7 @@ export default function CopilotSurface({
                 </button>
               ))
             ) : (
-              <p className="cc-list-empty">
-                由一個問題開始，C 會保留你嘅任務對話。
-              </p>
+              <p className="cc-list-empty">未有對話</p>
             )
           ) : b?.tasks.length ? (
             b.tasks.map((t) => (
@@ -463,15 +461,12 @@ export default function CopilotSurface({
               </button>
             ))
           ) : (
-            <p className="cc-list-empty">
-              同 C 建立活動後，保存嘅草稿會喺呢度。
-            </p>
+            <p className="cc-list-empty">未有草稿</p>
           )}
           <div className="cc-memory-note">
-            <span>公司及個人範圍</span>
-            <p>C 會記得你嘅選擇；只使用你有權讀取嘅公司紀錄。</p>
             <button
-              disabled={c.busy}
+              title="暫停主動提示 1 小時"
+              aria-label="暫停主動提示 1 小時"
               onClick={() =>
                 void c.act({
                   action: "feedback",
@@ -483,7 +478,7 @@ export default function CopilotSurface({
               }
             >
               <Clock3 size={13} />
-              暫停主動提示 1 小時
+              暫停提醒
             </button>
           </div>
         </aside>
@@ -506,12 +501,10 @@ export default function CopilotSurface({
               <Sparkles size={14} />
               工作觀察
             </button>
-            <span>
-              {b?.companyName ?? "公司工作空間"} ·{" "}
-              {c.context.product.toUpperCase()}
-              {c.context.customerId ? " · 正在處理客戶" : ""}
-            </span>
-            {!!b?.brands.length && (
+            {c.context.customerId && (
+              <span className="cc-context-badge">目前客戶</span>
+            )}
+            {(b?.brands.length ?? 0) > 1 && (
               <select
                 className="cc-brand-scope"
                 aria-label="C 分析品牌"
@@ -520,7 +513,7 @@ export default function CopilotSurface({
                 onChange={(e) => c.setBrand(e.target.value)}
               >
                 <option value="">所有品牌</option>
-                {b.brands.map((brand) => (
+                {b!.brands.map((brand) => (
                   <option key={brand.id} value={brand.id}>
                     {brand.name}
                   </option>
@@ -543,7 +536,7 @@ export default function CopilotSurface({
               >
                 返回對話
               </button>
-              <span className="cc-eyebrow">SAVED CAMPAIGN BRIEF</span>
+              <span className="cc-eyebrow">活動草稿</span>
               <h1>{selectedPlan.title}</h1>
               <p>{selectedPlan.plan?.objective}</p>
               <h2>目標客群</h2>
@@ -560,9 +553,7 @@ export default function CopilotSurface({
                   <span key={i}>{m}</span>
                 ))}
               </div>
-              <p className="cc-muted">
-                呢份係活動準備記錄，唔代表已推播或已核准發送。
-              </p>
+              <span className="cc-draft-state">未發送</span>
               <button
                 className="cc-primary"
                 disabled={c.busy}
@@ -585,23 +576,23 @@ export default function CopilotSurface({
             </article>
           ) : (
             <>
-              <div className="cc-chat" aria-live="polite" aria-busy={c.busy}>
+              <div
+                className={`cc-chat${!messages.length && !c.pending ? " is-welcome" : ""}`}
+                aria-live="polite"
+                aria-busy={c.busy}
+              >
                 {!messages.length && !c.pending ? (
                   <div className="cc-welcome">
                     <div className="cc-hero-mark">
-                      <BrandMark size={58} />
+                      <BrandMark size={66} />
                       <i>
                         <Sparkles size={14} />
                       </i>
                     </div>
                     <p>你好，{name}。</p>
                     <h1>
-                      下一步，<span>同 C 一齊諗。</span>
+                      下一步，<span>交畀 C。</span>
                     </h1>
-                    <p className="cc-intro">
-                      由客戶查詢、預約到營銷機會。
-                      <br />C 睇得明你做緊嘅工作，同你一齊將觀察變成行動。
-                    </p>
                     <div className="cc-category" aria-label="C 協助方向">
                       {(
                         [
@@ -621,13 +612,15 @@ export default function CopilotSurface({
                       ))}
                     </div>
                     <div className="cc-example-grid">
-                      {examples[category].map(([title, prompt]) => (
+                      {examples[category].map(([title, prompt], index) => (
                         <button key={title} onClick={() => example(prompt)}>
+                          <span className="cc-example-number">
+                            0{index + 1}
+                          </span>
                           <b>
                             {title}
                             <ArrowUpRight size={16} />
                           </b>
-                          <span>{prompt}</span>
                         </button>
                       ))}
                     </div>
@@ -737,7 +730,7 @@ export default function CopilotSurface({
                   placeholder={
                     c.context.customerId
                       ? "同 C 傾目前呢位客，或者任何營運問題…"
-                      : "例如：幫我搵出值得跟進嘅客群，再一齊諗個活動…"
+                      : "問 C，或者講低你嘅想法…"
                   }
                   maxLength={2000}
                   rows={3}
@@ -756,10 +749,9 @@ export default function CopilotSurface({
                 />
                 <div>
                   <span>
-                    {c.context.customerId
-                      ? "已帶入目前客戶"
-                      : "已連結公司工作資料"}
-                    {b ? ` · 今日 ${b.ai.used}/${b.ai.limit}` : ""}
+                    <Sparkles size={12} />
+                    {c.context.customerId ? "目前客戶" : "C"}
+                    {b ? ` · ${b.ai.used}/${b.ai.limit}` : ""}
                   </span>
                   <button
                     type="submit"
@@ -771,9 +763,6 @@ export default function CopilotSurface({
                   </button>
                 </div>
               </form>
-              <p className="cc-composer-note">
-                C 會核對記錄同知識；對外訊息、預約同活動由你確認。
-              </p>
             </>
           )}
         </section>
@@ -786,7 +775,6 @@ export default function CopilotSurface({
               <Sparkles size={16} />
               我留意到
             </span>
-            <small>隨你嘅工作更新</small>
             <button
               className="cc-close-observations"
               aria-label="返回 C 對話"
@@ -813,12 +801,10 @@ export default function CopilotSurface({
             ))
           )}
           {b && !b.observations.length && (
-            <p className="cc-list-empty">
-              暫時未有值得打擾你嘅新觀察。C 會繼續按正式紀錄留意。
-            </p>
+            <p className="cc-list-empty">暫未有新觀察。</p>
           )}
           <details className="cc-coverage">
-            <summary>資料範圍同限制</summary>
+            <summary>資料範圍</summary>
             <p>
               以公司最近 90 日正式查詢、確認預約、已授權 POS
               及有效核准知識為基礎。未接駁來源唔當成零成效，未核實推播紀錄唔當成冇推播。

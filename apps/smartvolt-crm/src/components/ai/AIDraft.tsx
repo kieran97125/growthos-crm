@@ -83,13 +83,10 @@ export default function AIDraft({
           <Sparkles size={16} aria-hidden="true" />
           AI 回覆助手
         </span>
-        <small>由你確認，再覆客</small>
+        <small>草稿</small>
       </div>
-      <p className="ai-draft-description">
-        參考已核准品牌知識同客戶對話，整理建議、摘要及下一步。內部備註唔會交畀模型。
-      </p>
       <fieldset className="ai-goals" disabled={busy || !!pending || disabled}>
-        <legend>今次想點幫客人？</legend>
+        <legend>回覆目的</legend>
         {Object.entries(replyGoals).map(([id, g]) => (
           <button
             type="button"
@@ -139,7 +136,9 @@ export default function AIDraft({
             </b>
             <span>真實 AI · {result.model}</span>
           </div>
-          <p className="ai-result-reason">{result.reason}</p>
+          {result.decision !== "draft" && (
+            <p className="ai-result-reason">{result.reason}</p>
+          )}
           <blockquote>{result.reply}</blockquote>
           <div className="ai-result-actions">
             <button

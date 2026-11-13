@@ -333,8 +333,12 @@ for (const mobile of [false, true])
     const state = await fixture(page);
     await page.goto(base + "/crm/ai");
     await expect(
-      page.getByRole("heading", { name: /下一步，\s*同 C 一齊諗。/ }),
+      page.getByRole("heading", { name: /下一步，\s*交畀 C。/ }),
     ).toBeVisible();
+    await page.screenshot({
+      path: info.outputPath(`${mobile ? "mobile" : "desktop"}-c-welcome.png`),
+      fullPage: true,
+    });
     const input = page.getByRole("textbox", { name: "同 C 講你想做到乜" });
     await input.fill("幫我建立一個再互動活動");
     await page.getByRole("button", { name: "交畀 C 處理" }).click();
@@ -381,31 +385,51 @@ for (const mobile of [false, true])
       .analyze();
     expect(axe.violations).toEqual([]);
   });
-test("the persistent C drawer retains the task and unsent composer through module navigation", async ({
-  page,
-}) => {
-  await fixture(page);
-  await page.goto(base + "/crm");
-  await page
-    .getByRole("button", { name: "開啟 C 全能助手", exact: true })
-    .click();
-  const dock = page.getByRole("complementary", {
-    name: "C 全能助手",
-    exact: true,
+for (const mobile of [false, true])
+  test(`${mobile ? "mobile" : "desktop"}: floating C retains its unsent composer across modules and restores focus`, async ({
+    page,
+  }, info) => {
+    if (mobile) await page.setViewportSize({ width: 390, height: 844 });
+    await fixture(page);
+    await page.goto(base + "/crm");
+    const launcher = page.locator(".cc-launcher");
+    await expect(launcher).toHaveCount(1);
+    await expect(page.locator(".cq-header .cc-launcher")).toHaveCount(0);
+    await expect(launcher).toHaveCSS("position", "fixed");
+    const bounds = await launcher.boundingBox();
+    expect(bounds).not.toBeNull();
+    const viewport = page.viewportSize()!;
+    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(viewport.width - 10);
+    expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(
+      viewport.height - (mobile ? 74 : 20),
+    );
+    expect(bounds!.x).toBeGreaterThan(viewport.width - 100);
+    await page
+      .getByRole("button", { name: "開啟 C 全能助手", exact: true })
+      .click();
+    const dock = page.getByRole("complementary", {
+      name: "C 全能助手",
+      exact: true,
+    });
+    await expect(dock).toBeInViewport();
+    await expect(dock.getByRole("textbox")).toBeInViewport();
+    await page.screenshot({
+      path: info.outputPath(`${mobile ? "mobile" : "desktop"}-c-floating.png`),
+      fullPage: true,
+    });
+    await dock.getByRole("textbox").fill("未完成嘅活動想法");
+    await page
+      .getByRole("navigation", { name: "CRM 功能", exact: true })
+      .getByRole("link", { name: "AI 助理", exact: true })
+      .click();
+    await expect(dock.getByRole("textbox")).toHaveValue("未完成嘅活動想法");
+    await expect(page.locator(".cq-header")).toHaveCount(1);
+    await page.keyboard.press("Escape");
+    await expect(dock).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "開啟 C 全能助手", exact: true }),
+    ).toBeFocused();
   });
-  await dock.getByRole("textbox").fill("未完成嘅活動想法");
-  await page
-    .getByRole("navigation", { name: "CRM 功能", exact: true })
-    .getByRole("link", { name: "AI 助理", exact: true })
-    .click();
-  await expect(dock.getByRole("textbox")).toHaveValue("未完成嘅活動想法");
-  await expect(page.locator(".cq-header")).toHaveCount(1);
-  await page.keyboard.press("Escape");
-  await expect(dock).toHaveCount(0);
-  await expect(
-    page.getByRole("button", { name: "開啟 C 全能助手", exact: true }),
-  ).toBeFocused();
-});
 test("C observes without a click, remembers a snooze after reload and does not send anything", async ({
   page,
 }) => {
@@ -445,11 +469,19 @@ test("typing is not interrupted, and a new company never gets fabricated convers
   await page
     .getByRole("button", { name: "開啟 C 工作觀察", exact: true })
     .click();
+  const observations = page.getByRole("complementary", {
+    name: "C 工作觀察",
+    exact: true,
+  });
   await expect(
-    page.getByText(
-      "而家未有客戶紀錄，未足夠判斷高轉化客群。你可以先同我傾業務、整理核准知識或者準備活動草稿。",
-      { exact: true },
-    ),
+    observations.getByRole("heading", { name: "未有新動態", exact: true }),
+  ).toBeVisible();
+  await observations.getByText("查看依據", { exact: true }).click();
+  await expect(
+    observations.getByText("公司正式客戶目錄：0 位", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    observations.getByText("樣本不足，唔會顯示虛構轉化率", { exact: true }),
   ).toBeVisible();
 });
 test("native customer tagging exposes an explanation and a review step before applying", async ({
@@ -556,7 +588,7 @@ test("a slow C read does not block navigation or the company header", async ({
     .getByRole("link", { name: "AI 助理", exact: true })
     .click();
   await expect(
-    page.getByRole("heading", { name: /下一步，\s*同 C 一齊諗。/ }),
+    page.getByRole("heading", { name: /下一步，\s*交畀 C。/ }),
   ).toBeVisible();
   await expect(page.locator(".cq-header")).toBeVisible();
   release();

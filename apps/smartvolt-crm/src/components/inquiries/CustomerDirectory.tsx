@@ -185,8 +185,7 @@ export default function CustomerDirectory({
         </>
       )}
       <section className="iq-directory" aria-label="公司客戶目錄">
-        <h1>每位客戶，一份完整記錄。</h1>
-        <p>對話、預約同營運紀錄，沿同一個客戶身份連接。</p>
+        <h1>客戶</h1>
         <form
           className="iq-search"
           onSubmit={(e) => {

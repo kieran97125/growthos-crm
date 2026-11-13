@@ -865,3 +865,53 @@ test("WhatsApp AI claims bind brand and source revision and reject stale generat
   assert.equal(result.status, "failed");
   assert.equal(result.error_code, "context_changed");
 });
+test("a profile edit blocks a stale first POS materialization of a channel customer", async () => {
+  const id = "first-pos-" + randomUUID();
+  await db.query(
+    "insert into sv_customers(company_id,id,name,source)values($1,$2,'Before edit','meta')",
+    [company, id],
+  );
+  await db.query("insert into sv_customer_brands values($1,$2,'main')", [
+    company,
+    id,
+  ]);
+  const doc = await document(),
+    projected = await value<AppState["inbox"]["contacts"][number]>(
+      "select sv_customer_json($1,$2)v",
+      [company, id],
+    );
+  doc.payload.inbox.contacts.push(projected);
+  await db.query("select sv_customer_update($1,$2,$3,0,$4,$5::jsonb)", [
+    company,
+    owner,
+    id,
+    randomUUID(),
+    JSON.stringify({
+      name: "Latest verified name",
+      phone: "",
+      email: "",
+      tags: [],
+      note: "Changed while first POS operation was being prepared",
+    }),
+  ]);
+  await assert.rejects(
+    () =>
+      db.query("select sv_commit_workspace($1,$2,$3,$4,$5::jsonb,'pos')", [
+        company,
+        owner,
+        doc.revision,
+        randomUUID(),
+        JSON.stringify(doc.payload),
+      ]),
+    /revision_conflict/,
+  );
+  assert.equal(
+    (
+      await one("select name from sv_customers where company_id=$1 and id=$2", [
+        company,
+        id,
+      ])
+    ).name,
+    "Latest verified name",
+  );
+});

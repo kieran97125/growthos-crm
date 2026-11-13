@@ -430,6 +430,18 @@ for (const mobile of [false, true])
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
+    const save = page.getByRole("button", { name: "儲存流程", exact: true });
+    await save.scrollIntoViewIfNeeded();
+    const saveBounds = await save.boundingBox(),
+      launcherBounds = await page.locator(".cc-launcher").boundingBox();
+    expect(saveBounds).not.toBeNull();
+    expect(launcherBounds).not.toBeNull();
+    expect(
+      saveBounds!.x + saveBounds!.width <= launcherBounds!.x ||
+        launcherBounds!.x + launcherBounds!.width <= saveBounds!.x ||
+        saveBounds!.y + saveBounds!.height <= launcherBounds!.y ||
+        launcherBounds!.y + launcherBounds!.height <= saveBounds!.y,
+    ).toBe(true);
     await page.screenshot({
       path: info.outputPath(
         `${mobile ? "mobile" : "desktop"}-operations-rules.png`,

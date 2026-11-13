@@ -925,6 +925,7 @@
 .co-config-footer {
   justify-content: space-between;
   padding: 20px 0;
+  padding-inline-end: 80px;
 }
 .co-config-footer > span {
   font-size: 10px;

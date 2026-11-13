@@ -96,3 +96,43 @@ unsent content and Escape focus restoration. Hosted screenshots were visually
 reviewed. The company interface card is complete; existing offline observations,
 production performance measurement and channel/journey execution cards retain
 their separate status.
+
+## Draggable companion correction
+
+The user clarified that a floating C must move to a chosen position. Pointer
+capture now supports mouse, pen and touch dragging, with separate movement
+thresholds and suppression of the drag's generated click. A cancelled gesture
+returns to its starting position. Ordinary click/tap, Enter and Space keep their
+existing open/close behavior. Arrow keys move C, Shift increases the step, and
+Home restores the default. Dragging suppresses proactive interruptions.
+
+Coordinates are bounded by the visible viewport, safe areas, company header,
+mobile navigation and POS footer clearance. Positions stay free in the interior
+and gently snap near an edge. Versioned local preferences contain only normalized
+coordinates, scoped by company, actor and desktop/mobile layout; no operational
+record or model memory is changed. Reload and module navigation retain placement.
+Rotation and the visual viewport reproject coordinates without overwriting the
+other layout's preference. Storage failure preserves usable dragging.
+
+The companion follows the selected side, with desktop side placement where space
+allows and a readable mobile panel. Moving C away from the mobile workroom
+composer returns the reserved input space. Drag frames update presentation styles
+through animation frames without per-frame React/business-context state. Existing
+React and native Pointer Events cover this focused control; an additional drag
+library would add no required capability.
+
+Four geometry/persistence tests cover bounds, normalization, corrupt preferences,
+edge behavior and companion fit. Browser checks add actual mouse and emulated
+touch dragging, cancellation, click separation, reload/navigation retention,
+keyboard reset, orientation changes and screenshots. Existing C evidence/action,
+accessibility and initial-paint checks remain required. This is emulated touch
+acceptance, not a claim of physical iPhone/Safari qualification.
+
+Product Learning Sync checked again against the canonical protocol, learning
+index and checkpoint. `entries/2026-11-10-spatial-work-graph-readability.md` was
+considered for bounded coordinates, click-through prevention, keyboard access and
+presentation updates; its spatial graph remains an Enterprise Extension and is
+not adopted into Core. `entries/2026-08-10-platform-app-identity-icon-contract.md`
+retains the existing Convelta identity contract. No graph code, client identity,
+data, credentials or artwork is imported. Existing canonical review PR #88 and
+company card `c-draggable-placement` track this correction.

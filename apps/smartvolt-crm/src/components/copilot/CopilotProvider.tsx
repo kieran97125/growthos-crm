@@ -11,6 +11,7 @@ import {
   lazy,
   Suspense,
   type ReactNode,
+  type RefObject,
 } from "react";
 import { X, ArrowUpRight, Sparkles } from "lucide-react";
 import { BrandMark } from "@/components/BrandMark";
@@ -22,6 +23,7 @@ import type {
   Observation,
 } from "@/lib/copilot/model";
 import type { readCopilot } from "@/lib/copilot/server";
+import { useFloatingLauncher } from "./useFloatingLauncher";
 const Surface = lazy(() => import("./CopilotSurface"));
 export type CopilotBundle = Awaited<ReturnType<typeof readCopilot>>;
 type Pending = { request: CopilotRequest; proactive: boolean };
@@ -59,8 +61,9 @@ const shortError = (e: unknown) =>
 function idleInput() {
   const el = document.activeElement;
   return (
-    el instanceof HTMLElement &&
-    (el.matches("input,textarea,select") || el.isContentEditable)
+    !!document.querySelector(".cc-floating-layer[data-dragging='true']") ||
+    (el instanceof HTMLElement &&
+      (el.matches("input,textarea,select") || el.isContentEditable))
   );
 }
 export function CopilotProvider({
@@ -74,6 +77,10 @@ export function CopilotProvider({
   context: CopilotContext;
   children: ReactNode;
 }) {
+  const { layerRef, launcherRef } = useFloatingLauncher(
+    `${companyId}:${identityKey}`,
+    pageContext.product,
+  );
   const [open, setOpen] = useState(false),
     [bundle, setBundle] = useState<CopilotBundle | null>(null),
     [loading, setLoading] = useState(false),
@@ -499,92 +506,111 @@ export function CopilotProvider({
   return (
     <Context.Provider value={state}>
       {children}
-      <CLauncher />
-      {peek &&
-        peek.scope === workScope &&
-        !open &&
-        currentBundle?.context.brandId === context.brandId &&
-        currentBundle?.observations.some((o) => o.key === peek.signal.key) && (
-          <aside
-            className="cc-peek"
-            data-product={context.product}
-            aria-label="C 主動觀察"
-          >
-            <div>
-              <BrandMark size={26} />
-              <b>C 的新觀察</b>
+      <div
+        ref={layerRef}
+        className="cc-floating-layer"
+        data-product={context.product}
+      >
+        <CLauncher buttonRef={launcherRef} />
+        <span id="c-position-help" className="cc-position-help">
+          可以拖動移位；方向鍵移動，Shift 加方向鍵加快；Home 返回預設位置。
+        </span>
+        {peek &&
+          peek.scope === workScope &&
+          !open &&
+          currentBundle?.context.brandId === context.brandId &&
+          currentBundle?.observations.some(
+            (o) => o.key === peek.signal.key,
+          ) && (
+            <aside
+              className="cc-peek"
+              data-product={context.product}
+              aria-label="C 主動觀察"
+            >
+              <div>
+                <BrandMark size={26} />
+                <b>C 的新觀察</b>
+                <button
+                  aria-label="稍後提醒呢個觀察"
+                  onClick={() => {
+                    void act({
+                      action: "feedback",
+                      key: peek.signal.key,
+                      family: peek.signal.family,
+                      subject: peek.signal.subject,
+                      status: "snoozed",
+                    });
+                    setPeek(null);
+                  }}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              <strong>{peek.signal.title}</strong>
+              <p>{peek.text.replace(/\[[^\]]+\]/g, "")}</p>
               <button
-                aria-label="稍後提醒呢個觀察"
+                className="cc-inline"
                 onClick={() => {
-                  void act({
-                    action: "feedback",
-                    key: peek.signal.key,
-                    family: peek.signal.family,
-                    subject: peek.signal.subject,
-                    status: "snoozed",
-                  });
+                  if (peek.thread) setThreadId(peek.thread);
+                  else setComposer(peek.signal.prompt);
+                  setOpen(true);
                   setPeek(null);
                 }}
               >
-                <X size={16} />
+                同 C 一齊睇
+                <ArrowUpRight size={14} />
               </button>
-            </div>
-            <strong>{peek.signal.title}</strong>
-            <p>{peek.text.replace(/\[[^\]]+\]/g, "")}</p>
-            <button
-              className="cc-inline"
-              onClick={() => {
-                if (peek.thread) setThreadId(peek.thread);
-                else setComposer(peek.signal.prompt);
-                setOpen(true);
-                setPeek(null);
-              }}
-            >
-              同 C 一齊睇
-              <ArrowUpRight size={14} />
-            </button>
+            </aside>
+          )}
+        {open && (
+          <aside
+            id="convelta-c-dock"
+            className="cc-dock"
+            data-product={context.product}
+            aria-label="C 全能助手"
+          >
+            <header>
+              <BrandMark size={30} />
+              <div>
+                <b>C</b>
+                <small>{context.customerId ? "目前客戶" : "Convelta AI"}</small>
+              </div>
+              <Link
+                className="cc-expand"
+                href={`/company/${companyId}/copilot?${new URLSearchParams({ product: context.product, ...(context.customerId ? { contact: context.customerId } : {}), ...(context.brandId ? { brand: context.brandId } : {}) })}`}
+                onClick={() => setOpen(false)}
+                aria-label="展開 C 工作台"
+              >
+                <ArrowUpRight size={17} />
+              </Link>
+              <button
+                aria-label="關閉 C 全能助手"
+                onClick={() => setOpen(false)}
+              >
+                <X size={19} />
+              </button>
+            </header>
+            <Suspense fallback={<p className="cc-status">正在開啟 C…</p>}>
+              <Surface compact />
+            </Suspense>
           </aside>
         )}
-      {open && (
-        <aside
-          id="convelta-c-dock"
-          className="cc-dock"
-          data-product={context.product}
-          aria-label="C 全能助手"
-        >
-          <header>
-            <BrandMark size={30} />
-            <div>
-              <b>C</b>
-              <small>{context.customerId ? "目前客戶" : "Convelta AI"}</small>
-            </div>
-            <Link
-              className="cc-expand"
-              href={`/company/${companyId}/copilot?${new URLSearchParams({ product: context.product, ...(context.customerId ? { contact: context.customerId } : {}), ...(context.brandId ? { brand: context.brandId } : {}) })}`}
-              onClick={() => setOpen(false)}
-              aria-label="展開 C 工作台"
-            >
-              <ArrowUpRight size={17} />
-            </Link>
-            <button aria-label="關閉 C 全能助手" onClick={() => setOpen(false)}>
-              <X size={19} />
-            </button>
-          </header>
-          <Suspense fallback={<p className="cc-status">正在開啟 C…</p>}>
-            <Surface compact />
-          </Suspense>
-        </aside>
-      )}
+      </div>
     </Context.Provider>
   );
 }
-export function CLauncher() {
+export function CLauncher({
+  buttonRef,
+}: {
+  buttonRef: RefObject<HTMLButtonElement | null>;
+}) {
   const c = useCopilot();
   if (!c) return null;
   const count =
     c.bundle?.observations.filter((o) => o.kind !== "setup").length ?? 0;
   return (
     <button
+      ref={buttonRef}
       className="cc-launcher"
       type="button"
       data-open={c.open}
@@ -593,7 +619,8 @@ export function CLauncher() {
       aria-label={c.open ? "收起 C 全能助手" : "開啟 C 全能助手"}
       aria-expanded={c.open}
       aria-controls={c.open ? "convelta-c-dock" : undefined}
-      title={c.open ? "收起 C" : "同 C 傾"}
+      aria-describedby="c-position-help"
+      title={c.open ? "收起 C · 可拖動" : "同 C 傾 · 可拖動"}
       onClick={() => c.setOpen(!c.open)}
     >
       <span className="cc-fab-label">同 C 傾</span>

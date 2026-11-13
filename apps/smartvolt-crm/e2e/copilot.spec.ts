@@ -473,6 +473,161 @@ test("C observes without a click, remembers a snooze after reload and does not s
     1,
   );
 });
+test("desktop C drag is distinct from click, persists across reload, and supports keyboard placement", async ({
+  page,
+}, info) => {
+  const state = await fixture(page, { empty: true });
+  await page.goto(base + "/crm");
+  const launcher = page.locator(".cc-launcher"),
+    dock = page.locator(".cc-dock");
+  await expect(page.locator(".cc-floating-layer")).toHaveAttribute(
+    "data-positioned",
+    "true",
+  );
+  const initial = (await launcher.boundingBox())!;
+  await page.mouse.move(
+    initial.x + initial.width / 2,
+    initial.y + initial.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(210, 280, { steps: 12 });
+  await page.mouse.up();
+  await expect(dock).toHaveCount(0);
+  const moved = (await launcher.boundingBox())!;
+  expect(moved.x).toBeLessThan(250);
+  expect(moved.y).toBeLessThan(350);
+  await page.reload();
+  await expect(page.locator(".cc-floating-layer")).toHaveAttribute(
+    "data-positioned",
+    "true",
+  );
+  const restored = (await launcher.boundingBox())!;
+  expect(restored.x).toBeCloseTo(moved.x, 0);
+  expect(restored.y).toBeCloseTo(moved.y, 0);
+  await launcher.click();
+  await expect(dock).toBeInViewport({ ratio: 1 });
+  await expect(dock).toHaveCSS("opacity", "1");
+  const panel = (await dock.boundingBox())!;
+  expect(panel.x).toBeLessThan(400);
+  await dock.getByRole("textbox").fill("保留內容，再移動 C");
+  await page
+    .getByRole("navigation", { name: "CRM 功能", exact: true })
+    .getByRole("link", { name: "AI 助理", exact: true })
+    .click();
+  await expect(dock.getByRole("textbox")).toHaveValue("保留內容，再移動 C");
+  expect((await launcher.boundingBox())!.x).toBeCloseTo(moved.x, 0);
+  await page.screenshot({
+    path: info.outputPath("desktop-c-repositioned.png"),
+    fullPage: true,
+    animations: "disabled",
+  });
+  await page.keyboard.press("Escape");
+  await expect(launcher).toBeFocused();
+  await launcher.press("Shift+ArrowRight");
+  expect((await launcher.boundingBox())!.x).toBeCloseTo(moved.x + 48, 0);
+  await launcher.press("Home");
+  expect((await launcher.boundingBox())!.x).toBeCloseTo(initial.x, 0);
+  await launcher.press("Enter");
+  await expect(dock).toBeVisible();
+  expect(state.askCalls()).toHaveLength(0);
+});
+test.describe("touch placement", () => {
+  test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
+  test("C follows a real touch drag, cancels safely and restores its portrait position after rotation", async ({
+    page,
+  }, info) => {
+    const state = await fixture(page, { empty: true });
+    await page.goto(base + "/crm");
+    const launcher = page.locator(".cc-launcher"),
+      dock = page.locator(".cc-dock");
+    await expect(page.locator(".cc-floating-layer")).toHaveAttribute(
+      "data-positioned",
+      "true",
+    );
+    const cdp = await page.context().newCDPSession(page);
+    const touch = (
+      type: "touchStart" | "touchMove" | "touchEnd" | "touchCancel",
+      x = 0,
+      y = 0,
+    ) =>
+      cdp.send("Input.dispatchTouchEvent", {
+        type,
+        touchPoints:
+          type === "touchEnd" || type === "touchCancel"
+            ? []
+            : [{ id: 1, x, y }],
+      });
+    let box = (await launcher.boundingBox())!;
+    await touch("touchStart", box.x + box.width / 2, box.y + box.height / 2);
+    await touch("touchMove", 50, 260);
+    await touch("touchEnd");
+    await expect(dock).toHaveCount(0);
+    const moved = (await launcher.boundingBox())!;
+    expect(moved.x).toBeLessThan(70);
+    expect(moved.y).toBeLessThan(300);
+    expect(await page.evaluate(() => scrollY)).toBe(0);
+    await page.reload();
+    await expect(page.locator(".cc-floating-layer")).toHaveAttribute(
+      "data-positioned",
+      "true",
+    );
+    box = (await launcher.boundingBox())!;
+    expect(box.x).toBeCloseTo(moved.x, 0);
+    expect(box.y).toBeCloseTo(moved.y, 0);
+    await touch("touchStart", box.x + box.width / 2, box.y + box.height / 2);
+    await touch("touchMove", 260, 400);
+    await touch("touchCancel");
+    expect((await launcher.boundingBox())!.x).toBeCloseTo(moved.x, 0);
+    await page.touchscreen.tap(
+      moved.x + moved.width / 2,
+      moved.y + moved.height / 2,
+    );
+    await expect(dock).toBeVisible();
+    await dock.getByRole("textbox").fill("觸控移動時保留內容");
+    box = (await launcher.boundingBox())!;
+    await touch("touchStart", box.x + box.width / 2, box.y + box.height / 2);
+    await touch("touchMove", 300, 245);
+    await touch("touchEnd");
+    await expect(dock).toBeVisible();
+    await expect(dock.getByRole("textbox")).toHaveValue("觸控移動時保留內容");
+    await expect(dock.getByRole("textbox")).toBeInViewport({ ratio: 1 });
+    box = (await launcher.boundingBox())!;
+    await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+    await expect(dock).toHaveCount(0);
+    const saved = (await launcher.boundingBox())!;
+    await page.setViewportSize({ width: 844, height: 390 });
+    await expect
+      .poll(async () => {
+        const p = (await launcher.boundingBox())!;
+        return (
+          p.x >= 0 && p.y >= 0 && p.x + p.width <= 844 && p.y + p.height <= 390
+        );
+      })
+      .toBe(true);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect
+      .poll(async () => Math.round((await launcher.boundingBox())!.x))
+      .toBe(Math.round(saved.x));
+    expect((await launcher.boundingBox())!.y).toBeCloseTo(saved.y, 0);
+    await page
+      .getByRole("navigation", { name: "CRM 功能", exact: true })
+      .getByRole("link", { name: "AI 助理", exact: true })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: /下一步，\s*交畀 C。/ }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("textbox", { name: "同 C 講你想做到乜" }),
+    ).toBeInViewport();
+    await page.screenshot({
+      path: info.outputPath("mobile-c-repositioned.png"),
+      fullPage: true,
+      animations: "disabled",
+    });
+    expect(state.askCalls()).toHaveLength(0);
+    await cdp.detach();
+  });
+});
 test("typing is not interrupted, and a new company never gets fabricated conversion observations", async ({
   page,
 }) => {

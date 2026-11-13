@@ -442,6 +442,9 @@ test("typing is not interrupted, and a new company never gets fabricated convers
   await page
     .getByRole("button", { name: "開啟 C 全能助手", exact: true })
     .click();
+  await page
+    .getByRole("button", { name: "開啟 C 工作觀察", exact: true })
+    .click();
   await expect(
     page.getByText(
       "而家未有客戶紀錄，未足夠判斷高轉化客群。你可以先同我傾業務、整理核准知識或者準備活動草稿。",

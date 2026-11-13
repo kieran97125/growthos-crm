@@ -7,13 +7,11 @@ import { useIdentity } from "@/lib/saas/CompanyProvider";
 import { defaultProduct, type Product } from "@/lib/saas/products";
 import { StudioLoading } from "@/components/crm/studio/StudioUI";
 import { ProductHeader, type CustomerContext } from "./ProductHeader";
-import type { WorkspaceView } from "@/components/crm/conversations/ConversationWorkspace";
+import {
+  ConversationWorkspace as CRM,
+  type WorkspaceView,
+} from "@/components/crm/conversations/ConversationWorkspace";
 import "./products.css";
-const CRM = lazy(() =>
-  import("@/components/crm/conversations/ConversationWorkspace").then((m) => ({
-    default: m.ConversationWorkspace,
-  })),
-);
 const POS = lazy(() => import("@/components/pos/PosWorkspace"));
 export function ProductWorkspace({
   initialProduct,
@@ -97,14 +95,12 @@ export function ProductWorkspace({
     <div className="sv-products" data-product={product}>
       {products.includes("crm") && opened.includes("crm") && (
         <div className="sv-product-surface" hidden={product !== "crm"}>
-          <Suspense fallback={<StudioLoading />}>
-            <CRM
-              initialView={initialView === "pos" ? "inbox" : initialView}
-              initialConversation={initialConversation}
-              requestedCustomer={crmContext}
-              onSwitchProduct={switchProduct}
-            />
-          </Suspense>
+          <CRM
+            initialView={initialView === "pos" ? "inbox" : initialView}
+            initialConversation={initialConversation}
+            requestedCustomer={crmContext}
+            onSwitchProduct={switchProduct}
+          />
         </div>
       )}
       {products.includes("pos") && opened.includes("pos") && ready && (

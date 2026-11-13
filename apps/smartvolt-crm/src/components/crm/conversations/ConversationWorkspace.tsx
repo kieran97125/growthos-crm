@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useIdentity } from "@/lib/saas/CompanyProvider";
 
 import {
@@ -395,6 +396,7 @@ export function ConversationWorkspace({
     >
       <ProductHeader
         product="crm"
+        context={{ contactId: contact?.id, brandId: selected?.brandId }}
         onSwitch={(product) =>
           onSwitchProduct(product, {
             contactId: contact?.id,
@@ -403,20 +405,31 @@ export function ConversationWorkspace({
         }
       />
       <nav className="fh-rail" aria-label="CRM 功能">
-        <button
-          aria-label="訊息收件匣"
-          title="訊息收件匣"
-          className={view === "inbox" ? "is-active" : ""}
-          onClick={() => {
-            setView("inbox");
-            setPanel(null);
-            setMobileChat(false);
-          }}
-        >
-          <Inbox size={21} />
-          <span>訊息</span>
-          <i />
-        </button>
+        {identity.connected ? (
+          <Link
+            href={`/company/${identity.scope.companyId}/crm`}
+            aria-label="訊息收件匣"
+            title="訊息收件匣"
+          >
+            <Inbox size={21} />
+            <span>訊息</span>
+          </Link>
+        ) : (
+          <button
+            aria-label="訊息收件匣"
+            title="訊息收件匣"
+            className={view === "inbox" ? "is-active" : ""}
+            onClick={() => {
+              setView("inbox");
+              setPanel(null);
+              setMobileChat(false);
+            }}
+          >
+            <Inbox size={21} />
+            <span>訊息</span>
+            <i />
+          </button>
+        )}
         {!empty && (
           <>
             <button
@@ -470,14 +483,25 @@ export function ConversationWorkspace({
             </button>
           </>
         )}
-        <button
-          aria-label="客戶通訊錄"
-          title="客戶通訊錄"
-          onClick={() => setPanel("contacts")}
-        >
-          <ContactRound size={21} />
-          <span>客戶</span>
-        </button>
+        {identity.connected ? (
+          <Link
+            href={`/company/${identity.scope.companyId}/crm/customers`}
+            aria-label="客戶通訊錄"
+            title="客戶通訊錄"
+          >
+            <ContactRound size={21} />
+            <span>客戶</span>
+          </Link>
+        ) : (
+          <button
+            aria-label="客戶通訊錄"
+            title="客戶通訊錄"
+            onClick={() => setPanel("contacts")}
+          >
+            <ContactRound size={21} />
+            <span>客戶</span>
+          </button>
+        )}
         <button
           aria-label="快捷回覆庫"
           title="快捷回覆庫"

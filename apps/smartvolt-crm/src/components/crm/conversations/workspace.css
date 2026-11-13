@@ -240,7 +240,7 @@
   border-right: 1px solid var(--fh-line);
   gap: 10px;
 }
-.fh-rail > button,
+.fh-rail > :is(button, a),
 .fh-rail-bottom > button {
   position: relative;
   width: 51px;
@@ -254,15 +254,15 @@
   color: var(--kies-muted);
   font-size: 9px;
 }
-.fh-rail button:hover {
+.fh-rail :is(button, a):hover {
   background: var(--kies-canvas);
   color: var(--kies-royal);
 }
-.fh-rail button.is-active {
+.fh-rail :is(button, a).is-active {
   color: var(--kies-royal);
   background: var(--kies-tint);
 }
-.fh-rail button.is-active i {
+.fh-rail :is(button, a).is-active i {
   position: absolute;
   width: 4px;
   height: 17px;
@@ -271,7 +271,7 @@
   background: var(--kies-selected);
   border-radius: 0 4px 4px 0;
 }
-.fh-rail button > span {
+.fh-rail :is(button, a) > span {
   font-size: 10px;
 }
 .fh-rail-bottom {
@@ -2522,7 +2522,7 @@
     padding-left: 5px;
     padding-right: 5px;
   }
-  .fh-rail button.is-active i {
+  .fh-rail :is(button, a).is-active i {
     left: -7px;
   }
   .fh-queues {
@@ -2720,7 +2720,7 @@
   .fh-rail {
     padding: 15px 4px;
   }
-  .fh-rail > button,
+  .fh-rail > :is(button, a),
   .fh-rail-bottom > button {
     width: 48px;
   }
@@ -2802,20 +2802,20 @@
     padding: 14px 3px;
     gap: 10px;
   }
-  .fh-rail > button,
+  .fh-rail > :is(button, a),
   .fh-rail-bottom > button {
     width: 45px;
     min-height: 54px;
     gap: 4px;
   }
-  .fh-rail button > span {
+  .fh-rail :is(button, a) > span {
     font-size: 9px;
   }
-  .fh-rail button > svg {
+  .fh-rail :is(button, a) > svg {
     width: 20px;
     height: 20px;
   }
-  .fh-rail button.is-active i {
+  .fh-rail :is(button, a).is-active i {
     left: -5px;
   }
   .fh-conversations {

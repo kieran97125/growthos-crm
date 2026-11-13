@@ -341,7 +341,9 @@ for (const mobile of [false, true])
       .filter({ has: page.getByText("Casey Chan", { exact: true }) });
     await row.getByRole("button", { name: /新查詢/ }).click();
     const form = page.getByRole("form", { name: "更新客戶階段" });
-    await form.getByLabel("階段", { exact: true }).selectOption("qualified");
+    await form
+      .getByRole("combobox", { name: "階段", exact: true })
+      .selectOption("qualified");
     await form
       .getByLabel("原因", { exact: true })
       .fill("客戶確認想了解週末時段");

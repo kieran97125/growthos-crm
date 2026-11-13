@@ -1,5 +1,6 @@
 "use client";
 import { lazy, Suspense, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { LockKeyhole } from "lucide-react";
 import { BRAND } from "@/lib/brand";
 import { useDemo } from "@/lib/demo/Provider";
@@ -19,15 +20,18 @@ export function ProductWorkspace({
   initialProduct,
   initialView = "inbox",
   initialContact,
+  initialBrand: requestedBrand,
   initialConversation,
   previewPlan,
 }: {
   initialProduct?: Product;
   initialView?: WorkspaceView;
   initialContact?: string;
+  initialBrand?: string;
   initialConversation?: string;
   previewPlan?: string;
 }) {
+  const router = useRouter();
   const { products, scope, connected } = useIdentity(),
     { state, ready } = useDemo();
   const preferred = defaultProduct(products),
@@ -42,9 +46,11 @@ export function ProductWorkspace({
   const [opened, setOpened] = useState<Product[]>(
     products.includes(requested) ? [requested] : [],
   );
-  const initialBrand = state.inbox.conversations.find(
-    (c) => c.contactId === initialContact,
-  )?.brandId;
+  const initialBrand =
+    requestedBrand ??
+    state.inbox.conversations.find((c) => c.contactId === initialContact)
+      ?.brandId ??
+    state.inbox.contacts.find((c) => c.id === initialContact)?.brandIds?.[0];
   const [posContext, setPosContext] = useState<CustomerContext | null>(
     initialContact
       ? { contactId: initialContact, brandId: initialBrand, token: "initial" }
@@ -57,6 +63,13 @@ export function ProductWorkspace({
   function switchProduct(next: Product, context?: CustomerContext) {
     if (!products.includes(next)) {
       setDenied(next);
+      return;
+    }
+    if (connected && next === "crm") {
+      const query = new URLSearchParams();
+      if (context?.contactId) query.set("contact", context.contactId);
+      if (context?.brandId) query.set("brand", context.brandId);
+      router.push(`/company/${scope.companyId}/crm?${query}`);
       return;
     }
     setDenied(null);

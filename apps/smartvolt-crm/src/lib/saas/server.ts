@@ -1,4 +1,5 @@
 import "server-only";
+import { z } from "zod";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
@@ -106,6 +107,7 @@ export async function requireCompany(companyId: string) {
 }
 async function readCompanyDocument(
   access: Awaited<ReturnType<typeof requireCompany>>,
+  extraCustomerId?: string,
 ) {
   const { data, error } = await access.db
     .from("sv_workspaces")
@@ -113,7 +115,52 @@ async function readCompanyDocument(
     .eq("company_id", access.company.id)
     .single();
   if (error || !data) throw new AccessError("公司工作空間未完成設定。", 503);
-  const state = appSchema.parse(data.payload);
+  const ids = (data.payload.inbox?.contacts ?? []).map(
+    (c: { id: string }) => c.id,
+  );
+  let payload = data.payload;
+  if (ids.length) {
+    const directory = await access.db
+      .from("sv_customers")
+      .select("id,name,phone,email,tags,note")
+      .eq("company_id", access.company.id)
+      .in("id", ids);
+    if (directory.error)
+      throw new AccessError("暫時未能讀取共用客戶資料。", 503);
+    const records = new Map((directory.data ?? []).map((c) => [c.id, c]));
+    payload = {
+      ...payload,
+      inbox: {
+        ...payload.inbox,
+        contacts: payload.inbox.contacts.map((c: { id: string }) => ({
+          ...c,
+          ...records.get(c.id),
+        })),
+      },
+    };
+  }
+  if (extraCustomerId) {
+    z.string().min(1).max(100).parse(extraCustomerId);
+    const customer = await access.db.rpc("sv_customer_json", {
+      p_company: access.company.id,
+      p_id: extraCustomerId,
+    });
+    if (customer.error) throw new AccessError("暫時未能讀取客戶資料。", 503);
+    if (!customer.data) throw new AccessError("找不到此公司客戶。", 404);
+    payload = {
+      ...payload,
+      inbox: {
+        ...payload.inbox,
+        contacts: [
+          ...payload.inbox.contacts.filter(
+            (c: { id: string }) => c.id !== extraCustomerId,
+          ),
+          customer.data,
+        ],
+      },
+    };
+  }
+  const state = appSchema.parse(payload);
   if (state.scope?.companyId !== access.company.id)
     throw new AccessError("工作空間識別不一致。", 409);
   return {
@@ -123,12 +170,16 @@ async function readCompanyDocument(
     revision: data.revision as number,
   };
 }
-export async function loadCompany(companyId: string, product?: Product) {
+export async function loadCompany(
+  companyId: string,
+  product?: Product,
+  customerId?: string,
+) {
   const access = await requireCompany(companyId);
   if (product) requireProduct(access.products, product);
   if (!access.products.length)
     throw new AccessError("公司未有可使用嘅產品方案。");
-  const document = await readCompanyDocument(access);
+  const document = await readCompanyDocument(access, customerId);
   return {
     ...document,
     state: appSchema.parse(projectWorkspace(document.state, access.products)),
@@ -141,5 +192,14 @@ export async function loadCompanyForCommand(
 ) {
   const access = await requireCompany(companyId);
   requireCommandProduct(access.products, command);
-  return readCompanyDocument(access);
+  const selected = z
+    .object({
+      type: z.literal("pos"),
+      command: z.object({ contactId: z.string().min(1).max(100) }),
+    })
+    .safeParse(command);
+  return readCompanyDocument(
+    access,
+    selected.success ? selected.data.command.contactId : undefined,
+  );
 }

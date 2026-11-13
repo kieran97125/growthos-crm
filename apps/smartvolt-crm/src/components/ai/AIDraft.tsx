@@ -11,7 +11,7 @@ import type { CompanyAnswer } from "@/lib/ai/protocol";
 type Context = { companyId: string; brandId: string } & (
   | { source: "playground"; message: string }
   | { source: "conversation"; conversationId: string }
-  | { source: "meta"; threadId: string }
+  | { source: "meta" | "whatsapp"; threadId: string }
 );
 export default function AIDraft({
   context,

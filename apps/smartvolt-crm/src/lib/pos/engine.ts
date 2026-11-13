@@ -14,7 +14,7 @@ export type PosContext = {
   companyId: string;
   brandIds: string[];
   staffIds: string[];
-  contacts: { id: string }[];
+  contacts: { id: string; brandIds?: string[] }[];
   conversations: { id: string; contactId: string; brandId: string }[];
   actor: { name: string; role: Role };
   now: number;
@@ -146,8 +146,13 @@ export function applyPosCommand(
   const contact = (contactId: string, brandId: string) => {
     if (
       !ctx.contacts.some((p) => p.id === contactId) ||
-      !ctx.conversations.some(
-        (cv) => cv.contactId === contactId && cv.brandId === brandId,
+      !(
+        ctx.contacts.some(
+          (p) => p.id === contactId && p.brandIds?.includes(brandId),
+        ) ||
+        ctx.conversations.some(
+          (cv) => cv.contactId === contactId && cv.brandId === brandId,
+        )
       )
     )
       fail("客戶不屬於此品牌。");
@@ -242,12 +247,13 @@ export function applyPosCommand(
       );
     const cv = ctx.conversations.find(
       (cv) => cv.contactId === c.contactId && cv.brandId === item.brandId,
-    )!;
+    );
     const a: Appointment = {
       id: c.appointmentId,
       brandId: item.brandId,
       contactId: c.contactId,
-      conversationId: cv.id,
+      conversationId: cv?.id ?? null,
+      ...(old?.requestId ? { requestId: old.requestId } : {}),
       crmBookingId: old?.crmBookingId ?? `pos-book-${c.appointmentId}`,
       serviceId: item.id,
       serviceName: old && hasOrder ? old.serviceName : item.name,

@@ -581,7 +581,11 @@ test("installation backfills existing corrected package history without advancin
       "create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create table auth.users(id uuid primary key);create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;grant usage on schema auth,public to authenticated,service_role;",
     );
     for (const file of migrationFiles.filter(
-      (f) => !f.endsWith("smartvolt_pos_immutable_ledger.sql"),
+      (f) =>
+        f <
+        migrationFiles.find((x) =>
+          x.endsWith("smartvolt_pos_immutable_ledger.sql"),
+        )!,
     ))
       await backfill.exec(readFileSync(`supabase/migrations/${file}`, "utf8"));
     await backfill.query("insert into auth.users values($1)", [owner]);
@@ -606,6 +610,8 @@ test("installation backfills existing corrected package history without advancin
     await backfill.exec(
       readFileSync(`supabase/migrations/${migration}`, "utf8"),
     );
+    for (const later of migrationFiles.filter((f) => f > migration))
+      await backfill.exec(readFileSync(`supabase/migrations/${later}`, "utf8"));
     assert.equal(
       Number(
         (

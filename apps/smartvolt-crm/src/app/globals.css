@@ -1,3 +1,6 @@
+@import "../components/inquiries/inquiries.css";
+@import "../components/meta/meta.css";
+@import "../components/ai/ai.css";
 @import "../components/crm/studio/broadcast.css";
 @import "../components/crm/studio/experience.css";
 /* Initial workspace styles must be in the render-blocking layout stylesheet.

@@ -31,7 +31,7 @@ export const companyAIRequest = z.discriminatedUnion("source", [
       companyId: z.uuid(),
       requestId: z.uuid(),
       brandId: z.string().min(1).max(100),
-      source: z.literal("meta"),
+      source: z.enum(["meta", "whatsapp"]),
       threadId: z.uuid(),
     })
     .strict(),

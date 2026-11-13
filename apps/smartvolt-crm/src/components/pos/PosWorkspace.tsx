@@ -206,10 +206,12 @@ export default function PosWorkspace({
   const metrics = dailyMetrics(pos, date, brand),
     selectedSection = sections.find((s) => s.id === section)!;
   const selectedOrder = pos.orders.find((o) => o.id === orderId);
-  const contacts = workspace.state.inbox.contacts.filter((c) =>
-    workspace.state.inbox.conversations.some(
-      (cv) => cv.contactId === c.id && cv.brandId === brand,
-    ),
+  const contacts = workspace.state.inbox.contacts.filter(
+    (c) =>
+      c.brandIds?.includes(brand) ||
+      workspace.state.inbox.conversations.some(
+        (cv) => cv.contactId === c.id && cv.brandId === brand,
+      ),
   );
   const customerPacks = pos.entitlements.filter(
     (p) =>

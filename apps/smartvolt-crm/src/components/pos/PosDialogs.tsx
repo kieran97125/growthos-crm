@@ -167,10 +167,12 @@ function AppointmentForm({
       a?.status === "pending" ? "pending" : "confirmed",
     ),
     [error, setError] = useState("");
-  const contacts = workspace.state.inbox.contacts.filter((c) =>
-    workspace.state.inbox.conversations.some(
-      (cv) => cv.contactId === c.id && cv.brandId === brand,
-    ),
+  const contacts = workspace.state.inbox.contacts.filter(
+    (c) =>
+      c.brandIds?.includes(brand) ||
+      workspace.state.inbox.conversations.some(
+        (cv) => cv.contactId === c.id && cv.brandId === brand,
+      ),
   );
   function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();

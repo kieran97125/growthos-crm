@@ -71,6 +71,9 @@ export const appSchema = z
       if (
         entities.some((row) => row.clientId !== company) ||
         branded.some((row) => !brands.has(row.brandId)) ||
+        s.inbox.contacts.some((c) =>
+          c.brandIds?.some((id) => !brands.has(id)),
+        ) ||
         s.inbox.conversations.some((row) => row.owner && !team.has(row.owner))
       )
         ctx.addIssue({ code: "custom", message: "Invalid company scope" });
@@ -690,6 +693,8 @@ export function synchronizePosBookings(s: AppState): AppState {
   if (!s.pos) return s;
   const byId = new Map(s.inbox.bookings.map((b) => [b.id, b]));
   for (const a of s.pos.appointments) {
+    // Provider-backed customers do not require a fabricated legacy conversation.
+    if (!a.conversationId) continue;
     const old = byId.get(a.crmBookingId);
     byId.set(a.crmBookingId, {
       id: a.crmBookingId,

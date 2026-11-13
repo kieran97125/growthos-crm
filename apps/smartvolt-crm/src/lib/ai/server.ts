@@ -205,6 +205,39 @@ export async function prepareCompanyAnswer(raw: unknown) {
       role: m.kind === "incoming" ? "user" : "assistant",
       content: m.body.slice(0, 1200),
     }));
+  } else if (request.source === "whatsapp") {
+    sourceId = request.threadId;
+    const t = await a.db
+      .from("sv_wa_conversations")
+      .select("id,brand_id,revision,customer_name")
+      .eq("company_id", request.companyId)
+      .eq("id", sourceId)
+      .maybeSingle();
+    dbError(t.error);
+    if (!t.data || t.data.brand_id !== request.brandId)
+      throw new AccessError("找不到此品牌對話。", 404);
+    const m = await a.db
+      .from("sv_wa_messages")
+      .select("direction,body,seq")
+      .eq("company_id", request.companyId)
+      .eq("conversation_id", sourceId)
+      .in("direction", ["incoming", "outgoing"])
+      .in("state", ["accepted", "sent", "delivered", "read"])
+      .order("seq", { ascending: false })
+      .limit(20);
+    dbError(m.error);
+    const messages = (m.data ?? []).reverse(),
+      index = messages.findLastIndex((m) => m.direction === "incoming");
+    if (index < 0) throw new AccessError("未有客戶來訊可供準備回覆。", 409);
+    message = messages[index].body;
+    name = t.data.customer_name || name;
+    sourceRevision = t.data.revision;
+    history = messages
+      .slice(Math.max(0, index - 6), index)
+      .map((m) => ({
+        role: m.direction === "incoming" ? "user" : "assistant",
+        content: m.body.slice(0, 1200),
+      }));
   } else {
     sourceId = request.threadId;
     const t = await a.db
@@ -341,15 +374,13 @@ export async function prepareCompanyAnswer(raw: unknown) {
       "budget_exhausted",
     ].includes(errorCode)
   ) {
-    const health = await a.db
-      .from("sv_ai_runtime")
-      .upsert({
-        id: "platform",
-        model,
-        status: errorCode ? "blocked" : "ready",
-        error_code: errorCode,
-        checked_at: new Date().toISOString(),
-      });
+    const health = await a.db.from("sv_ai_runtime").upsert({
+      id: "platform",
+      model,
+      status: errorCode ? "blocked" : "ready",
+      error_code: errorCode,
+      checked_at: new Date().toISOString(),
+    });
     if (health.error) console.error("company_ai_health_write_failed");
   }
   return savedResult(completed.data);

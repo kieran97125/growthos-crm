@@ -14,6 +14,7 @@ const contactSchema = z.object({
   source: z.string().max(100),
   createdAt: z.number(),
   note: text,
+  brandIds: z.array(id).max(100).optional(),
 });
 const conversationSchema = z.object({
   id,

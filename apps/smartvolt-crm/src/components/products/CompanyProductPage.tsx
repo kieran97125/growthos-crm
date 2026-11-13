@@ -1,4 +1,5 @@
 import Link from "next/link";
+import UnifiedInbox from "@/components/inquiries/UnifiedInbox";
 import { redirect } from "next/navigation";
 import { loadCompany } from "@/lib/saas/server";
 import { AccessError } from "@/lib/saas/identity";
@@ -18,7 +19,11 @@ export async function CompanyProductPage({
 }) {
   let company;
   try {
-    company = await loadCompany(companyId, product);
+    company = await loadCompany(
+      companyId,
+      product,
+      product === "pos" ? query.contact : undefined,
+    );
   } catch (error) {
     if (error instanceof AccessError && error.status === 401)
       redirect("/login");
@@ -38,6 +43,17 @@ export async function CompanyProductPage({
   )
     ? (query.view as WorkspaceView)
     : "inbox";
+  if (selected === "crm" && view === "inbox")
+    return (
+      <UnifiedInbox
+        companyId={companyId}
+        companyName={company.company.name}
+        hasPos={company.products.includes("pos")}
+        initialThread={query.thread}
+        initialProvider={query.provider}
+        initialCustomer={query.contact}
+      />
+    );
   return (
     <>
       {selected === "crm" && (
@@ -62,6 +78,7 @@ export async function CompanyProductPage({
             initialProduct={selected}
             initialView={view}
             initialContact={query.contact}
+            initialBrand={query.brand}
             initialConversation={query.conversation}
           />
         </AIProvider>

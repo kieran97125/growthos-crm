@@ -121,7 +121,7 @@ through animation frames without per-frame React/business-context state. Existin
 React and native Pointer Events cover this focused control; an additional drag
 library would add no required capability.
 
-Four geometry/persistence tests cover bounds, normalization, corrupt preferences,
+Five geometry/persistence tests cover bounds, normalization, corrupt preferences,
 edge behavior and companion fit. Browser checks add actual mouse and emulated
 touch dragging, cancellation, click separation, reload/navigation retention,
 keyboard reset, orientation changes and screenshots. Existing C evidence/action,
@@ -136,3 +136,34 @@ not adopted into Core. `entries/2026-08-10-platform-app-identity-icon-contract.m
 retains the existing Convelta identity contract. No graph code, client identity,
 data, credentials or artwork is imported. Existing canonical review PR #88 and
 company card `c-draggable-placement` track this correction.
+
+Hosted touch acceptance exposed two real interaction defects before release:
+a half-pixel coordinate could restore one CSS pixel away, and a tap immediately
+after a captured drag could lose the browser's compatibility click. Persistence
+now normalizes displayed pixels, with 50 consecutive save/restore round trips
+covered. Captured pointer completion explicitly activates an in-bounds tap,
+suppresses compatibility clicks and retains native keyboard activation. The
+original assertions remain in place, including the moved control's hit target;
+synthetic-only pointer event receipts accompany touch acceptance.
+
+
+### Drag correction release acceptance — 2026-11-13
+
+Runtime `fb21d79b96230973a4131ccc909ae4cb7ca21fae` is READY as production
+`dpl_AMgESoE8TduxsHnumDPXrdz4WfmB` at https://app.convelta.io. Exact-source
+[Convelta CI](https://github.com/kieran97125/growthos-crm/actions/runs/43428458789)
+passes typecheck, lint, 226 unit/PostgreSQL tests, production build, all 86 browser
+checks and four production load/refresh checks. The
+[original CRM regression](https://github.com/kieran97125/growthos-crm/actions/runs/43428458904)
+also passes. Desktop/mobile repositioned-C screenshots were visually reviewed
+from the accepted artifact (SHA-256
+`a923c640b9284efa23bbf607e12579825e98c44c2250ded2cb06099cccde4bd1`).
+The original touch hit-target and immediate post-drag tap assertions pass.
+
+Actual production styles include bounded, touch-enabled positioning, drag
+feedback and responsive companion placement. Login returns 200, the private C
+read returns 401 and the unshipped acceptance fixture returns 404. Initial
+production deployment error/fatal logs are empty. Hosted acceptance uses synthetic
+data; it does not claim another authenticated model or business-record write.
+Company card `c-draggable-placement` is complete, and the learning checkpoint
+correction remains reviewable in canonical draft PR #88.

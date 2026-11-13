@@ -196,7 +196,7 @@ export default function BrandKnowledge({
               問題
               <input
                 name="question"
-                  aria-label="問題"
+                aria-label="問題"
                 required
                 maxLength={100}
                 defaultValue={editing.title}
@@ -207,7 +207,7 @@ export default function BrandKnowledge({
               答案
               <textarea
                 name="answer"
-                  aria-label="答案"
+                aria-label="答案"
                 required
                 rows={7}
                 maxLength={5000}

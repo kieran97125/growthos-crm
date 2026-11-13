@@ -136,6 +136,7 @@ test("AI endpoint is protected and public demo remains isolated from live models
   });
   expect(cross.status()).toBe(404);
   await page.goto("/preview?view=bot");
+  await page.getByRole("button", { name: "回覆設定", exact: true }).click();
   await page
     .getByRole("button", { name: "AI 設定", exact: false })
     .first()

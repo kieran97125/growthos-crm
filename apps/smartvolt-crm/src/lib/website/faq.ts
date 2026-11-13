@@ -151,12 +151,20 @@ export function splitFaqAnswer(text: string) {
 }
 
 export function pageFaqs(page: WebsitePage): WebsiteFaq[] {
+  const primaryQuestion =
+    page.category === "policy"
+      ? /privacy|私隱|隱私/i.test(`${page.url} ${page.title}`)
+        ? "你哋點樣處理個人資料？"
+        : /terms|條款|使用說明/i.test(`${page.url} ${page.title}`)
+          ? "使用服務前有咩條款要留意？"
+          : questions.policy
+      : questions[page.category];
   const faqs: WebsiteFaq[] = page.faqs.map((faq) => ({
     ...faq,
     question:
       faq.question === headingQuestion(page.title) &&
       faq.question.startsWith("關於「")
-        ? questions[page.category]
+        ? primaryQuestion
         : faq.question,
   }));
   const add = (question: string, answer: string) => {
@@ -171,23 +179,25 @@ export function pageFaqs(page: WebsitePage): WebsiteFaq[] {
     !faqs.some((f) => f.answer.includes(page.description))
   )
     faqs.unshift({
-      question: questions[page.category],
+      question: primaryQuestion,
       answer: page.description,
     });
   add("點樣聯絡你哋？", [...page.phones, ...page.emails].join("\n"));
   add("你哋嘅地址喺邊？", page.addresses.join("\n"));
   add("營業時間係幾點？", page.hours.join("\n"));
-  if (!faqs.length)
+  if (!page.faqs.length)
     splitFaqAnswer(page.text).forEach((answer, i, chunks) =>
       faqs.push({
-        question:
-          questions[page.category] + (chunks.length > 1 ? `（${i + 1}）` : ""),
+        question: primaryQuestion + (chunks.length > 1 ? `（${i + 1}）` : ""),
         answer,
       }),
     );
   const grouped = new Map<string, string[]>();
   for (const faq of faqs) {
-    const answers = grouped.get(faq.question) ?? [];
+    let answers = grouped.get(faq.question) ?? [];
+    answers = answers.filter(
+      (a) => a === faq.answer || !faq.answer.includes(a),
+    );
     if (!answers.some((a) => a.includes(faq.answer))) answers.push(faq.answer);
     grouped.set(faq.question, answers);
   }

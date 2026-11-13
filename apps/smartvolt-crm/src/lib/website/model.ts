@@ -38,6 +38,7 @@ export const websitePageSchema = z.object({
 export const websiteStateSchema = z.object({
   version: z.literal(1),
   format: z.enum(["pages", "faq"]).default("pages"),
+  derivedFrom: z.uuid().optional(),
   inputUrl: z.url().max(2048),
   queue: z.array(z.url().max(2048)).max(WEBSITE_LIMITS.links),
   visited: z.array(z.string().max(2048)).max(WEBSITE_LIMITS.links),

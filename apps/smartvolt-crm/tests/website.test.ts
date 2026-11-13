@@ -240,6 +240,34 @@ test("contact FAQ uses only discovered contact facts and excludes absent opening
   assert.ok(!items.some((a) => a.title === "營業時間係幾點？"));
   assert.ok(items.every((a) => a.validUntil === "9999-12-31"));
 });
+test("legacy or unstructured pages retain their complete body even when a short metadata description exists", () => {
+  const { page } = extractWebsitePage(
+    Buffer.from(html),
+    "https://starblue.com/",
+  );
+  page.faqs = [];
+  const state = initialWebsiteState(page.url);
+  state.pages = [page];
+  const items = websiteCandidates(state, "company", "brand", randomUUID());
+  const overview = items.find((a) => a.title === "你哋主要提供咩服務？");
+  assert.ok(overview?.content.includes("HK$388"));
+  assert.ok(overview?.content.includes("請先聯絡同事核實時段"));
+  assert.ok(overview?.content.includes(page.description));
+  const privacy = extractWebsitePage(
+    Buffer.from(html),
+    "https://starblue.com/privacy",
+  ).page;
+  const terms = extractWebsitePage(
+    Buffer.from(html),
+    "https://starblue.com/terms",
+  ).page;
+  privacy.faqs = [];
+  terms.faqs = [];
+  state.pages = [privacy, terms];
+  const policies = websiteCandidates(state, "company", "brand", randomUUID());
+  assert.ok(policies.some((a) => a.title === "你哋點樣處理個人資料？"));
+  assert.ok(policies.some((a) => a.title === "使用服務前有咩條款要留意？"));
+});
 test("bounded crawl persists progress, retains partial failures and does not invent complete coverage", async () => {
   const fetcher: typeof fetchWebsite = async (url, options) => {
     await options.beforeRequest?.(new URL(url));

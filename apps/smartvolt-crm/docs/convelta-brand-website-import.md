@@ -36,6 +36,11 @@ company mutation queue serializes publication with ordinary edits. The scan UUID
 is the publication command UUID; same-store duplicate requests share a promise,
 and lost HTTP responses reconcile the same command without duplicate publication.
 
+Existing saved website sources can be reprocessed into the new FAQ format without
+refetching. Such jobs retain their original page retrieval dates and a derivedFrom
+source-job identifier; they do not claim a fresh website crawl. They use the same
+manager-scoped lease, atomic publication and immutable receipt path.
+
 Server-owned FAQ candidates are published atomically through the existing audited
 workspace path. Existing manager membership, purchased CRM and brand scope checks
 remain. All new FAQ records are usable immediately and have no automatic expiry;

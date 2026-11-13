@@ -3,17 +3,25 @@ import Link from "next/link";
 import { companyAIStatus } from "@/lib/ai/server";
 import { AccessError } from "@/lib/saas/identity";
 import AIStudio from "@/components/ai/AIStudio";
+import CopilotWorkspace from "@/components/copilot/CopilotWorkspace";
+import { requireCompany } from "@/lib/saas/server";
+import { requireProduct } from "@/lib/saas/products";
 import "@/components/ai/ai.css";
 export const dynamic = "force-dynamic";
 export default async function AIPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ companyId: string }>;
+  searchParams: Promise<{ mode?: string }>;
 }) {
   const { companyId } = await params;
   let status;
+  const replies = (await searchParams).mode === "replies";
   try {
-    status = await companyAIStatus(companyId);
+    const access = await requireCompany(companyId);
+    requireProduct(access.products, "crm");
+    if (replies) status = await companyAIStatus(companyId);
   } catch (e) {
     if (e instanceof AccessError && e.status === 401) redirect("/login");
     return (
@@ -24,5 +32,9 @@ export default async function AIPage({
       </main>
     );
   }
-  return <AIStudio companyId={companyId} initialStatus={status} />;
+  return status ? (
+    <AIStudio companyId={companyId} initialStatus={status} />
+  ) : (
+    <CopilotWorkspace />
+  );
 }

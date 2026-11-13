@@ -232,12 +232,10 @@ export async function prepareCompanyAnswer(raw: unknown) {
     message = messages[index].body;
     name = t.data.customer_name || name;
     sourceRevision = t.data.revision;
-    history = messages
-      .slice(Math.max(0, index - 6), index)
-      .map((m) => ({
-        role: m.direction === "incoming" ? "user" : "assistant",
-        content: m.body.slice(0, 1200),
-      }));
+    history = messages.slice(Math.max(0, index - 6), index).map((m) => ({
+      role: m.direction === "incoming" ? "user" : "assistant",
+      content: m.body.slice(0, 1200),
+    }));
   } else {
     sourceId = request.threadId;
     const t = await a.db
@@ -345,8 +343,13 @@ export async function prepareCompanyAnswer(raw: unknown) {
       model,
       a.company.name,
       now,
+      request.goal,
     );
-    answer = { ...result.answer, requestId: request.requestId };
+    answer = {
+      ...result.answer,
+      requestId: request.requestId,
+      goal: request.goal,
+    };
     inputTokens = result.inputTokens;
     outputTokens = result.outputTokens;
   } catch (e) {

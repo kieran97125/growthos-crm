@@ -485,3 +485,30 @@
   color: var(--kies-royal);
   margin-top: 15px;
 }
+.ai-goals {
+  border: 0;
+  padding: 0;
+  margin: 14px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ai-goals legend {
+  font-size: 11px;
+  color: var(--kies-text);
+  margin-bottom: 8px;
+}
+.ai-draft .ai-goals button {
+  padding: 7px 9px;
+  background: #fff;
+  border: 1px solid var(--kies-line);
+  border-radius: 7px;
+  font-size: 11px;
+  color: var(--kies-text);
+  cursor: pointer;
+}
+.ai-draft .ai-goals button[aria-pressed="true"] {
+  color: var(--kies-strong);
+  background: var(--kies-tint);
+  border-color: var(--kies-royal);
+}

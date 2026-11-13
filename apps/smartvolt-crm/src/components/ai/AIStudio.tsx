@@ -86,9 +86,8 @@ export default function AIStudio({
       <div className="ai-studio-body">
         {chrome && (
           <nav className="cq-ai-links" aria-label="AI 工作室功能">
-            <Link aria-current="page" href={`/company/${companyId}/crm/ai`}>
-              回覆助手
-            </Link>
+            <Link href={`/company/${companyId}/crm/ai`}>C 工作台</Link>
+            <Link aria-current="page" href={`/company/${companyId}/crm/ai?mode=replies`}>回覆測試</Link>
             <Link href={`/company/${companyId}/crm?view=bot`}>
               BOT 與核准知識
             </Link>

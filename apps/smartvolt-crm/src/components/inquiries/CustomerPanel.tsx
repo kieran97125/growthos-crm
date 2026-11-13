@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { CTagHint } from "@/components/copilot/CopilotProvider";
 import Link from "next/link";
 import {
   CalendarDays,
@@ -438,7 +439,12 @@ export default function CustomerPanel({
                 </label>
                 <label>
                   標籤（用「、」分隔）
-                  <input name="tags" defaultValue={c.tags.join("、")} />
+                  <input
+                    name="tags"
+                    data-copilot-activity="tagging"
+                    defaultValue={c.tags.join("、")}
+                  />
+                  <CTagHint customerId={c.id} />
                 </label>
                 <label>
                   備忘

@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { z } from "zod";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
@@ -47,7 +48,7 @@ export function database() {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
-export async function requireUser() {
+export const requireUser = cache(async function requireUser() {
   const client = await authClient();
   const {
     data: { user },
@@ -56,7 +57,7 @@ export async function requireUser() {
   if (error || !user || user.is_anonymous)
     throw new AccessError("請先登入公司帳戶。", 401);
   return user;
-}
+});
 export async function companiesForUser() {
   const user = await requireUser();
   const { data, error } = await database()
@@ -70,7 +71,9 @@ export async function companiesForUser() {
   if (error) throw new AccessError("暫時未能讀取公司工作空間。", 503);
   return { user, memberships: data ?? [] };
 }
-export async function requireCompany(companyId: string) {
+export const requireCompany = cache(async function requireCompany(
+  companyId: string,
+) {
   const user = await requireUser();
   const db = database();
   const { data: member, error } = await db
@@ -104,7 +107,7 @@ export async function requireCompany(companyId: string) {
     products,
     company: company as { id: string; name: string; status: string },
   };
-}
+});
 async function readCompanyDocument(
   access: Awaited<ReturnType<typeof requireCompany>>,
   extraCustomerId?: string,

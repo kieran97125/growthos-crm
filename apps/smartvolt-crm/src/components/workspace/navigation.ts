@@ -29,7 +29,9 @@ export function workspaceLocation(
     : "";
   const query = new URLSearchParams(search);
   const product: Product =
-    /^\/(pos|ledger)(\/|$)/.test(relative) || !products.includes("crm")
+    (relative === "/copilot" && query.get("product") === "pos") ||
+    /^\/(pos|ledger)(\/|$)/.test(relative) ||
+    !products.includes("crm")
       ? "pos"
       : "crm";
   const view = query.get("view");
@@ -41,7 +43,7 @@ export function workspaceLocation(
   )
     section = "settings";
   else if (relative === "/crm/customers") section = "customers";
-  else if (relative === "/crm/ai") section = "ai";
+  else if (relative === "/crm/ai" || relative === "/copilot") section = "ai";
   else if (view === "flows") section = "flows";
   else if (view === "bot") section = "knowledge";
   else if (view === "broadcasts") section = "broadcasts";

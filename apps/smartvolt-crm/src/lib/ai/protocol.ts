@@ -7,6 +7,9 @@ import {
   type LiveAnswer,
 } from "@/lib/demo/ai-contract";
 import { detectIntent } from "@/components/crm/studio/engine";
+const goal = z
+  .enum(["answer", "book", "objection", "follow_up", "empathy", "concise"])
+  .default("answer");
 export const companyAIRequest = z.discriminatedUnion("source", [
   z
     .object({
@@ -14,6 +17,7 @@ export const companyAIRequest = z.discriminatedUnion("source", [
       requestId: z.uuid(),
       brandId: z.string().min(1).max(100),
       source: z.literal("playground"),
+      goal,
       message: z.string().trim().min(1).max(2000),
     })
     .strict(),
@@ -23,6 +27,7 @@ export const companyAIRequest = z.discriminatedUnion("source", [
       requestId: z.uuid(),
       brandId: z.string().min(1).max(100),
       source: z.literal("conversation"),
+      goal,
       conversationId: z.string().min(1).max(100),
     })
     .strict(),
@@ -32,6 +37,7 @@ export const companyAIRequest = z.discriminatedUnion("source", [
       requestId: z.uuid(),
       brandId: z.string().min(1).max(100),
       source: z.enum(["meta", "whatsapp"]),
+      goal,
       threadId: z.uuid(),
     })
     .strict(),
@@ -66,6 +72,7 @@ export const groundedAnswerSchema = answerSchema.extend({
   interest: z.enum(["high", "medium", "low", "unknown"]),
 });
 export type CompanyAnswer = LiveAnswer & {
+  goal?: import("./goals").ReplyGoal;
   requestId?: string;
   nextStep: string;
   interest: "high" | "medium" | "low" | "unknown";
@@ -118,7 +125,7 @@ export function retrieveKnowledge(
   }
   return selected;
 }
-const prices = (s: string) =>
+export const prices = (s: string) =>
   [
     ...s.matchAll(
       /(?:HK\$|HKD|\$|港幣)\s*(\d[\d,.]*)|(\d[\d,.]*)\s*(?:港元|元)|(?:收費|價錢|售價|報價|費用|定價)\s*(?:為|係|是|:|：)?\s*\$?(\d[\d,.]*)/gi,

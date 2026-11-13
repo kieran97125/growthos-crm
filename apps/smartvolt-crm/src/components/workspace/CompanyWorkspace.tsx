@@ -16,15 +16,20 @@ import {
   UsersRound,
   Workflow,
 } from "lucide-react";
-import { BrandMark } from "@/components/BrandMark";
 import { BRAND } from "@/lib/brand";
 import type { Product } from "@/lib/saas/products";
 import { WorkspaceChromeContext, type WorkspaceCustomer } from "./context";
 import { crmSections, workspaceLocation } from "./navigation";
+import {
+  CopilotProvider,
+  CLauncher,
+  CHeaderButton,
+} from "@/components/copilot/CopilotProvider";
 type Props = {
   companyId: string;
   companyName: string;
   actorName: string;
+  actorId?: string;
   products: Product[];
   children: ReactNode;
 };
@@ -43,6 +48,7 @@ export function CompanyWorkspaceChrome({
   companyId,
   companyName,
   actorName,
+  actorId,
   products,
   children,
   location,
@@ -85,99 +91,114 @@ export function CompanyWorkspaceChrome({
     [publishCustomer, navigate],
   );
   return (
-    <WorkspaceChromeContext.Provider value={chrome}>
-      <div
-        className="cq-workspace"
-        data-product={current.product}
-        data-rail={showCrmRail}
-      >
-        <a className="cq-skip" href="#company-work-area">
-          跳到工作區
-        </a>
-        <header className="cq-header">
-          <Link
-            className="cq-brand"
-            href={`${current.base}/${current.product}`}
-            aria-label={`${BRAND.name} ${current.product.toUpperCase()}`}
-          >
-            <BrandMark size={34} />
-            <strong>{BRAND.name}</strong>
-          </Link>
-          <span className="cq-product">
-            {current.product === "crm" ? (
-              <MessagesSquare size={15} />
-            ) : (
-              <Store size={15} />
-            )}
-            <b>{current.product.toUpperCase()}</b>
-          </span>
-          <span className="cq-company">{companyName}</span>
-          <div className="cq-header-actions">
-            {products.includes(other) && (
+    <CopilotProvider
+      key={`${companyId}:${actorId ?? actorName}:${current.product}`}
+      companyId={companyId}
+      identityKey={actorId ?? actorName}
+      context={{
+        product: current.product,
+        section: current.section,
+        activity: "viewing",
+        customerId: contactId ?? undefined,
+        brandId: brandId ?? undefined,
+      }}
+    >
+      <WorkspaceChromeContext.Provider value={chrome}>
+        <div
+          className="cq-workspace"
+          data-product={current.product}
+          data-rail={showCrmRail}
+        >
+          <a className="cq-skip" href="#company-work-area">
+            跳到工作區
+          </a>
+          <header className="cq-header">
+            <div className="cq-brand">
+              <CLauncher />
               <Link
-                className="cq-switch"
-                href={`${current.base}/${other}${context ? "?" + context : ""}`}
-                aria-label={`切換至 ${other.toUpperCase()}`}
+                href={`${current.base}/${current.product}`}
+                aria-label={`${BRAND.name} ${current.product.toUpperCase()}`}
               >
-                <ArrowLeftRight size={16} />
-                <span>切換 {other.toUpperCase()}</span>
+                <strong>{BRAND.name}</strong>
               </Link>
-            )}
-            <details
-              className="cq-account"
-              key={location.pathname + location.search}
-            >
-              <summary aria-label="公司及帳戶選單">
-                <span>{actorName.slice(0, 1)}</span>
-                <ChevronDown size={13} />
-              </summary>
-              <div className="cq-account-menu">
-                <b>{actorName}</b>
-                <small>{companyName}</small>
-                <Link href={`${current.base}/settings`}>
-                  <Settings2 size={15} />
-                  公司設定
-                </Link>
-                <Link href="/">
-                  <UsersRound size={15} />
-                  切換公司
-                </Link>
-                <form action="/auth/signout" method="post">
-                  <button>
-                    <LogOut size={15} />
-                    登出
-                  </button>
-                </form>
-              </div>
-            </details>
-          </div>
-        </header>
-        {showCrmRail && (
-          <nav className="cq-rail" aria-label="CRM 功能">
-            {crmSections.map((item) => {
-              const Icon = icons[item.id];
-              return (
+            </div>
+            <span className="cq-product">
+              {current.product === "crm" ? (
+                <MessagesSquare size={15} />
+              ) : (
+                <Store size={15} />
+              )}
+              <b>{current.product.toUpperCase()}</b>
+            </span>
+            <span className="cq-company">{companyName}</span>
+            <div className="cq-header-actions">
+              <CHeaderButton />
+              {products.includes(other) && (
                 <Link
-                  key={item.id}
-                  data-section={item.id}
-                  href={current.base + item.suffix}
-                  aria-current={
-                    current.section === item.id ? "page" : undefined
-                  }
-                  title={item.label}
+                  className="cq-switch"
+                  href={`${current.base}/${other}${context ? "?" + context : ""}`}
+                  aria-label={`切換至 ${other.toUpperCase()}`}
                 >
-                  <Icon size={20} />
-                  <span>{item.label}</span>
+                  <ArrowLeftRight size={16} />
+                  <span>切換 {other.toUpperCase()}</span>
                 </Link>
-              );
-            })}
-          </nav>
-        )}
-        <div className="cq-content" id="company-work-area" tabIndex={-1}>
-          {children}
+              )}
+              <details
+                className="cq-account"
+                key={location.pathname + location.search}
+              >
+                <summary aria-label="公司及帳戶選單">
+                  <span>{actorName.slice(0, 1)}</span>
+                  <ChevronDown size={13} />
+                </summary>
+                <div className="cq-account-menu">
+                  <b>{actorName}</b>
+                  <small>{companyName}</small>
+                  <Link href={`${current.base}/settings`}>
+                    <Settings2 size={15} />
+                    公司設定
+                  </Link>
+                  <Link href="/">
+                    <UsersRound size={15} />
+                    切換公司
+                  </Link>
+                  <form action="/auth/signout" method="post">
+                    <button>
+                      <LogOut size={15} />
+                      登出
+                    </button>
+                  </form>
+                </div>
+              </details>
+            </div>
+          </header>
+          {showCrmRail && (
+            <nav className="cq-rail" aria-label="CRM 功能">
+              {crmSections.map((item) => {
+                const Icon = icons[item.id];
+                return (
+                  <Link
+                    key={item.id}
+                    data-section={item.id}
+                    href={current.base + item.suffix}
+                    aria-current={
+                      current.section === item.id ? "page" : undefined
+                    }
+                    title={item.label}
+                  >
+                    <Icon size={20} />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+          )}
+          <div className="cq-content" id="company-work-area" tabIndex={-1}>
+            {children}
+          </div>
         </div>
-      </div>
-    </WorkspaceChromeContext.Provider>
+      </WorkspaceChromeContext.Provider>
+    </CopilotProvider>
   );
 }
 export default function CompanyWorkspace(props: Props) {

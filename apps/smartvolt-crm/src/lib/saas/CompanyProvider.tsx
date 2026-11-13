@@ -106,6 +106,7 @@ function createCompanyStore(
       saved = appSchema.parse(body.state);
       currentRevision = body.revision;
       queue.shift();
+      window.dispatchEvent(new Event("convelta:data-changed"));
       snapshot = {
         ...snapshot,
         state: projectWorkspace(

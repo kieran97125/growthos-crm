@@ -1,9 +1,13 @@
 import Link from "next/link";
 import UnifiedInbox from "@/components/inquiries/UnifiedInbox";
 import { redirect } from "next/navigation";
-import { loadCompany } from "@/lib/saas/server";
+import { loadCompany, requireCompany } from "@/lib/saas/server";
 import { AccessError } from "@/lib/saas/identity";
-import { defaultProduct, type Product } from "@/lib/saas/products";
+import {
+  defaultProduct,
+  requireProduct,
+  type Product,
+} from "@/lib/saas/products";
 import { CompanyProvider } from "@/lib/saas/CompanyProvider";
 import { AIProvider } from "@/lib/demo/AIConnection";
 import { ProductWorkspace } from "./ProductWorkspace";
@@ -17,13 +21,24 @@ export async function CompanyProductPage({
   product?: Product;
   query: Record<string, string | undefined>;
 }) {
+  const view: WorkspaceView = ["inbox", "flows", "bot", "broadcasts"].includes(
+    query.view ?? "",
+  )
+    ? (query.view as WorkspaceView)
+    : "inbox";
   let company;
+  let access;
   try {
-    company = await loadCompany(
-      companyId,
-      product,
-      product === "pos" ? query.contact : undefined,
-    );
+    access = await requireCompany(companyId);
+    const selected = product ?? defaultProduct(access.products);
+    if (selected === "crm" && view === "inbox") {
+      requireProduct(access.products, "crm");
+    } else
+      company = await loadCompany(
+        companyId,
+        product,
+        product === "pos" ? query.contact : undefined,
+      );
   } catch (error) {
     if (error instanceof AccessError && error.status === 401)
       redirect("/login");
@@ -37,12 +52,19 @@ export async function CompanyProductPage({
       );
     throw error;
   }
+  if (!company)
+    return (
+      <UnifiedInbox
+        companyId={companyId}
+        companyName={access.company.name}
+        hasPos={access.products.includes("pos")}
+        initialThread={query.thread}
+        initialProvider={query.provider}
+        initialCustomer={query.contact}
+        initialQueue={query.queue}
+      />
+    );
   const selected = product ?? defaultProduct(company.products)!;
-  const view: WorkspaceView = ["inbox", "flows", "bot", "broadcasts"].includes(
-    query.view ?? "",
-  )
-    ? (query.view as WorkspaceView)
-    : "inbox";
   if (selected === "crm" && view === "inbox")
     return (
       <UnifiedInbox

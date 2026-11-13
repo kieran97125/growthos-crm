@@ -8,6 +8,7 @@ import {
   ClipboardCopy,
 } from "lucide-react";
 import type { CompanyAnswer } from "@/lib/ai/protocol";
+import { replyGoals, type ReplyGoal } from "@/lib/ai/goals";
 type Context = { companyId: string; brandId: string } & (
   | { source: "playground"; message: string }
   | { source: "conversation"; conversationId: string }
@@ -27,11 +28,12 @@ export default function AIDraft({
   onRequestState?: (locked: boolean) => void;
 }) {
   const [result, setResult] = useState<CompanyAnswer | null>(null),
+    [goal, setGoal] = useState<ReplyGoal>("answer"),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [notice, setNotice] = useState("");
   const [pending, setPending] = useState<
-    (Context & { requestId: string }) | null
+    (Context & { requestId: string; goal: ReplyGoal }) | null
   >(null);
   async function generate() {
     if (busy || disabled) return;
@@ -39,7 +41,11 @@ export default function AIDraft({
     onRequestState?.(true);
     setError("");
     setNotice("");
-    const input = pending ?? { ...context, requestId: crypto.randomUUID() };
+    const input = pending ?? {
+      ...context,
+      goal,
+      requestId: crypto.randomUUID(),
+    };
     setPending(input);
     try {
       const r = await fetch("/api/assistant", {
@@ -82,6 +88,23 @@ export default function AIDraft({
       <p className="ai-draft-description">
         參考已核准品牌知識同客戶對話，整理建議、摘要及下一步。內部備註唔會交畀模型。
       </p>
+      <fieldset className="ai-goals" disabled={busy || !!pending || disabled}>
+        <legend>今次想點幫客人？</legend>
+        {Object.entries(replyGoals).map(([id, g]) => (
+          <button
+            type="button"
+            key={id}
+            aria-pressed={goal === id}
+            onClick={() => {
+              setGoal(id as ReplyGoal);
+              setResult(null);
+              setNotice("");
+            }}
+          >
+            {g.label}
+          </button>
+        ))}
+      </fieldset>
       <button
         className="ai-solid"
         onClick={() => void generate()}
@@ -109,7 +132,11 @@ export default function AIDraft({
       {result && (
         <div className="ai-generated">
           <div className="ai-result-heading">
-            <b>{result.decision === "handoff" ? "需要同事核實" : "建議回覆"}</b>
+            <b>
+              {result.decision === "handoff"
+                ? "需要同事核實"
+                : replyGoals[result.goal ?? goal].label + " · 建議回覆"}
+            </b>
             <span>真實 AI · {result.model}</span>
           </div>
           <p className="ai-result-reason">{result.reason}</p>

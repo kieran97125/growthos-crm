@@ -33,6 +33,7 @@ export default async function CompanyLayout({
       companyId={companyId}
       companyName={access.company.name}
       actorName={access.actor.name}
+      actorId={access.actor.id}
       products={access.products}
     >
       {children}

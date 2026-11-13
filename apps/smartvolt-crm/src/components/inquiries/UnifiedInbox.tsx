@@ -64,6 +64,7 @@ export default function UnifiedInbox({
   initialThread,
   initialProvider,
   initialCustomer,
+  initialQueue,
 }: {
   companyId: string;
   companyName: string;
@@ -71,6 +72,7 @@ export default function UnifiedInbox({
   initialThread?: string;
   initialProvider?: string;
   initialCustomer?: string;
+  initialQueue?: string;
 }) {
   const chrome = useWorkspaceChrome();
   const base = `/api/companies/${companyId}`;
@@ -85,7 +87,20 @@ export default function UnifiedInbox({
         ? { id: initialThread, provider: initialProvider }
         : null,
     ),
-    [queue, setQueue] = useState("all"),
+    [queue, setQueue] = useState(
+      initialQueue &&
+        [
+          "all",
+          "mine",
+          "unassigned",
+          "overdue",
+          "priority",
+          "unread",
+          "resolved",
+        ].includes(initialQueue)
+        ? initialQueue
+        : "all",
+    ),
     [channel, setChannel] = useState("all"),
     [search, setSearch] = useState(""),
     [input, setInput] = useState(""),
@@ -269,6 +284,7 @@ export default function UnifiedInbox({
         setDrafts((old) => ({ ...old, [k]: old[k] === s.body ? "" : old[k] }));
       }
       setNotice("已儲存並同步公司資料。");
+      window.dispatchEvent(new Event("convelta:data-changed"));
       try {
         await refresh();
       } catch (e) {
@@ -745,6 +761,7 @@ export default function UnifiedInbox({
                 {note ? "內部備註" : "回覆草稿"}
               </label>
               <textarea
+                data-copilot-activity="replying"
                 id="iq-reply"
                 rows={3}
                 maxLength={2000}

@@ -57,3 +57,42 @@ read before implementation:
 No client identity, data, prices, tokens or runtime were imported. The canonical
 checkpoint is updated through the existing reviewed draft PR #88. Company system
 card `convelta-interface-polish` tracks implementation and release acceptance.
+
+## Released runtime — 2026-11-13
+
+Source `3ee3b55caa253466ffa8a6b2ff6dbe49bf30cecb` is READY as production
+`dpl_BAmQk9B6yjUeRAxE6L1WjyGq79r7`, aliased to https://app.convelta.io.
+The source tree was published through the connected GitHub API and its tree SHA
+was checked against the frozen local commit. No unrelated working files changed.
+
+The expanded welcome/panel accessibility checks caught inactive category text
+at 4.43:1 against its tinted background. Its text is now darker; the checks remain
+required. Mobile acceptance also requires the entire third shortcut to be in
+view, and screenshot capture waits for the opening transition to settle.
+
+Production reads confirmed the fixed launcher, full-height compact panel,
+readable prompt numbers and ink navigation in the actual delivered stylesheet.
+Login returns 200, anonymous C/inbox/AI reads 401, foreign-origin C mutation 403
+and a non-shipped fixture URL 404. A valid same-origin anonymous command returns
+401; an invalid empty command returns 400 before authorization, as designed.
+Initial deployment-scoped error/fatal logs are empty. The connected local-browser
+inspection timed out; this release uses hosted exact-source component screenshots
+and interaction checks plus direct production asset/boundary verification. It
+does not claim another authenticated Owner/model-write acceptance.
+
+Final runtime `052922f6931a8e53de7e9aee5b8b8172414cfb19` also preserves legacy
+destructive-action colors by excluding those controls from neutral secondary
+button styling. It is READY as `dpl_FcXd1yXHdMQ9x8c7bydKvyVRgfDC` at the same
+production origin, with the exclusions verified in the actual stylesheet and
+an empty deployment-scoped error/fatal scan.
+
+[Final Convelta CI](https://github.com/kieran97125/growthos-crm/actions/runs/43419403377)
+passes typecheck, lint, 221 unit/PostgreSQL tests, production build, all 84 browser
+checks and four production cold-load/refresh checks.
+[Original CRM regression](https://github.com/kieran97125/growthos-crm/actions/runs/43419403372)
+also passes. Welcome and floating-panel checks cover desktop/mobile contrast,
+the entire third shortcut, composer visibility, fixed positioning, cross-page
+unsent content and Escape focus restoration. Hosted screenshots were visually
+reviewed. The company interface card is complete; existing offline observations,
+production performance measurement and channel/journey execution cards retain
+their separate status.

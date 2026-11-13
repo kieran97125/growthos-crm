@@ -446,9 +446,9 @@
 }
 .cq-workspace
   :is(
-    .st-button:not(.st-primary),
+    .st-button:not(.st-primary, .st-danger),
     .bc-button:not(.bc-primary),
-    .sv-secondary,
+    .sv-secondary:not(.sv-danger-text),
     .ai-health button,
     .iq-search button
   ) {
@@ -460,9 +460,9 @@
 }
 .cq-workspace
   :is(
-    .st-button:not(.st-primary),
+    .st-button:not(.st-primary, .st-danger),
     .bc-button:not(.bc-primary),
-    .sv-secondary,
+    .sv-secondary:not(.sv-danger-text),
     .ai-health button,
     .iq-search button
   ):hover:not(:disabled) {

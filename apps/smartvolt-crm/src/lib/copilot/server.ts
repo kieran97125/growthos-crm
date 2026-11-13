@@ -449,6 +449,15 @@ export async function askCopilot(companyId: string, raw: unknown) {
       /Unknown evidence|Unsupported|Unexecuted/.test(e.message)
         ? "answer_verification_failed"
         : classifyAIError(e);
+    const status =
+      e && typeof e === "object" && "statusCode" in e ? e.statusCode : null;
+    console.warn("convelta_copilot_generation_failed", {
+      code: errorCode,
+      statusCode:
+        typeof status === "number" && status >= 100 && status <= 599
+          ? status
+          : null,
+    });
   }
   const done = await a.db.rpc("sv_copilot_finish", {
     p_company: companyId,

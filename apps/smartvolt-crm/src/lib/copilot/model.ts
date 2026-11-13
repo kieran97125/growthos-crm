@@ -98,8 +98,7 @@ export const outputSchema = z.object({
         quote: z.string().min(1).max(400),
       }),
     )
-    .max(12)
-    .default([]),
+    .max(12),
   nextQuestions: z.array(z.string().max(120)).max(3),
   campaign: z
     .object({

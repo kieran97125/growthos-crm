@@ -1,9 +1,11 @@
 import { test } from "node:test";
 import { MockLanguageModelV4 } from "ai/test";
+import { zodSchema } from "ai";
 import assert from "node:assert/strict";
 import { observations, factsFor } from "../src/lib/copilot/observations";
 import {
   snapshotSchema,
+  outputSchema,
   type Snapshot,
   type CopilotContext,
 } from "../src/lib/copilot/model";
@@ -49,6 +51,28 @@ const snapshot: Snapshot = snapshotSchema.parse({
   channels: { connected: 0 },
   lastBroadcastAt: null,
   broadcastCoverage: "unavailable",
+});
+test("C's provider-facing structured output requires every declared field", async () => {
+  const schema = await zodSchema(outputSchema).jsonSchema;
+  function check(value: unknown, path: string) {
+    if (Array.isArray(value)) {
+      value.forEach((item, i) => check(item, `${path}[${i}]`));
+      return;
+    }
+    if (!value || typeof value !== "object") return;
+    const node = value as Record<string, unknown>;
+    if (node.type === "object" && node.properties) {
+      assert.deepEqual(
+        [...((node.required as string[] | undefined) ?? [])].sort(),
+        Object.keys(node.properties).sort(),
+        `${path}: strict provider schemas require all fields, including empty evidence`,
+      );
+      assert.equal(node.additionalProperties, false, path);
+    }
+    for (const [key, child] of Object.entries(node))
+      check(child, `${path}.${key}`);
+  }
+  check(schema, "C output");
 });
 test("C proposes a grounded tag at the point of work, without asserting a booking", () => {
   const list = observations(snapshot, context, [], now);
@@ -176,6 +200,7 @@ test("agent outputs reject invented sources, external URLs, unexecuted claims an
     output = {
       answer: "我可以先準備 [k]",
       factIds: ["k"],
+      evidence: [],
       nextQuestions: [],
       campaign: null,
     };

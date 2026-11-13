@@ -7,7 +7,12 @@ export const WEBSITE_LIMITS = {
   links: 60,
   htmlBytes: 1000000,
   robotsBytes: 32000,
+  faqs: 60,
 } as const;
+export const websiteFaqSchema = z.object({
+  question: z.string().min(1).max(100),
+  answer: z.string().min(1).max(5000),
+});
 export const websitePageSchema = z.object({
   id: z.string().max(64),
   url: z.url().max(2048),
@@ -28,9 +33,11 @@ export const websitePageSchema = z.object({
   emails: z.array(z.string().max(160)).max(8),
   addresses: z.array(z.string().max(300)).max(8),
   hours: z.array(z.string().max(300)).max(8),
+  faqs: z.array(websiteFaqSchema).max(24).default([]),
 });
 export const websiteStateSchema = z.object({
   version: z.literal(1),
+  format: z.enum(["pages", "faq"]).default("pages"),
   inputUrl: z.url().max(2048),
   queue: z.array(z.url().max(2048)).max(WEBSITE_LIMITS.links),
   visited: z.array(z.string().max(2048)).max(WEBSITE_LIMITS.links),
@@ -46,7 +53,7 @@ export const websiteStateSchema = z.object({
   warnings: z
     .array(z.object({ url: z.string().max(2048), reason: z.string().max(160) }))
     .max(WEBSITE_LIMITS.links),
-  candidates: z.array(articleSchema).max(24),
+  candidates: z.array(articleSchema).max(WEBSITE_LIMITS.faqs),
 });
 export const websiteJobSchema = z.object({
   id: z.uuid(),
@@ -57,6 +64,7 @@ export const websiteJobSchema = z.object({
   state: websiteStateSchema,
   added: z.number().int().nonnegative(),
   skipped: z.number().int().nonnegative(),
+  refreshed: z.number().int().nonnegative().default(0),
 });
 export const websiteActionSchema = z.discriminatedUnion("kind", [
   z.object({
@@ -72,7 +80,10 @@ export const websiteImportSchema = z
     id: z.uuid(),
     commandId: z.uuid(),
     revision: z.number().int().nonnegative(),
-    selected: z.array(z.string().min(1).max(100)).min(1).max(24),
+    selected: z
+      .array(z.string().min(1).max(100))
+      .min(1)
+      .max(WEBSITE_LIMITS.faqs),
   })
   .refine(
     (v) => new Set(v.selected).size === v.selected.length,
@@ -82,6 +93,11 @@ export type WebsiteState = z.infer<typeof websiteStateSchema>;
 export type WebsitePage = z.infer<typeof websitePageSchema>;
 export type WebsiteJob = z.infer<typeof websiteJobSchema>;
 export type WebsiteImportSelection = { id: string; selected: string[] };
+export type WebsiteImportResult = {
+  added: number;
+  skipped: number;
+  refreshed: number;
+};
 export const categoryLabels: Record<WebsitePage["category"], string> = {
   overview: "品牌概覽",
   about: "品牌介紹",

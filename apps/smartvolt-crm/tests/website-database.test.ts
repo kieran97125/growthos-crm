@@ -1,9 +1,12 @@
 import { before, after, test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
-import { randomUUID } from "node:crypto";
+import { randomUUID, createHash } from "node:crypto";
 import { PGlite } from "@electric-sql/pglite";
-import { createCompanyState } from "../src/lib/saas/workspace";
+import {
+  createCompanyState,
+  applyCompanyCommand,
+} from "../src/lib/saas/workspace";
 import { appSchema } from "../src/lib/demo/state";
 import {
   initialWebsiteState,
@@ -63,30 +66,42 @@ const revision = () =>
   val<number>("select revision v from sv_workspaces where company_id=$1", [
     company,
   ]);
-async function ready(id = randomUUID()) {
+async function ready(
+  id = randomUUID(),
+  c = company,
+  html = "<main><h1>品牌服務</h1><p>品牌介紹與服務內容，費用 HK$388。客戶需要核實時段，再由同事安排預約。每位客戶都先了解需要，才選擇合適服務。</p></main>",
+  legacy = false,
+) {
   const state = initialWebsiteState("https://brand.com");
-  await call("sv_website_start", [
-    company,
-    owner,
-    id,
-    "main",
-    JSON.stringify(state),
-  ]);
+  await call("sv_website_start", [c, owner, id, "main", JSON.stringify(state)]);
   const token = randomUUID();
-  await call("sv_website_claim", [company, owner, id, token]);
+  await call("sv_website_claim", [c, owner, id, token]);
   state.pages.push(
-    extractWebsitePage(
-      Buffer.from(
-        "<main><h1>品牌服務</h1><p>品牌介紹與服務內容，費用 HK$388。客戶需要核實時段，再由同事安排預約。每位客戶都先了解需要，才選擇合適服務。</p></main>",
-      ),
-      "https://brand.com/",
-    ).page,
+    extractWebsitePage(Buffer.from(html), "https://brand.com/").page,
   );
   state.queue = [];
   state.visited = [state.inputUrl];
-  state.candidates = websiteCandidates(state, company, "main", id);
+  state.candidates = websiteCandidates(state, c, "main", id);
+  if (legacy) {
+    const page = state.pages[0];
+    state.format = "pages";
+    const { faqKey, ...source } = state.candidates[0].website!;
+    void faqKey;
+    state.candidates = [
+      {
+        ...state.candidates[0],
+        title: page.title,
+        content: page.text,
+        status: "draft",
+        website: {
+          ...source,
+          contentHash: createHash("sha256").update(page.text).digest("hex"),
+        },
+      },
+    ];
+  }
   await call("sv_website_finish", [
-    company,
+    c,
     owner,
     id,
     token,
@@ -183,7 +198,7 @@ test("one worker owns a step; stale tokens cannot replace newly persisted progre
     /website_lease_lost/,
   );
 });
-test("explicit import is atomic, draft-only, preserves POS and replays once after unknown HTTP success", async () => {
+test("publication is atomic, immediately usable, preserves POS and replays once after unknown HTTP success", async () => {
   const { id, state } = await ready(),
     command = randomUUID(),
     selected = JSON.stringify(state.candidates.map((a) => a.id));
@@ -211,7 +226,7 @@ test("explicit import is atomic, draft-only, preserves POS and replays once afte
   }>("sv_website_import", [company, owner, id, command, rev, selected]);
   assert.equal(result.added, 1);
   const parsed = appSchema.parse(result.state);
-  assert.equal(parsed.studio.articles[0].status, "draft");
+  assert.equal(parsed.studio.articles[0].status, "approved");
   assert.deepEqual(parsed.pos, before);
   const replay = await call<{ added: number; revision: number }>(
     "sv_website_import",
@@ -270,7 +285,13 @@ test("rescan skips identical content without changing approved knowledge; foreig
   );
 });
 test("browser roles cannot read staging or execute website routines", async () => {
-  await assert.rejects(() => db.exec("update sv_website_imports set state='{}'where status='imported'"), /website_receipt_immutable/);
+  await assert.rejects(
+    () =>
+      db.exec(
+        "update sv_website_imports set state='{}'where status='imported'",
+      ),
+    /website_receipt_immutable/,
+  );
   assert.equal(
     await val(
       "select has_table_privilege('anon','public.sv_website_imports','select')v",
@@ -295,4 +316,106 @@ test("browser roles cannot read staging or execute website routines", async () =
     ),
     false,
   );
+});
+
+async function isolatedCompany() {
+  const c = randomUUID();
+  const state = createCompanyState({
+    companyId: c,
+    companyName: "Synthetic",
+    brands: [{ id: "main", name: "Brand", short: "B" }],
+    team: [{ id: owner, name: "Owner", initials: "O" }],
+  });
+  await call("sv_provision_company", [
+    c,
+    "Synthetic",
+    owner,
+    "Owner",
+    JSON.stringify(state),
+    ["crm", "pos"],
+  ]);
+  return c;
+}
+async function publish(c: string, result: Awaited<ReturnType<typeof ready>>) {
+  const revision = await val<number>(
+    "select revision v from sv_workspaces where company_id=$1",
+    [c],
+  );
+  return await call<{
+    state: unknown;
+    revision: number;
+    added: number;
+    skipped: number;
+    refreshed: number;
+  }>("sv_website_import", [
+    c,
+    owner,
+    result.id,
+    result.id,
+    revision,
+    JSON.stringify(result.state.candidates.map((a) => a.id)),
+  ]);
+}
+test("rescan updates the same FAQ, preserves its identity and never overwrites a staff-edited answer", async () => {
+  const c = await isolatedCompany();
+  const html = (price: number) =>
+    `<main><h1>服務收費係幾多？</h1><p>小組訓練每堂 HK$${price}，費用包含教練指導，請先聯絡同事確認時段。</p></main>`;
+  const first = await publish(c, await ready(randomUUID(), c, html(388)));
+  const firstArticle = appSchema.parse(first.state).studio.articles[0];
+  const second = await publish(c, await ready(randomUUID(), c, html(488)));
+  const updated = appSchema.parse(second.state);
+  assert.equal(second.added, 0);
+  assert.equal(second.refreshed, 1);
+  assert.equal(updated.studio.articles.length, 1);
+  assert.equal(updated.studio.articles[0].id, firstArticle.id);
+  assert.match(updated.studio.articles[0].content, /488/);
+  const edited = applyCompanyCommand(
+    updated,
+    {
+      type: "studio",
+      action: {
+        type: "article",
+        article: {
+          ...updated.studio.articles[0],
+          content: "同事特別提供嘅答案，請直接聯絡工作室確認。",
+          revision: 3,
+        },
+      },
+    },
+    { id: owner, name: "Owner", role: "owner" },
+    Date.now(),
+    ["crm", "pos"],
+  );
+  await call("sv_commit_workspace", [
+    c,
+    owner,
+    second.revision,
+    randomUUID(),
+    JSON.stringify(edited),
+    "studio",
+  ]);
+  const third = await publish(c, await ready(randomUUID(), c, html(588)));
+  assert.equal(third.added, 0);
+  assert.equal(third.refreshed, 0);
+  assert.equal(third.skipped, 1);
+  assert.equal(
+    appSchema.parse(third.state).studio.articles[0].content,
+    "同事特別提供嘅答案，請直接聯絡工作室確認。",
+  );
+});
+test("FAQ scans replace untouched legacy page dumps while keeping immutable original scan evidence", async () => {
+  const c = await isolatedCompany();
+  const old = await ready(randomUUID(), c, undefined, true);
+  await publish(c, old);
+  const result = await publish(c, await ready(randomUUID(), c));
+  const items = appSchema.parse(result.state).studio.articles;
+  assert.equal(items.length, 1);
+  assert.notEqual(items[0].id, old.state.candidates[0].id);
+  assert.ok(items[0].website?.faqKey);
+  assert.equal(items[0].status, "approved");
+  const saved = await val(
+    "select state v from sv_website_imports where company_id=$1 and id=$2",
+    [c, old.id],
+  );
+  assert.deepEqual(saved, old.state);
 });

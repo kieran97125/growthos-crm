@@ -23,7 +23,7 @@ async function main() {
   assert.ok(result.state.candidates.length > 0);
   assert.ok(
     result.state.candidates.every(
-      (a) => a.status === "draft" && a.website?.url.startsWith("https://"),
+      (a) => a.status === "approved" && a.website?.url.startsWith("https://"),
     ),
   );
   console.log(
@@ -34,7 +34,7 @@ async function main() {
         (n, p) => n + p.text.length,
         0,
       ),
-      draftCandidates: result.state.candidates.length,
+      faqCandidates: result.state.candidates.length,
       persistedCompanyRecords: 0,
     }),
   );

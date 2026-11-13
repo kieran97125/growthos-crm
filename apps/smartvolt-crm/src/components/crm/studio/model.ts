@@ -137,6 +137,10 @@ export const articleSchema = z.object({
         }),
       fetchedAt: z.iso.datetime(),
       contentHash: z.string().regex(/^[a-f0-9]{64}$/),
+      faqKey: z
+        .string()
+        .regex(/^[a-f0-9]{64}$/)
+        .optional(),
       truncated: z.boolean(),
     })
     .optional(),

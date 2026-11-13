@@ -80,7 +80,7 @@ export function AssistantDialog({
         <div className="ai-copilot-info">
           <p>
             AI
-            會讀取呢段對話同已核准品牌知識，唔包括內部備註。建議由你修改後傳送。
+            會讀取呢段對話同品牌知識庫，唔包括內部備註。建議由你修改後傳送。
           </p>
           <AIConnectButton />
         </div>

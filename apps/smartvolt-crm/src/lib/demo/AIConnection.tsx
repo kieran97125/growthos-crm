@@ -96,7 +96,7 @@ export function AIConnectButton() {
             <p>
               {identity.connected
                 ? connection.status === "ready"
-                  ? `使用 ${connection.model}，只讀取公司已核准知識，準備建議畀同事確認。`
+                  ? `使用 ${connection.model}，使用公司可用知識，準備建議畀同事確認。`
                   : (connection.blocker ?? "正在核對公司 AI 連線。")
                 : "呢個係公開示範工作空間。示範引擎唔會呼叫真實模型。"}
             </p>

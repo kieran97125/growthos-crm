@@ -18,13 +18,13 @@ import {
   type Product,
 } from "./products";
 import type { Actor, CompanyScope } from "./identity";
-import type { WebsiteImportSelection } from "@/lib/website/model";
+import type {
+  WebsiteImportSelection,
+  WebsiteImportResult,
+} from "@/lib/website/model";
 
 export const WebsiteImportCommitContext = createContext<
-  | ((
-      input: WebsiteImportSelection,
-    ) => Promise<{ added: number; skipped: number }>)
-  | null
+  ((input: WebsiteImportSelection) => Promise<WebsiteImportResult>) | null
 >(null);
 
 type Identity = {
@@ -92,8 +92,9 @@ function createCompanyStore(
     id: string;
     action?: AppAction;
     website?: WebsiteImportSelection;
-    resolve?: (result: { added: number; skipped: number }) => void;
+    resolve?: (result: WebsiteImportResult) => void;
   }[] = [];
+  const websiteRequests = new Map<string, Promise<WebsiteImportResult>>();
   let running = false,
     blocked = false;
   const emit = () => listeners.forEach((fn) => fn());
@@ -140,7 +141,11 @@ function createCompanyStore(
         storage: queue.length ? "正在儲存改動…" : "已儲存至公司工作空間",
         now: Date.now(),
       };
-      pending.resolve?.({ added: body.added ?? 0, skipped: body.skipped ?? 0 });
+      pending.resolve?.({
+        added: body.added ?? 0,
+        skipped: body.skipped ?? 0,
+        refreshed: body.refreshed ?? 0,
+      });
     } catch (error) {
       // Keep the external promise pending while its original command is frozen.
       // Same-UUID recovery must still settle the importer's visible state.
@@ -197,11 +202,13 @@ function createCompanyStore(
       }
     },
     importWebsite(input: WebsiteImportSelection) {
+      const existing = websiteRequests.get(input.id);
+      if (existing) return existing;
       if (blocked)
         return Promise.reject(Error("尚有未儲存改動，請先重試儲存。"));
-      return new Promise<{ added: number; skipped: number }>((resolve) => {
+      const request = new Promise<WebsiteImportResult>((resolve) => {
         queue.push({
-          id: crypto.randomUUID(),
+          id: input.id,
           website: input,
           resolve,
         });
@@ -209,6 +216,8 @@ function createCompanyStore(
         emit();
         void drain();
       });
+      websiteRequests.set(input.id, request);
+      return request;
     },
     exportPending() {
       const file = new Blob(

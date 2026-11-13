@@ -179,7 +179,7 @@ for (const mobile of [false, true])
         ).toBeVisible();
       if (section === "knowledge")
         await expect(
-          page.getByRole("heading", { name: "BOT／知識庫", exact: true }),
+          page.getByRole("heading", { name: "品牌知識庫", exact: true }),
         ).toBeVisible();
       if (section === "broadcasts")
         await expect(
@@ -187,7 +187,10 @@ for (const mobile of [false, true])
         ).toBeVisible();
       if (section === "operations")
         await expect(
-          page.getByRole("heading", { name: "Synthetic operations", exact: true }),
+          page.getByRole("heading", {
+            name: "Synthetic operations",
+            exact: true,
+          }),
         ).toBeVisible();
       expect(
         await page.evaluate(

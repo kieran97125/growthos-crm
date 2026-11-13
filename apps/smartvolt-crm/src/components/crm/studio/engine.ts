@@ -120,7 +120,7 @@ export function suggestReply(input: {
     return {
       ...base,
       decision: "handoff",
-      reason: "未找到有效、已核准嘅品牌資料。",
+      reason: "未找到可用嘅品牌資料。",
       reply: "呢個問題我想先請同事確認，避免提供唔準確嘅資料。",
     };
   const auto =

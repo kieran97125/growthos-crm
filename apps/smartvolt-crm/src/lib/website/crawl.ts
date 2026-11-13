@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { loadBuffer } from "cheerio";
 import robotsParser from "robots-parser";
 import { articleSchema } from "@/components/crm/studio/model";
+import { extractStructuredFaqs, extractHeadingFaqs, pageFaqs } from "./faq";
 import {
   WEBSITE_LIMITS,
   websiteStateSchema,
@@ -30,6 +31,7 @@ export function initialWebsiteState(url: string): WebsiteState {
   const normalized = websiteUrl(url).href;
   return {
     version: 1,
+    format: "faq",
     inputUrl: normalized,
     queue: [normalized],
     visited: [],
@@ -174,9 +176,27 @@ export function extractWebsitePage(
         /* Not a public navigable brand link. */
       }
     });
+  const structuredFaqs = extractStructuredFaqs($);
   $(
     "script,style,noscript,iframe,svg,canvas,form,nav,header,footer,button,input,select,textarea,[hidden],[aria-hidden='true']",
   ).remove();
+  const extractedFaqs = [...structuredFaqs, ...extractHeadingFaqs($)];
+  const faqs: WebsitePage["faqs"] = [];
+  let faqCharacters = 0;
+  for (const faq of extractedFaqs) {
+    if (faqs.length >= 24 || faqCharacters >= WEBSITE_LIMITS.text) break;
+    if (
+      faqs.some((f) => f.question === faq.question && f.answer === faq.answer)
+    )
+      continue;
+    const answer = faq.answer.slice(
+      0,
+      Math.min(5000, WEBSITE_LIMITS.text - faqCharacters),
+    );
+    if (answer.length < 12) break;
+    faqs.push({ question: faq.question, answer });
+    faqCharacters += answer.length;
+  }
   const main = $("main").first().length ? $("main").first() : $("body");
   main.find("br").replaceWith("\n");
   main.find("h1,h2,h3,h4,p,li,tr,section,div,address").append("\n");
@@ -187,7 +207,14 @@ export function extractWebsitePage(
     ...unique(addresses),
     ...unique(hours),
   ].filter(Boolean);
-  const text = clean([title, ...facts, main.text()].join("\n"));
+  const text = clean(
+    [
+      title,
+      ...facts,
+      main.text(),
+      ...structuredFaqs.map((f) => `${f.question}\n${f.answer}`),
+    ].join("\n"),
+  );
   const page: WebsitePage = {
     id: hash(rootUrl.href).slice(0, 24),
     url: rootUrl.href,
@@ -201,6 +228,7 @@ export function extractWebsitePage(
     emails: unique(emails).map((v) => v.slice(0, 160)),
     addresses: unique(addresses),
     hours: unique(hours),
+    faqs,
   };
   return {
     page,
@@ -216,45 +244,40 @@ export function websiteCandidates(
   brandId: string,
   importId: string,
 ) {
-  return state.pages.flatMap((page) => {
-    const chunks: string[] = [];
-    let remaining = page.text;
-    while (remaining.length && chunks.length < 3) {
-      let end = Math.min(5000, remaining.length);
-      if (end < remaining.length) {
-        const boundary = remaining.lastIndexOf("\n", end);
-        if (boundary > 3000) end = boundary;
-      }
-      chunks.push(remaining.slice(0, end).trim());
-      remaining = remaining.slice(end).trim();
-    }
-    return chunks.filter(Boolean).map((content, i) =>
-      articleSchema.parse({
-        id: `web-${importId}-${page.id.slice(0, 12)}-${i}`,
-        clientId: companyId,
-        brandId,
-        title: (
-          page.title.slice(0, 85) +
-          (chunks.length > 1 ? ` · ${i + 1}/${chunks.length}` : "")
-        ).slice(0, 100),
-        content,
-        keywords: [page.title.slice(0, 50)],
-        source: `網站 · ${new URL(page.url).hostname}`.slice(0, 120),
-        status: "draft",
-        revision: 1,
-        validUntil: new Date(Date.parse(page.fetchedAt) + 180 * 86400000)
-          .toISOString()
-          .slice(0, 10),
-        website: {
-          importId,
-          url: page.url,
-          fetchedAt: page.fetchedAt,
-          contentHash: hash(content),
-          truncated: page.truncated,
-        },
-      }),
-    );
-  });
+  const seen = new Set<string>();
+  return state.pages
+    .flatMap((page) => {
+      return pageFaqs(page)
+        .filter((faq) => {
+          const key = hash(faq.question + "\n" + faq.answer);
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
+        .map(({ question, answer: content }, i) =>
+          articleSchema.parse({
+            id: `web-${importId}-${page.id.slice(0, 12)}-${i}`,
+            clientId: companyId,
+            brandId,
+            title: question,
+            content,
+            keywords: [page.title.slice(0, 50)],
+            source: `網站 · ${new URL(page.url).hostname}`.slice(0, 120),
+            status: "approved",
+            revision: 1,
+            validUntil: "9999-12-31",
+            website: {
+              importId,
+              url: page.url,
+              fetchedAt: page.fetchedAt,
+              contentHash: hash(content),
+              faqKey: hash(page.url + "\n" + question),
+              truncated: page.truncated,
+            },
+          }),
+        );
+    })
+    .slice(0, WEBSITE_LIMITS.faqs);
 }
 export async function stepWebsiteState(
   previous: WebsiteState,
@@ -265,6 +288,7 @@ export async function stepWebsiteState(
 ) {
   const state = structuredClone(previous),
     next = state.queue.shift();
+  state.format = "faq";
   if (!next || state.visited.length >= WEBSITE_LIMITS.pages)
     return { state, status: state.pages.length ? "ready" : "failed" } as const;
   const signal = AbortSignal.timeout(16000);

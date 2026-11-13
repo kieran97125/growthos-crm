@@ -23,7 +23,7 @@ function fail(error: { message: string } | null) {
       : code.includes("active_scan")
         ? "此品牌有另一個網站掃描未完成，請先繼續該次掃描。"
         : code.includes("knowledge_limit")
-          ? "品牌知識庫已接近上限，請減少選取項目。"
+          ? "品牌知識庫已達 100 條上限，暫時未能加入更多 FAQ。"
           : code.includes("expired")
             ? "此掃描已超過一天，請重新掃描網站。"
             : code.includes("lease_lost")
@@ -44,7 +44,9 @@ type Access = Awaited<ReturnType<typeof access>>;
 async function job(a: Access, id: string) {
   const r = await a.db
     .from("sv_website_imports")
-    .select("id,brand_id,status,state,created_at,updated_at,added,skipped")
+    .select(
+      "id,brand_id,status,state,created_at,updated_at,added,skipped,refreshed",
+    )
     .eq("company_id", a.company.id)
     .eq("id", id)
     .single();
@@ -61,6 +63,7 @@ async function job(a: Access, id: string) {
     updatedAt: r.data.updated_at,
     added: r.data.added,
     skipped: r.data.skipped,
+    refreshed: r.data.refreshed,
   });
 }
 export async function readWebsiteImport(companyId: string, brand: string) {
@@ -147,5 +150,6 @@ export async function commitWebsiteImport(companyId: string, raw: unknown) {
     revision: r.data.revision,
     added: r.data.added,
     skipped: r.data.skipped,
+    refreshed: r.data.refreshed,
   };
 }

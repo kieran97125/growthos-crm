@@ -10,25 +10,16 @@ import {
   Clock3,
   Hand,
   MessageSquare,
-  Pencil,
   Play,
-  Plus,
   Save,
-  Search,
   Send,
   ShieldCheck,
   Sparkles,
   X,
 } from "lucide-react";
 
-import { Modal } from "../conversations/WorkspacePrimitives";
 import { uid, actionTime } from "../conversations/events";
-import {
-  articleSchema,
-  type Article,
-  type BotProfile,
-  type BrandId,
-} from "./model";
+import { type BotProfile, type BrandId } from "./model";
 import type { AssistantResult } from "./engine";
 import { useAssistant } from "@/lib/demo/useAssistant";
 import { AIConnectButton, useAIConnection } from "@/lib/demo/AIConnection";
@@ -36,8 +27,7 @@ import { AssistantResultCard } from "./AssistantResult";
 import { StudioStatus } from "./StudioUI";
 import type { StudioController } from "./useStudioStore";
 import "./studio.css";
-import WebsiteKnowledgeImport from "@/components/website/WebsiteKnowledgeImport";
-import { canManage } from "@/lib/saas/identity";
+import BrandKnowledge from "@/components/website/BrandKnowledge";
 
 const modes = [
   {
@@ -79,10 +69,7 @@ export default function BotStudio({
   const ai = useAssistant();
   const connection = useAIConnection();
   const [brandId, setBrandId] = useState<BrandId>(BRANDS[0].id);
-  const [tab, setTab] = useState<"settings" | "knowledge">("settings");
-  const [query, setQuery] = useState("");
-  const [editing, setEditing] = useState<Article | null>(null);
-  const [articleError, setArticleError] = useState("");
+  const [tab, setTab] = useState<"settings" | "knowledge">("knowledge");
   const [labInput, setLabInput] = useState(
     identity.connected
       ? "我哋幾個同事分開覆 IG 同 Messenger，想集中管理查詢，有咩方案適合？"
@@ -95,7 +82,6 @@ export default function BotStudio({
   const [humanOwned, setHumanOwned] = useState(false);
   const [notice, setNotice] = useState("");
   const profile = state.bots.find((b) => b.brandId === brandId)!;
-  const brand = BRANDS.find((b) => b.id === brandId)!;
   const articles = state.articles.filter((a) => a.brandId === brandId);
   const today = new Date(actionTime() + 8 * 3600000).toISOString().slice(0, 10);
   function patch(changes: Partial<BotProfile>) {
@@ -164,21 +150,6 @@ export default function BotStudio({
     setLabMessages((current) => [...current, ...list].slice(-12));
     setResult(answer);
   }
-  function newArticle() {
-    setArticleError("");
-    setEditing({
-      id: uid(),
-      clientId: identity.scope.companyId,
-      brandId,
-      title: "",
-      content: "",
-      keywords: [],
-      source: "管理員提供資料",
-      status: "draft",
-      validUntil: "2027-12-31",
-      revision: 1,
-    });
-  }
   function takeOver(value: boolean) {
     setHumanOwned(value);
     setLabMessages((current) => [
@@ -195,7 +166,7 @@ export default function BotStudio({
 
   return (
     <section
-      className="st-workspace st-bot-workspace"
+      className={`st-workspace st-bot-workspace ${tab === "knowledge" ? "is-knowledge" : ""}`}
       aria-label="AI BOT 工作室"
     >
       <header className="st-page-header">
@@ -204,80 +175,84 @@ export default function BotStudio({
             <Bot size={24} />
           </span>
           <div>
-            <h1>BOT／知識庫</h1>
+            <h1>{tab === "knowledge" ? "品牌知識庫" : "BOT 回覆設定"}</h1>
           </div>
         </div>
-        <div className="st-header-actions">
-          <StudioStatus />
-          <AIConnectButton />
-          <button
-            className="st-button st-primary"
-            onClick={() =>
-              setNotice("設定已保留，真實 WhatsApp 渠道仍未接通。")
-            }
-          >
-            <Save size={15} />
-            儲存設定
-          </button>
-        </div>
-      </header>
-      <aside className="st-bot-sidebar">
-        <div className="st-library-title">
-          <h2>品牌助手</h2>
-          <Bot size={15} />
-        </div>
-        <div className="st-bot-profiles">
-          {BRANDS.map((b, i) => (
+        {tab === "settings" && (
+          <div className="st-header-actions">
+            <StudioStatus />
+            <AIConnectButton />
             <button
-              key={b.id}
-              className={brandId === b.id ? "is-active" : ""}
-              onClick={() => changeBrand(b.id as BrandId)}
+              className="st-button st-primary"
+              onClick={() =>
+                setNotice("設定已保留，真實 WhatsApp 渠道仍未接通。")
+              }
             >
-              <span>{i === 0 ? "N" : "C"}</span>
-              <div>
-                <strong>{b.name}</strong>
-                <small>獨立知識及回覆設定</small>
-              </div>
-              <ChevronRight size={13} />
+              <Save size={15} />
+              儲存設定
             </button>
-          ))}
-        </div>
-        <div className="st-bot-summary">
-          <span className="st-neutral-chip">示範設定</span>
-          <strong>{profile.name}</strong>
-          <p>{modes.find((m) => m.id === profile.mode)?.title}</p>
-          <div>
-            <span>可用知識</span>
-            <b>
-              {
-                articles.filter(
-                  (a) => a.status === "approved" && a.validUntil >= today,
-                ).length
-              }{" "}
-              項
-            </b>
           </div>
-          <div>
-            <span>接待時間</span>
-            <b>
-              {profile.openingHour}:00–{profile.closingHour}:00
-            </b>
+        )}
+      </header>
+      {tab === "settings" && (
+        <aside className="st-bot-sidebar">
+          <div className="st-library-title">
+            <h2>品牌助手</h2>
+            <Bot size={15} />
           </div>
-        </div>
-        <div className="st-rule-box st-bot-principle">
-          <ShieldCheck size={17} />
-          <h3>每個回答都有邊界</h3>
-          <p>
-            預約意向交 CS
-            核實。價錢只引用有效資料；套票餘額、即時名額及收款狀態由同事確認。
-          </p>
-        </div>
-        <button className="st-back-to-inbox" onClick={onInbox}>
-          <MessageSquare size={15} />
-          到收件匣試用 AI 建議
-          <ArrowRight size={13} />
-        </button>
-      </aside>
+          <div className="st-bot-profiles">
+            {BRANDS.map((b, i) => (
+              <button
+                key={b.id}
+                className={brandId === b.id ? "is-active" : ""}
+                onClick={() => changeBrand(b.id as BrandId)}
+              >
+                <span>{i === 0 ? "N" : "C"}</span>
+                <div>
+                  <strong>{b.name}</strong>
+                  <small>獨立知識及回覆設定</small>
+                </div>
+                <ChevronRight size={13} />
+              </button>
+            ))}
+          </div>
+          <div className="st-bot-summary">
+            <span className="st-neutral-chip">示範設定</span>
+            <strong>{profile.name}</strong>
+            <p>{modes.find((m) => m.id === profile.mode)?.title}</p>
+            <div>
+              <span>可用知識</span>
+              <b>
+                {
+                  articles.filter(
+                    (a) => a.status === "approved" && a.validUntil >= today,
+                  ).length
+                }{" "}
+                項
+              </b>
+            </div>
+            <div>
+              <span>接待時間</span>
+              <b>
+                {profile.openingHour}:00–{profile.closingHour}:00
+              </b>
+            </div>
+          </div>
+          <div className="st-rule-box st-bot-principle">
+            <ShieldCheck size={17} />
+            <h3>每個回答都有邊界</h3>
+            <p>
+              預約意向交 CS
+              核實。價錢只引用有效資料；套票餘額、即時名額及收款狀態由同事確認。
+            </p>
+          </div>
+          <button className="st-back-to-inbox" onClick={onInbox}>
+            <MessageSquare size={15} />
+            到收件匣試用 AI 建議
+            <ArrowRight size={13} />
+          </button>
+        </aside>
+      )}
       <div className="st-bot-editor">
         <nav className="st-tabs" aria-label="BOT 設定頁籤">
           <button
@@ -296,6 +271,22 @@ export default function BotStudio({
             <BookOpen size={15} />
             品牌知識庫<span>{articles.length}</span>
           </button>
+          {tab === "knowledge" && BRANDS.length > 1 && (
+            <label className="kb-brand-label">
+              品牌
+              <select
+                aria-label="知識庫品牌"
+                value={brandId}
+                onChange={(e) => changeBrand(e.target.value)}
+              >
+                {BRANDS.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
         </nav>
         <div className="st-bot-editor-scroll">
           {tab === "settings" ? (
@@ -459,218 +450,138 @@ export default function BotStudio({
               </div>
             </>
           ) : (
-            <>
-              <div className="st-knowledge-header">
-                <div>
-                  <h2>{brand.name} 品牌知識庫</h2>
-                  <p>只有已核准而且有效嘅資料會被引用。</p>
-                </div>
-                <button className="st-button" onClick={newArticle}>
-                  <Plus size={14} />
-                  新增知識
-                </button>
-              </div>
-              {canManage(identity.actor.role) && (
-                <WebsiteKnowledgeImport
-                  key={brandId}
-                  companyId={identity.scope.companyId}
-                  brandId={brandId}
-                  connected={identity.connected}
-                />
-              )}
-              <label className="st-search">
-                <Search size={15} />
-                <input
-                  aria-label="搜尋品牌知識"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="搜尋知識標題或內容"
-                />
-              </label>
-              <div className="st-knowledge-list">
-                {articles
-                  .filter((a) =>
-                    (a.title + a.content)
-                      .toLowerCase()
-                      .includes(query.toLowerCase()),
-                  )
-                  .map((a) => (
-                    <article key={a.id}>
-                      <div>
-                        <span
-                          className={`st-knowledge-state ${a.status === "approved" && a.validUntil >= today ? "is-approved" : ""}`}
-                        >
-                          <span />
-                          {a.validUntil < today
-                            ? "已過期"
-                            : a.status === "approved"
-                              ? "已核准"
-                              : "待審核"}
-                        </span>
-                        <small>v{a.revision}</small>
-                        <button
-                          aria-label={`編輯知識 ${a.title}`}
-                          onClick={() => {
-                            setArticleError("");
-                            setEditing(a);
-                          }}
-                        >
-                          <Pencil size={14} />
-                        </button>
-                      </div>
-                      <h3>{a.title}</h3>
-                      <p>{a.content}</p>
-                      <footer>
-                        <BookOpen size={12} />
-                        <span>{a.source}</span>
-                        {a.website && (
-                          <a
-                            href={a.website.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            原網頁 ↗
-                          </a>
-                        )}
-                        <span>有效至 {a.validUntil}</span>
-                      </footer>
-                    </article>
-                  ))}
-              </div>
-              <div className="st-rule-box">
-                <ShieldCheck size={17} />
-                <p>
-                  每個品牌獨立搜尋；已過期、待審核及其他品牌資料不會加入建議回覆。正式模型接通後，回覆亦需要保留引用來源。
-                </p>
-              </div>
-            </>
+            <BrandKnowledge key={brandId} studio={studio} brandId={brandId} />
           )}
         </div>
-        <footer className="st-editor-footer">
-          <ShieldCheck size={12} />
-          {studio.storageError
-            ? "設定未能儲存，請保留頁面"
-            : "設定自動保留於此瀏覽器"}
-          <span>真實 WhatsApp 未接通</span>
-        </footer>
+        {tab === "settings" && (
+          <footer className="st-editor-footer">
+            <ShieldCheck size={12} />
+            {studio.storageError
+              ? "設定未能儲存，請保留頁面"
+              : "設定自動保留於此瀏覽器"}
+            <span>真實 WhatsApp 未接通</span>
+          </footer>
+        )}
       </div>
-      <aside className="st-bot-lab" aria-label="BOT 試聊測試">
-        <header>
-          <div>
-            <span>
-              <Play size={14} />
+      {tab === "settings" && (
+        <aside className="st-bot-lab" aria-label="BOT 試聊測試">
+          <header>
+            <div>
+              <span>
+                <Play size={14} />
+              </span>
+              <h2>試聊測試</h2>
+            </div>
+            <button
+              aria-label="清除測試對話"
+              onClick={() => {
+                setLabMessages([]);
+                setResult(null);
+                setHumanOwned(false);
+              }}
+            >
+              <RotateIcon />
+            </button>
+          </header>
+          <div className="st-lab-context">
+            <span>以客戶身份試一次</span>
+            <span className="st-lab-model-label">
+              {connection.status === "ready" ? "AI 已啟用" : "可用示範引擎"}
             </span>
-            <h2>試聊測試</h2>
           </div>
-          <button
-            aria-label="清除測試對話"
-            onClick={() => {
-              setLabMessages([]);
-              setResult(null);
-              setHumanOwned(false);
+          <div className="st-lab-conditions">
+            <label>
+              <input
+                type="checkbox"
+                checked={withinWindow}
+                onChange={(e) => setWithinWindow(e.target.checked)}
+              />
+              客服窗口內
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={businessHours}
+                onChange={(e) => setBusinessHours(e.target.checked)}
+              />
+              營業時間內
+            </label>
+          </div>
+          <div className="st-lab-chat">
+            <div className="st-lab-welcome">
+              <span>
+                <Bot size={20} />
+              </span>
+              <strong>{profile.name}</strong>
+              <p>{profile.greeting}</p>
+            </div>
+            {labMessages.map((m) => (
+              <div key={m.id} className={`st-lab-message st-lab-${m.from}`}>
+                {m.text}
+              </div>
+            ))}
+          </div>
+          <div className="st-lab-presets">
+            <button onClick={() => setLabInput("想了解服務收費。")}>
+              服務收費
+            </button>
+            <button onClick={() => setLabInput("星期六下午三點有冇位？")}>
+              預約意向
+            </button>
+            <button onClick={() => setLabInput("我要退款，想搵真人處理。")}>
+              真人交接
+            </button>
+          </div>
+          <form
+            className="st-lab-composer"
+            onSubmit={(e) => {
+              e.preventDefault();
+              runLab();
             }}
           >
-            <RotateIcon />
-          </button>
-        </header>
-        <div className="st-lab-context">
-          <span>以客戶身份試一次</span>
-          <span className="st-lab-model-label">
-            {connection.status === "ready" ? "AI 已啟用" : "可用示範引擎"}
-          </span>
-        </div>
-        <div className="st-lab-conditions">
-          <label>
-            <input
-              type="checkbox"
-              checked={withinWindow}
-              onChange={(e) => setWithinWindow(e.target.checked)}
+            <textarea
+              aria-label="BOT 測試訊息"
+              rows={2}
+              maxLength={2000}
+              value={labInput}
+              onChange={(e) => setLabInput(e.target.value)}
+              placeholder="輸入一個客戶問題…"
             />
-            客服窗口內
-          </label>
-          <label>
-            <input
-              type="checkbox"
-              checked={businessHours}
-              onChange={(e) => setBusinessHours(e.target.checked)}
-            />
-            營業時間內
-          </label>
-        </div>
-        <div className="st-lab-chat">
-          <div className="st-lab-welcome">
+            <button
+              aria-label="試跑 BOT 回覆"
+              type="submit"
+              disabled={!labInput.trim() || ai.busy}
+            >
+              <Send size={15} />
+            </button>
+          </form>
+          <div className="ai-lab-options">
+            <button disabled={ai.busy} onClick={() => void runLab(true)}>
+              使用示範引擎
+            </button>
+            {ai.busy && <span>AI 正在準備回覆…</span>}
+            {ai.error && <p role="alert">{ai.error}</p>}
+          </div>
+          <div className="st-lab-takeover">
             <span>
-              <Bot size={20} />
+              <span className={humanOwned ? "is-human" : ""} />
+              {humanOwned ? "真人已接管" : "跟隨回覆設定"}
             </span>
-            <strong>{profile.name}</strong>
-            <p>{profile.greeting}</p>
+            <button onClick={() => takeOver(!humanOwned)}>
+              <Hand size={12} />
+              {humanOwned ? "交回 BOT" : "由我接管"}
+            </button>
           </div>
-          {labMessages.map((m) => (
-            <div key={m.id} className={`st-lab-message st-lab-${m.from}`}>
-              {m.text}
+          {result && (
+            <div className="st-lab-result">
+              <AssistantResultCard result={result} />
             </div>
-          ))}
-        </div>
-        <div className="st-lab-presets">
-          <button onClick={() => setLabInput("想了解服務收費。")}>
-            服務收費
-          </button>
-          <button onClick={() => setLabInput("星期六下午三點有冇位？")}>
-            預約意向
-          </button>
-          <button onClick={() => setLabInput("我要退款，想搵真人處理。")}>
-            真人交接
-          </button>
-        </div>
-        <form
-          className="st-lab-composer"
-          onSubmit={(e) => {
-            e.preventDefault();
-            runLab();
-          }}
-        >
-          <textarea
-            aria-label="BOT 測試訊息"
-            rows={2}
-            maxLength={2000}
-            value={labInput}
-            onChange={(e) => setLabInput(e.target.value)}
-            placeholder="輸入一個客戶問題…"
-          />
-          <button
-            aria-label="試跑 BOT 回覆"
-            type="submit"
-            disabled={!labInput.trim() || ai.busy}
-          >
-            <Send size={15} />
-          </button>
-        </form>
-        <div className="ai-lab-options">
-          <button disabled={ai.busy} onClick={() => void runLab(true)}>
-            使用示範引擎
-          </button>
-          {ai.busy && <span>AI 正在準備回覆…</span>}
-          {ai.error && <p role="alert">{ai.error}</p>}
-        </div>
-        <div className="st-lab-takeover">
-          <span>
-            <span className={humanOwned ? "is-human" : ""} />
-            {humanOwned ? "真人已接管" : "跟隨回覆設定"}
-          </span>
-          <button onClick={() => takeOver(!humanOwned)}>
-            <Hand size={12} />
-            {humanOwned ? "交回 BOT" : "由我接管"}
-          </button>
-        </div>
-        {result && (
-          <div className="st-lab-result">
-            <AssistantResultCard result={result} />
-          </div>
-        )}
-        <footer>
-          AI 經伺服器處理；回覆只會進入 Demo 對話，不會發送至 WhatsApp。
-        </footer>
-      </aside>
+          )}
+          <footer>
+            AI 經伺服器處理；回覆只會進入 Demo 對話，不會發送至 WhatsApp。
+          </footer>
+        </aside>
+      )}
       {notice && (
         <div className="st-notice" role="status">
           <Check size={14} />
@@ -679,122 +590,6 @@ export default function BotStudio({
             <X size={13} />
           </button>
         </div>
-      )}
-      {editing && (
-        <Modal
-          title={editing.title ? "編輯品牌知識" : "新增品牌知識"}
-          subtitle={`${brand.name} · 審核後先用作回覆依據`}
-          onClose={() => setEditing(null)}
-        >
-          <form
-            className="st-article-form st-fields"
-            onSubmit={(e) => {
-              e.preventDefault();
-              const data = new FormData(e.currentTarget);
-              const article: Article = {
-                ...editing,
-                title: String(data.get("title")).trim(),
-                content: String(data.get("content")).trim(),
-                source: String(data.get("source")).trim(),
-                keywords: String(data.get("keywords"))
-                  .split(/[,，、]/)
-                  .map((v) => v.trim())
-                  .filter(Boolean),
-                status: String(data.get("status")) as Article["status"],
-                validUntil: String(data.get("until")),
-                revision:
-                  editing.revision +
-                  (state.articles.some((a) => a.id === editing.id) ? 1 : 0),
-              };
-              if (!articleSchema.safeParse(article).success) {
-                setArticleError(
-                  "請檢查欄位：關鍵字最多 20 個，每個最多 50 字，並填妥有效日期。",
-                );
-                return;
-              }
-              if (
-                !state.articles.some((a) => a.id === article.id) &&
-                state.articles.length >= 100
-              ) {
-                setArticleError("示範知識數量已達上限，請編輯現有資料。");
-                return;
-              }
-              dispatch({ type: "article", article });
-              setEditing(null);
-              setNotice("知識已儲存，試聊會使用最新有效版本。");
-            }}
-          >
-            {articleError && <p role="alert">{articleError}</p>}
-            <label>
-              知識標題
-              <input
-                name="title"
-                required
-                maxLength={100}
-                defaultValue={editing.title}
-              />
-            </label>
-            <label>
-              內容
-              <textarea
-                name="content"
-                required
-                rows={6}
-                maxLength={5000}
-                defaultValue={editing.content}
-              />
-            </label>
-            <label>
-              資料來源
-              <input
-                name="source"
-                required
-                maxLength={120}
-                defaultValue={editing.source}
-              />
-            </label>
-            <label>
-              搜尋關鍵字
-              <input
-                name="keywords"
-                maxLength={500}
-                placeholder="用逗號分隔，例如：收費、服務、幾錢"
-                defaultValue={editing.keywords.join("、")}
-              />
-            </label>
-            <div className="st-sim-inputs">
-              <label>
-                審核狀態
-                <select name="status" defaultValue={editing.status}>
-                  <option value="draft">待審核</option>
-                  <option value="approved">已核准</option>
-                </select>
-              </label>
-              <label>
-                有效日期
-                <input
-                  name="until"
-                  type="date"
-                  required
-                  defaultValue={editing.validUntil}
-                />
-              </label>
-            </div>
-            <footer>
-              <button
-                type="button"
-                className="st-button"
-                onClick={() => setEditing(null)}
-              >
-                取消
-              </button>
-              <button className="st-button st-primary" type="submit">
-                <Save size={14} />
-                儲存知識
-              </button>
-            </footer>
-          </form>
-        </Modal>
       )}
     </section>
   );

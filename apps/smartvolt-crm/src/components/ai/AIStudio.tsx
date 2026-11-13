@@ -196,7 +196,7 @@ export default function AIStudio({
                 <article key={a.id}>
                   <div>
                     <b>{a.title}</b>
-                    <span>{a.status === "approved" ? "已核准" : "草稿"}</span>
+                    <span>{a.status === "approved" ? "可使用" : "暫停使用"}</span>
                   </div>
                   <small>
                     v{a.revision} · 有效至 {a.validUntil}

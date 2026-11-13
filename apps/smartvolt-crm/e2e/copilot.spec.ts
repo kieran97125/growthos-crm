@@ -335,6 +335,13 @@ for (const mobile of [false, true])
     await expect(
       page.getByRole("heading", { name: /下一步，\s*交畀 C。/ }),
     ).toBeVisible();
+    expect(
+      (
+        await new AxeBuilder({ page })
+          .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+          .analyze()
+      ).violations,
+    ).toEqual([]);
     await page.screenshot({
       path: info.outputPath(`${mobile ? "mobile" : "desktop"}-c-welcome.png`),
       fullPage: true,
@@ -413,10 +420,18 @@ for (const mobile of [false, true])
       exact: true,
     });
     await expect(dock).toBeInViewport();
+    await expect(dock).toHaveCSS("opacity", "1");
     await expect(dock.getByRole("textbox")).toBeInViewport();
     await expect(
       dock.getByRole("button", { name: /現客再次預約/ }),
     ).toBeInViewport({ ratio: 1 });
+    expect(
+      (
+        await new AxeBuilder({ page })
+          .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+          .analyze()
+      ).violations,
+    ).toEqual([]);
     await page.screenshot({
       path: info.outputPath(`${mobile ? "mobile" : "desktop"}-c-floating.png`),
       fullPage: true,

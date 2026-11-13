@@ -3,6 +3,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { build } from "esbuild";
 import { readFileSync } from "node:fs";
 import { BRAND_CSS } from "../src/lib/brand";
+import type { CopilotBundle } from "../src/components/copilot/CopilotProvider";
 import {
   defaultSettings,
   operationsAction,
@@ -191,6 +192,8 @@ async function fixture(
         actorName: "Synthetic owner",
         context: { product: "crm", section: "operations", activity: "viewing" },
         observations: [],
+        feedback: [],
+        facts: [],
         threads: [],
         tasks: [],
         messages: [],
@@ -206,7 +209,7 @@ async function fixture(
         },
         at: now,
         brands: data.brands,
-      },
+      } satisfies CopilotBundle,
     }),
   );
   await page.route(`**/api/companies/${company}/operations**`, async (r) => {

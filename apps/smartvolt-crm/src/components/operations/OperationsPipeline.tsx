@@ -161,6 +161,7 @@ export default function OperationsPipeline({
           <label>
             階段
             <select
+              aria-label="階段"
               value={editing.stage}
               disabled={mutation.locked}
               onChange={(e) =>

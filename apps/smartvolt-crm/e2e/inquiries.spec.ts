@@ -26,6 +26,7 @@ const css = [
   "meta/meta.css",
   "ai/ai.css",
   "operations/operations.css",
+  "translation/translation.css",
 ]
   .map((f) => readFileSync("src/components/" + f, "utf8"))
   .join("\n");

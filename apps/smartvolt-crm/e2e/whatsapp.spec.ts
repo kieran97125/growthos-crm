@@ -109,7 +109,9 @@ const props: WhatsAppInboxViewProps = {
   atBottom: true,
   actionBusy: false,
 };
-const css = readFileSync("src/components/whatsapp/whatsapp.css", "utf8");
+const css =
+  readFileSync("src/components/whatsapp/whatsapp.css", "utf8") +
+  readFileSync("src/components/translation/translation.css", "utf8");
 function html(data: WhatsAppInboxViewProps) {
   return `<!doctype html><html lang="zh-HK"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>WhatsApp presentation acceptance</title><style>body{margin:0}*{box-sizing:border-box}${css}</style></head><body>${renderToStaticMarkup(createElement(WhatsAppInboxView, data))}</body></html>`;
 }

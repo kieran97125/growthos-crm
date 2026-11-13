@@ -187,6 +187,63 @@ async function main() {
   );
   assert.equal(loads.owner, 6);
   assert.equal(loads.agent, 6);
+  // Translation uses the same company budget lock as replies and C. Multiple
+  // browser clicks and concurrent actors must never reserve the last slot twice.
+  await sql(`select sv_ai_configure(${quote(company)},${quote(owner)},true);`);
+  const translationData = {
+    mode: "draft",
+    source: "meta",
+    brandId: "main",
+    threadId: candidates[0],
+    text: "想約星期六",
+    target: "en",
+  };
+  const translate = (id: string, actor: string, data: object, hash: string) =>
+    `select sv_translation_claim(${quote(company)},${quote(actor)},${quote(id)},${quote(JSON.stringify(data))}::jsonb,'synthetic/model',${quote(hash)});`;
+  const translationIds = Array.from({ length: 8 }, () => randomUUID());
+  const reservations = await Promise.all(
+    translationIds.map((id) =>
+      json<{ dispatch: boolean }>(
+        translate(id, owner, translationData, "a".repeat(64)),
+      ),
+    ),
+  );
+  assert.equal(reservations.filter((r) => r.dispatch).length, 1);
+  assert.equal(
+    await sql(
+      `select count(*)from sv_ai_requests where company_id=${quote(company)}and feature='translation';`,
+    ),
+    "1",
+  );
+  const translationWinner =
+    translationIds[reservations.findIndex((r) => r.dispatch)];
+  await json(
+    `select sv_translation_finish(${quote(company)},${quote(owner)},${quote(translationWinner)},${quote(JSON.stringify({ requestId: translationWinner, target: "en", text: "I would like to book Saturday." }))}::jsonb,null,40,15);`,
+  );
+  await sql(
+    `update sv_ai_settings set daily_limit=2 where company_id=${quote(company)};`,
+  );
+  const lastSlot = await Promise.allSettled(
+    [owner, agent].map((actor, i) =>
+      json(
+        translate(
+          randomUUID(),
+          actor,
+          { ...translationData, text: "unique " + i },
+          String(i + 1).repeat(64),
+        ),
+      ),
+    ),
+  );
+  assert.equal(lastSlot.filter((r) => r.status === "fulfilled").length, 1);
+  const quotaFailure = lastSlot.find((r) => r.status === "rejected");
+  assert.ok(
+    quotaFailure?.status === "rejected" &&
+      /ai_daily_limit/.test(String(quotaFailure.reason)),
+  );
+  console.log(
+    "Native PostgreSQL: parallel translation deduplication and shared last-slot AI quota passed.",
+  );
   console.log(
     "Native PostgreSQL: busy-row skip, queue catch-up, concurrent capacity, receipt replay and round-robin fairness passed.",
   );

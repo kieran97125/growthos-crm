@@ -8,7 +8,9 @@ import type { ThreadActivity } from "../src/lib/meta/operations";
 // A browser-only harness for the real controller, with synthetic tenant data.
 // No production route, provider request, test credential or Auth exception.
 let bundle = "";
-const css = readFileSync("src/components/meta/meta.css", "utf8");
+const css =
+  readFileSync("src/components/meta/meta.css", "utf8") +
+  readFileSync("src/components/translation/translation.css", "utf8");
 test.beforeAll(async () => {
   const built = await build({
     stdin: {

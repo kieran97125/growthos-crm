@@ -1,4 +1,8 @@
 "use client";
+import {
+  MessageTranslation,
+  DraftTranslation,
+} from "@/components/translation/Translation";
 import { useWorkspaceChrome } from "@/components/workspace/context";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -818,6 +822,20 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
                         className={`meta-message ${m.direction}`}
                       >
                         <p>{m.body}</p>
+                        {m.direction === "inbound" && connection && (
+                          <MessageTranslation
+                            key={detail.thread.id + m.id + m.body}
+                            scope={{
+                              companyId,
+                              brandId: connection.brand_id,
+                              source: "meta",
+                              threadId: detail.thread.id,
+                            }}
+                            messageId={m.id}
+                            text={m.body}
+                            disabled={!overview?.canSend}
+                          />
+                        )}
                         {m.referral && (
                           <div className="meta-referral">
                             平台來源證據
@@ -876,6 +894,25 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
                       onChange={(e) => setDraft(e.target.value)}
                       disabled={!overview?.canSend || busy}
                     />
+                    {!note && connection && (
+                      <DraftTranslation
+                        key={detail.thread.id}
+                        scope={{
+                          companyId,
+                          brandId: connection.brand_id,
+                          source: "meta",
+                          threadId: detail.thread.id,
+                        }}
+                        value={draft}
+                        onChange={setDraft}
+                        maxLength={max}
+                        disabled={
+                          !overview?.canSend ||
+                          busy ||
+                          pendingThread === selected
+                        }
+                      />
+                    )}
                     <footer>
                       <small>
                         {Array.from(draft).length}/{max}

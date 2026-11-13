@@ -39,6 +39,8 @@ jobs:
         run: npm run test:e2e -- e2e/operations.spec.ts
       - name: Verify website knowledge import interactions
         run: npm run test:e2e -- e2e/website.spec.ts
+      - name: Verify inbox and draft translation interactions
+        run: npm run test:e2e -- e2e/translation.spec.ts
       - run: npm run test:e2e
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()

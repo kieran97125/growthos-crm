@@ -1,4 +1,8 @@
 "use client";
+import {
+  MessageTranslation,
+  DraftTranslation,
+} from "@/components/translation/Translation";
 import { useWorkspaceChrome } from "@/components/workspace/context";
 import Link from "next/link";
 import { useIdentity } from "@/lib/saas/CompanyProvider";
@@ -861,6 +865,21 @@ export function ConversationWorkspace({
                               </blockquote>
                             )}
                             <p>{m.body}</p>
+                            {m.kind === "incoming" && (
+                              <MessageTranslation
+                                key={selected.id + m.id + m.body}
+                                scope={{
+                                  companyId: identity.scope.companyId,
+                                  brandId: selected.brandId,
+                                  source: "conversation",
+                                  threadId: selected.id,
+                                }}
+                                messageId={m.id}
+                                text={m.body}
+                                disabled={identity.actor.role === "viewer"}
+                                demo={!identity.connected}
+                              />
+                            )}
                             <button
                               aria-label={`引用訊息：${m.body.slice(0, 18)}`}
                               title="引用回覆"
@@ -974,6 +993,22 @@ export function ConversationWorkspace({
                       }}
                       rows={3}
                     />
+                    {composerMode === "reply" && (
+                      <DraftTranslation
+                        key={selected.id}
+                        scope={{
+                          companyId: identity.scope.companyId,
+                          brandId: selected.brandId,
+                          source: "conversation",
+                          threadId: selected.id,
+                        }}
+                        value={text}
+                        onChange={changeDraft}
+                        maxLength={5000}
+                        disabled={!ready || identity.actor.role === "viewer"}
+                        demo={!identity.connected}
+                      />
+                    )}
                     <div className="fh-composer-bottom">
                       <div className="fh-composer-tools">
                         <div className="fh-popover-anchor">

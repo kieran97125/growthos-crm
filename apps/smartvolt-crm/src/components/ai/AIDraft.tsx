@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { DraftTranslation } from "@/components/translation/Translation";
 import {
   Sparkles,
   ArrowUpRight,
@@ -29,6 +30,7 @@ export default function AIDraft({
   onRequestState?: (locked: boolean) => void;
   onHandoff?: (answer: CompanyAnswer) => Promise<boolean | void>;
 }) {
+  const [replyDraft, setReplyDraft] = useState("");
   const [result, setResult] = useState<CompanyAnswer | null>(null),
     [goal, setGoal] = useState<ReplyGoal>("answer"),
     [busy, setBusy] = useState(false),
@@ -71,6 +73,7 @@ export default function AIDraft({
       }
       onRequestState?.(false);
       setResult(data);
+      setReplyDraft(data.reply);
       setPending(null);
       setNotice("真實 AI 建議已準備好，未向客戶發送。");
       onGenerated?.();
@@ -143,15 +146,33 @@ export default function AIDraft({
           {result.decision !== "draft" && (
             <p className="ai-result-reason">{result.reason}</p>
           )}
-          <blockquote>{result.reply}</blockquote>
+          <blockquote>{replyDraft}</blockquote>
+          <DraftTranslation
+            key={result.requestId ?? result.reply}
+            scope={{
+              companyId: context.companyId,
+              brandId: context.brandId,
+              source: context.source,
+              threadId:
+                context.source === "playground"
+                  ? "studio"
+                  : context.source === "conversation"
+                    ? context.conversationId
+                    : context.threadId,
+            }}
+            value={replyDraft}
+            onChange={setReplyDraft}
+            maxLength={5000}
+            disabled={disabled || busy}
+          />
           <div className="ai-result-actions">
             <button
               onClick={() => {
                 if (onInsert) {
-                  onInsert(result.reply);
+                  onInsert(replyDraft);
                   setNotice("已加入回覆草稿，請確認內容後再發送。");
                 } else
-                  void navigator.clipboard.writeText(result.reply).then(
+                  void navigator.clipboard.writeText(replyDraft).then(
                     () => setNotice("建議已複製，未向客戶發送。"),
                     () => setError("未能自動複製，請選取建議文字。"),
                   );

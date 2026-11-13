@@ -93,7 +93,7 @@ async function mount(
     .map(([k, v]) => `${k}:${v}`)
     .join(";");
   await page.setContent(
-    `<!doctype html><html lang="zh-HK"><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Isolated company AI acceptance</title><style>:root{${vars}}body{margin:0}${readFileSync("src/components/ai/ai.css", "utf8")}</style></head><body><div id="fixture"></div><script>window.__aiStatus=${JSON.stringify(initial)}</script></body></html>`,
+    `<!doctype html><html lang="zh-HK"><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Isolated company AI acceptance</title><style>:root{${vars}}body{margin:0}${readFileSync("src/components/translation/translation.css", "utf8")}${readFileSync("src/components/ai/ai.css", "utf8")}</style></head><body><div id="fixture"></div><script>window.__aiStatus=${JSON.stringify(initial)}</script></body></html>`,
   );
   await page.addScriptTag({ content: bundle });
 }

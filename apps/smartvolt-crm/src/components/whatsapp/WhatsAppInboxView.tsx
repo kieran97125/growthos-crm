@@ -1,4 +1,8 @@
 "use client";
+import {
+  MessageTranslation,
+  DraftTranslation,
+} from "@/components/translation/Translation";
 import { useWorkspaceChrome } from "@/components/workspace/context";
 import {
   ArrowDown,
@@ -436,6 +440,22 @@ export default function WhatsAppInboxView({
                           <p>{m.body || "目前未提供附件預覽或播放。"}</p>
                         </div>
                       )}
+                      {p.selected &&
+                        m.direction === "incoming" &&
+                        m.messageType === "text" && (
+                          <MessageTranslation
+                            key={p.selected.id + m.id + m.body}
+                            scope={{
+                              companyId: p.companyId,
+                              brandId: p.selected.brandId,
+                              source: "whatsapp",
+                              threadId: p.selected.id,
+                            }}
+                            messageId={m.id}
+                            text={m.body}
+                            disabled={!p.canSend}
+                          />
+                        )}
                       <footer>
                         <span>
                           {m.direction === "outgoing" && m.authorName
@@ -542,6 +562,19 @@ export default function WhatsAppInboxView({
                     maxLength={8192}
                     aria-describedby="wa-draft-count"
                     disabled={disabled}
+                  />
+                  <DraftTranslation
+                    key={p.selected.id}
+                    scope={{
+                      companyId: p.companyId,
+                      brandId: p.selected.brandId,
+                      source: "whatsapp",
+                      threadId: p.selected.id,
+                    }}
+                    value={p.draft}
+                    onChange={(value) => p.onDraft?.(value)}
+                    maxLength={4096}
+                    disabled={!p.canSend || !!p.pending || p.actionBusy}
                   />
                   <div className="wa-composer-foot">
                     <span id="wa-draft-count">

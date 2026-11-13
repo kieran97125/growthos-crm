@@ -1,5 +1,9 @@
 "use client";
 import {
+  MessageTranslation,
+  DraftTranslation,
+} from "@/components/translation/Translation";
+import {
   useWorkspaceChrome,
   useWorkspaceCustomer,
 } from "@/components/workspace/context";
@@ -689,6 +693,20 @@ export default function UnifiedInbox({
                   <div>
                     {m.direction === "note" && <b>內部備註</b>}
                     <p>{m.body}</p>
+                    {m.direction === "incoming" && (
+                      <MessageTranslation
+                        key={key + m.id + m.body}
+                        scope={{
+                          companyId,
+                          brandId: detail.thread.brand_id,
+                          source: detail.thread.provider,
+                          threadId: detail.thread.id,
+                        }}
+                        messageId={m.id}
+                        text={m.body}
+                        disabled={!canEdit}
+                      />
+                    )}
                     <footer>
                       <time>{date(m.at)}</time>
                       {m.direction === "outgoing" && (
@@ -776,6 +794,23 @@ export default function UnifiedInbox({
                   note ? "只供團隊查看…" : "輸入回覆，或者加入 AI 建議…"
                 }
               />
+              {!note && (
+                <DraftTranslation
+                  key={key}
+                  scope={{
+                    companyId,
+                    brandId: detail.thread.brand_id,
+                    source: detail.thread.provider,
+                    threadId: detail.thread.id,
+                  }}
+                  value={draft}
+                  onChange={(value) =>
+                    setDrafts((old) => ({ ...old, [key]: value }))
+                  }
+                  maxLength={2000}
+                  disabled={!canEdit || locked}
+                />
+              )}
               <div className="iq-compose-footer">
                 <small>
                   {!canEdit

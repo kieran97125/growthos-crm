@@ -154,7 +154,7 @@ export default function WebsiteKnowledgeImport({
     };
   }, [connected, endpoint, brandId, run]);
 
-  const complete = job?.status === "imported";
+  const complete = job?.status === "imported" && job.state.format === "faq";
   const resume =
     job &&
     ["queued", "running", "ready"].includes(job.status) &&

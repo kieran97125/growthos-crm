@@ -32,8 +32,10 @@ test.beforeAll(async () => {
       format: "iife",
       jsx: "automatic",
       define: {
-        "process.env.NODE_ENV": JSON.stringify("test"),
-        "process.env.__NEXT_ROUTER_BASEPATH": JSON.stringify(""),
+        "process.env": JSON.stringify({
+          NODE_ENV: "test",
+          __NEXT_ROUTER_BASEPATH: "",
+        }),
       },
     })
   ).outputFiles[0].text;
@@ -327,6 +329,10 @@ for (const mobile of [false, true])
     await expect(page.getByText("預約意向", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "核對及確認" }).click();
     await page.getByRole("button", { name: "查可用人員及資源" }).click();
+    await page.getByLabel("已核實客戶同意、服務、時間及名額").check();
+    await expect(
+      page.getByRole("button", { name: "確認預約並同步 POS" }),
+    ).toBeDisabled();
     await page.getByLabel("可用安排").selectOption("0");
     await expect(
       page.getByRole("button", { name: "確認預約並同步 POS" }),

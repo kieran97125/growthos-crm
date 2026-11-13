@@ -117,7 +117,7 @@ function ConfirmBooking({
       setLoading(false);
     }
   }
-  const selection = result?.choices[Number(choice)];
+  const selection = choice === "" ? undefined : result?.choices[Number(choice)];
   return (
     <article className="iq-booking">
       <div>

@@ -384,7 +384,10 @@ test("channel switching preserves drafts and common ownership uses real operatio
   await page.getByLabel("回覆草稿").fill("另一位客戶草稿");
   await page.getByRole("button", { name: /Casey Chan/ }).click();
   await expect(page.getByLabel("回覆草稿")).toHaveValue("待核實嘅回覆");
-  await page.getByRole("button", { name: "AI 及跟進", exact: true }).click();
+  await page
+    .locator(".iq-context")
+    .getByRole("button", { name: "AI 及跟進", exact: true })
+    .click();
   await page.getByLabel("負責同事").selectOption(owner);
   await page.getByLabel("下一步行動").fill("核對試堂時間");
   await page.getByRole("button", { name: "儲存跟進", exact: true }).click();
@@ -433,7 +436,10 @@ test("viewer can read customer context but cannot send, edit, assign or create a
   await expect(page.getByRole("button", { name: "新增預約意向" })).toHaveCount(
     0,
   );
-  await page.getByRole("button", { name: "AI 及跟進", exact: true }).click();
+  await page
+    .locator(".iq-context")
+    .getByRole("button", { name: "AI 及跟進", exact: true })
+    .click();
   await expect(
     page.getByRole("button", { name: "按在手查詢量分派" }),
   ).toBeDisabled();

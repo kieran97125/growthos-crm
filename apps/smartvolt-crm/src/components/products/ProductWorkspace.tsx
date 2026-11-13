@@ -1,6 +1,5 @@
 "use client";
 import { lazy, Suspense, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { LockKeyhole } from "lucide-react";
 import { BRAND } from "@/lib/brand";
 import { useDemo } from "@/lib/demo/Provider";
@@ -31,7 +30,6 @@ export function ProductWorkspace({
   initialConversation?: string;
   previewPlan?: string;
 }) {
-  const router = useRouter();
   const { products, scope, connected } = useIdentity(),
     { state, ready } = useDemo();
   const preferred = defaultProduct(products),
@@ -63,13 +61,6 @@ export function ProductWorkspace({
   function switchProduct(next: Product, context?: CustomerContext) {
     if (!products.includes(next)) {
       setDenied(next);
-      return;
-    }
-    if (connected && next === "crm") {
-      const query = new URLSearchParams();
-      if (context?.contactId) query.set("contact", context.contactId);
-      if (context?.brandId) query.set("brand", context.brandId);
-      router.push(`/company/${scope.companyId}/crm?${query}`);
       return;
     }
     setDenied(null);
@@ -136,6 +127,7 @@ export function ProductWorkspace({
               renderProductHeader={(context) => (
                 <ProductHeader
                   product="pos"
+                  context={context}
                   onSwitch={(next) => switchProduct(next, context)}
                 />
               )}

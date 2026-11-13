@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { ArrowLeftRight, MessagesSquare, Store } from "lucide-react";
 import { BrandMark } from "@/components/BrandMark";
 import { BRAND } from "@/lib/brand";
@@ -12,9 +13,11 @@ export type CustomerContext = {
 export function ProductHeader({
   product,
   onSwitch,
+  context,
 }: {
   product: Product;
   onSwitch: (product: Product) => void;
+  context?: CustomerContext;
 }) {
   const identity = useIdentity(),
     other = product === "crm" ? "pos" : "crm";
@@ -47,19 +50,32 @@ export function ProductHeader({
         <span className="sv-product-mode">
           {identity.connected ? "公司專屬工作空間" : "示範工作空間"}
         </span>
-        {identity.products.includes(other) && (
-          <button
-            className="sv-product-switch"
-            onClick={() => onSwitch(other)}
-            aria-label={`切換至 ${other.toUpperCase()}`}
-          >
-            <ArrowLeftRight size={16} />
-            <span>
-              切換至 <b>{other.toUpperCase()}</b>
-            </span>
-            <Icon size={17} />
-          </button>
-        )}
+        {identity.products.includes(other) &&
+          (identity.connected ? (
+            <Link
+              className="sv-product-switch"
+              href={`/company/${identity.scope.companyId}/${other}?${new URLSearchParams({ ...(context?.contactId ? { contact: context.contactId } : {}), ...(context?.brandId ? { brand: context.brandId } : {}) })}`}
+              aria-label={`切換至 ${other.toUpperCase()}`}
+            >
+              <ArrowLeftRight size={16} />
+              <span>
+                切換至 <b>{other.toUpperCase()}</b>
+              </span>
+              <Icon size={17} />
+            </Link>
+          ) : (
+            <button
+              className="sv-product-switch"
+              onClick={() => onSwitch(other)}
+              aria-label={`切換至 ${other.toUpperCase()}`}
+            >
+              <ArrowLeftRight size={16} />
+              <span>
+                切換至 <b>{other.toUpperCase()}</b>
+              </span>
+              <Icon size={17} />
+            </button>
+          ))}
         <span
           className="sv-product-operator"
           aria-label={`目前同事 ${identity.actor.name}`}

@@ -384,6 +384,6 @@ const header = readFileSync(
   "utf8",
 );
 writeFileSync(
-  new URL("20261114154839_convelta_abc_scoped_operations.sql", directory),
+  new URL("20261114170356_convelta_abc_scoped_operations.sql", directory),
   `${header}\n-- Generated explicit overrides; source anchors verified by scripts/build-abc-scopes.mjs.\n${output.join("\n\n")}\n`,
 );

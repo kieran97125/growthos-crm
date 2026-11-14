@@ -1,6 +1,6 @@
 # Convelta A/B/C implementation recovery checkpoint
 
-> Update, 2026-11-15 (HKT): the fresh environment confirmed the previous uncommitted feature code was not retained. A2 has been reconstructed and saved in [draft PR #11](https://github.com/kieran97125/growthos-crm/pull/11). Read the [A2 implementation checkpoint](convelta-abc-a2-implementation-20261114.md) first for current source and acceptance. The sections below remain the historical interruption record, not a claim that old feature files survived or that ABC is complete. Production has not been updated.
+> Update, 2026-11-15 (HKT): the fresh environment confirmed the previous uncommitted feature code was not retained. A2 has been reconstructed and saved in [draft PR #11](https://github.com/kieran97125/growthos-crm/pull/11). Read the [A2 implementation checkpoint](convelta-abc-a2-implementation-20261114.md) first for current source and acceptance. The sections below remain the historical interruption record, not a claim that old feature files survived or that ABC is complete. A2 permission core is now released at `f568287`; email invitations remain gated and ABC is not complete. See the [release record](convelta-a2-release-20261115.md).
 
 Date: 2026-11-14 (Hong Kong). Status: **development interrupted; not accepted or released**.
 

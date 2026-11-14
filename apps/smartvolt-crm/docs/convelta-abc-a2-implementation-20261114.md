@@ -1,6 +1,6 @@
 # Convelta ABC：A2 重建及驗收紀錄
 
-更新：2026-11-15（HKT）。本文件是實作接續紀錄，**不是正式上線公告**。
+更新：2026-11-15（HKT）。權限核心已正式上線；電郵邀請仍待接通。正式發布證據見 [A2 發布紀錄](convelta-a2-release-20261115.md)。
 
 上輪環境中斷後，新的執行環境確認未保留未提交程式；本輪按已保存的契約重建。來源保存在 `feat/convelta-abc-20261114`，開發草稿 [PR #11](https://github.com/kieran97125/growthos-crm/pull/11)，總工作卡 [issue #10](https://github.com/kieran97125/growthos-crm/issues/10)。先前的 [恢復紀錄](convelta-abc-recovery-20261114.md) 保留為歷史，不代表其中舊路徑的程式仍存在。
 
@@ -8,10 +8,10 @@
 
 | 範圍 | 目前狀態 |
 |---|---|
-| A2 員工邀請、接受、角色及品牌／產品權限 | 已重建程式、SQL、介面和測試；正式 Auth 郵件接受與發佈未驗收。 |
+| A2 員工邀請、接受、角色及品牌／產品權限 | 角色／品牌／產品權限、停用／復原及紀錄已發布；正式 Auth 郵件接受仍未驗收，寄信開關維持關閉。 |
 | A3 所需專業套件 | Workflow、測試工具、Web Push、Recharts 已固定版本及 lockfile；持久工作執行器尚未重建。安裝不代表功能完成。 |
 | A1、A3–A5、B1–B4、C1–C4 | 按原有功能卡繼續；本輪不計完成。合計仍是已授權的 13 工作包。 |
-| 正式工作台 | 維持 `19450c1893d46f6feb4dfd1518b9530c44202f37`，部署 `dpl_Es1fAhBUk6EaidXBS1fAxutDCGC6`。本輪沒有套用新 migration 或部署。 |
+| 正式工作台 | 已發布 `f5682878742697aa52cf2a5309b51f355ea16424`，部署 `dpl_3VPZTuN3tSGfQw6gQgGZqLUKKRky` 為 READY。兩項 additive migration 已套用並核對原文雜湊。 |
 | 真實外部動作 | 沒有發送邀請、客戶訊息、通知、廣告轉化或模型請求。測試資料只存在隔離測試環境。 |
 
 ## A2 使用體驗
@@ -32,10 +32,10 @@
 
 ## Migration 與來源
 
-以下檔案由 Supabase CLI 建立，尚未套用正式資料庫：
+以下 migration 已套用正式資料庫；來源檔名已按平台實際版本對齊，SQL 原文保持不變：
 
-1. `20261114153740_convelta_abc_member_lifecycle.sql`
-2. `20261114154839_convelta_abc_scoped_operations.sql`
+1. `20261114170223_convelta_abc_member_lifecycle.sql`
+2. `20261114170356_convelta_abc_scoped_operations.sql`
 
 第二個 migration 是明確的 SQL 函式定義，從本專案原有 migration 產生；`scripts/build-abc-scopes.mjs` 會核對每個修改錨點，`scripts/abc-scope-header.sql` 保存新增共用契約。正式資料庫不執行程式文字改寫。再生後必須重跑資料庫及權限測試。
 
@@ -51,13 +51,13 @@
 
 候選 `f317315da8b0bbd931c5f058716970b23670763a` 的 [CI 43615013559](https://github.com/kieran97125/growthos-crm/actions/runs/43615013559) 已通過 typecheck、lint、287 項程式／資料庫、108 項瀏覽器、四項首屏，以及原生 PostgreSQL 併發驗證。108 項包括新增五項成員介面檢查：桌面、手機、鍵盤／可存取性、遺失回應重試、Manager 唯讀及郵件未設定情況。
 
-瀏覽器 artifact `14122415921` 的 SHA256 為 `22df652a91d64c93e62e87bf83485e3c9ee61c9a14b004b18788876046c8e746`，已核對並檢視桌面／手機截圖。視覺檢查後補齊主要按鈕及 Convelta 藍色樣式，並加入總覽截圖。其後亦補強 POS 轉換、服務同事資格、渠道設定品牌檢查及明確郵件啟用開關；**這些最終差異仍需新一輪整合 CI，不能用上一候選的綠燈代替**。
+瀏覽器 artifact `14122415921` 的 SHA256 為 `22df652a91d64c93e62e87bf83485e3c9ee61c9a14b004b18788876046c8e746`，已核對並檢視桌面／手機截圖。視覺檢查後補齊主要按鈕及 Convelta 藍色樣式，並加入總覽截圖。其後亦補強 POS 轉換、服務同事資格、渠道設定品牌檢查及明確郵件啟用開關；最終差異已由 `f568287` 的 CI 43616362481 驗證：293 項程式／資料庫、108 項瀏覽器、四項首屏與原生 PostgreSQL 全數通過。
 
 本地整體已通過 293 項程式／資料庫檢查；其中包含 15 項新增權限／生命週期情境及六項邀請服務邊界情境。後續範圍修正另有 52 項資料庫回歸通過。最終 typecheck、lint、資料庫及 hosted browser 的結果應以 PR 最新 commit 為準。本地 Chromium 因執行環境拒絕 process-singleton socket 而不能啟動，沒有把本地啟動失敗算作瀏覽器通過。
 
 ## 下一步
 
-1. 對 PR 最新來源完成整合 CI 及截圖核對；保留 A2 正式 Auth 接通及部署驗收。
+1. A2 權限核心、正式登入後名冊、設定入口、收合工作卡及重新載入已驗收。保留 A2 正式 Auth 郵件／指定郵箱接受驗收；沒有發出真實邀請。
 2. 重建 A3/A4 的持久 outbox、資格／用途／同意、限速、取消及不明結果核對，再接 B1–B3 的正式範本、受眾和旅程。Workflow 只決定何時喚醒，SQL 決定當下能否執行；供應商結果不明不能自動重發。
 3. B4/C1/C2 接背景通知、漏覆／同時回覆、更表／休假／技能；C3 使用完整聚合及獨立事件／cohort 口徑；C4 維持原始廣告來源與實際業務結果的權威邊界。
 4. A1 逐渠道驗收；A5 交接 Convelta 自家網站真實 enquiry。渠道接通、供應商接受、送達及業務結果分開記錄。所有未完成項目沿用原工作卡。
@@ -75,4 +75,4 @@
 - `2026-08-03-brand-owned-conversion-destination.md`
 - `2026-11-11-account-owned-report-segments.md`
 
-Canonical checkpoint 已在既有 draft PR #88 更新為重建中；未代表合併、完整 ABC 採納或正式發佈。沒有匯入試點身份、客戶、原始資料、憑證、價格、網域或實作程式。
+Canonical checkpoint 透過既有 draft PR #88 記錄 A2 權限核心的發布證據；未代表完整 ABC 完成或該 review proposal 已合併。沒有匯入試點身份、客戶、原始資料、憑證、價格、網域或實作程式。

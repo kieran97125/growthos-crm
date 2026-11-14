@@ -1,17 +1,9 @@
 import { runBounded } from "./bounded";
-import { timingSafeEqual } from "node:crypto";
 import { database } from "@/lib/saas/database";
 import { checked } from "./runtime";
 import { dispatchFeedback } from "@/lib/feedback/runtime";
 import { dispatchNotifications } from "@/lib/notifications/runtime";
 import { wakeDelivery } from "./scheduler";
-export function validCronAuthorization(value: string | null) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret || secret.length < 32 || !value) return false;
-  const a = Buffer.from(value),
-    b = Buffer.from("Bearer " + secret);
-  return a.length === b.length && timingSafeEqual(a, b);
-}
 export async function maintenance() {
   const db = database(),
     r = await db.rpc("sv_execution_tenants");

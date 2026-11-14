@@ -118,3 +118,11 @@ Before B3 is final: extend the currently name-only merge fields with actual sour
 - Read-only hosted checks confirm production remains A2: workspace revision 5 and all four section fingerprints unchanged; 77 system cards, zero CRM customers, zero WA/Meta connections and no candidate outbox tables. No candidate DDL applied.
 - Hosted security categories remain the existing own-site definer/password warnings, with service-only table INFO. No new production privilege was granted. Baseline results are retained for post-migration comparison.
 - Added covering indexes for new FK/source lookups, and corrected manual-template readiness to show real connection/inbound/acceptance/delivery evidence. Disabled connections cannot synchronize templates. These final candidate changes require exact-source acceptance.
+
+### Private scheduling and browser acceptance correction
+
+- Replaced the secret-bearing public cron route with the documented `@vercel/schedules` private function target (`schedule/v1beta` only). No `CRON_SECRET`, VAPID key or substitute credential has been written or disclosed. The blocked production push-key action remains blocked. Private deployment output and public inaccessibility must be verified before production promotion.
+- Use a 15-minute recovery schedule compatible with all current plans. Exact delivery jobs still wake from verified source events and use durable workflow sleeps; do not promise five-minute recovery or instantaneous offline reminder delivery. Scheduler plan jitter remains applicable.
+- Two tests exercise the real schedule SDK parser and partial-failure result. These tests are not proof of HTTP authentication: the platform's private function target is the required boundary.
+- Cancelled run 187 artifacts exposed three stale implicit-label selectors, supervisor link contrast and real report-filter horizontal overflow. Updated accessible-role selectors, darkened the link, made report filters wrap with readable stacked labels, and isolated cost status text from its expandable evidence form.
+- Local typecheck/lint and two schedule-handler cases passed. No candidate hosted migration/deployment or external recipient send yet. Full browser acceptance remains required for this checkpoint.

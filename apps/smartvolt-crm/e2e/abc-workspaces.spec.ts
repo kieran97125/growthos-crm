@@ -340,7 +340,9 @@ test("supervisor queue keeps whole totals and edits office hours with an accessi
   const f = await mount(page, "supervision");
   await expect(page.getByText("73", { exact: true })).toBeVisible();
   await expect(page.getByText("流程已回覆，待真人處理")).toBeVisible();
-  await page.getByLabel("品牌", { exact: true }).selectOption("main");
+  await page
+    .getByRole("combobox", { name: "品牌", exact: true })
+    .selectOption("main");
   await page.getByRole("button", { name: "辦公時間", exact: true }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.getByRole("dialog").getByRole("button", { name: /儲存/ }).click();

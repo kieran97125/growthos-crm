@@ -208,7 +208,9 @@ async function fixture(
 async function compose(page: Page) {
   await page.getByRole("button", { name: "新增推播", exact: true }).click();
   const dialog = page.getByRole("dialog");
-  await dialog.getByLabel("發送渠道", { exact: true }).selectOption(connection);
+  await dialog
+    .getByRole("combobox", { name: "發送渠道", exact: true })
+    .selectOption(connection);
   await expect(dialog.locator(".eng-audience strong")).toContainText("3");
   await dialog.getByRole("button", { name: "下一步" }).click();
   await dialog.getByLabel("推播名稱").fill("November members");

@@ -90,7 +90,7 @@ export default function ReportsWorkspace({
         canManage={true}
       />
       <form
-        className="eng-toolbar"
+        className="eng-toolbar report-filters"
         onSubmit={(e) => {
           e.preventDefault();
           const f = new FormData(e.currentTarget);
@@ -295,9 +295,11 @@ export default function ReportsWorkspace({
                     <>
                       <td>{reportMoney(p.net_cents)}</td>
                       <td>
-                        {p.cost_cents === null
-                          ? "未記錄"
-                          : reportMoney(p.cost_cents)}
+                        <span>
+                          {p.cost_cents === null
+                            ? "未記錄"
+                            : reportMoney(p.cost_cents)}
+                        </span>
                         {data.canManageCosts && (
                           <details>
                             <summary>成本來源</summary>

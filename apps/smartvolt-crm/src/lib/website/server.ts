@@ -147,7 +147,10 @@ export async function commitWebsiteImport(companyId: string, raw: unknown) {
   fail(r.error);
   const state = appSchema.parse(r.data.state);
   return {
-    state: projectMemberWorkspace(projectWorkspace(state, a.products), a.memberScope),
+    state: projectMemberWorkspace(
+      projectWorkspace(state, a.products),
+      a.memberScope,
+    ),
     revision: r.data.revision,
     added: r.data.added,
     skipped: r.data.skipped,

@@ -50,7 +50,7 @@ async function access(companyId: string, context: CopilotContext) {
   z.uuid().parse(companyId);
   const a = await requireCompany(companyId);
   requireProduct(a.products, context.product);
-  if(context.brandId) assertBrand(a.memberScope, context.brandId);
+  if (context.brandId) assertBrand(a.memberScope, context.brandId);
   return a;
 }
 async function snapshot(
@@ -116,7 +116,10 @@ async function configurationFact(
     .eq("company_id", a.company.id)
     .single();
   checked(r.error);
-  const state = projectMemberWorkspace(appSchema.parse(r.data?.payload), a.memberScope);
+  const state = projectMemberWorkspace(
+    appSchema.parse(r.data?.payload),
+    a.memberScope,
+  );
   const brand = (id: string) => !context.brandId || id === context.brandId;
   let rows: unknown[] = [],
     total = 0;
@@ -221,7 +224,12 @@ async function messagesFor(
   product: string,
 ) {
   if (!threadId) return [];
-  const r = await a.db.rpc("sv_copilot_thread_read", {p_company:a.company.id,p_actor:a.user.id,p_product:product,p_thread:z.uuid().parse(threadId)});
+  const r = await a.db.rpc("sv_copilot_thread_read", {
+    p_company: a.company.id,
+    p_actor: a.user.id,
+    p_product: product,
+    p_thread: z.uuid().parse(threadId),
+  });
   checked(r.error);
   return (r.data ?? []) as Message[];
 }
@@ -237,13 +245,20 @@ export async function readCopilot(
     await Promise.all([
       snapshot(a, context),
       feedbackFor(a),
-      a.db.rpc("sv_copilot_thread_list", {p_company:companyId,p_actor:a.user.id,p_product:context.product}),
+      a.db.rpc("sv_copilot_thread_list", {
+        p_company: companyId,
+        p_actor: a.user.id,
+        p_product: context.product,
+      }),
       context.product === "crm"
-        ? scopeBrands(a, a.db
-            .from("sv_copilot_briefs")
-            .select("id,title,status,revision,plan,created_at")
-            .eq("company_id", companyId)
-            .eq("actor_id", a.user.id))
+        ? scopeBrands(
+            a,
+            a.db
+              .from("sv_copilot_briefs")
+              .select("id,title,status,revision,plan,created_at")
+              .eq("company_id", companyId)
+              .eq("actor_id", a.user.id),
+          )
             .order("created_at", { ascending: false })
             .limit(50)
         : Promise.resolve({ data: [], error: null }),

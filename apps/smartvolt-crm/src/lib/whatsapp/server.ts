@@ -244,7 +244,13 @@ async function brandsFor(
   const scope = scopeSchema.safeParse(payload?.scope);
   if (!scope.success || scope.data.companyId !== access.company.id)
     throw new AccessError("公司品牌設定未完成。", 503);
-  return scope.data.brands.filter(b => access.memberScope.brandIds === null || access.memberScope.brandIds.includes(b.id)).map(({ id, name }) => ({ id, name }));
+  return scope.data.brands
+    .filter(
+      (b) =>
+        access.memberScope.brandIds === null ||
+        access.memberScope.brandIds.includes(b.id),
+    )
+    .map(({ id, name }) => ({ id, name }));
 }
 export async function listConnections(
   companyId: string,
@@ -252,11 +258,13 @@ export async function listConnections(
   const access = await crmAccess(companyId);
   const [brands, result] = await Promise.all([
     brandsFor(access),
-    scopeBrands(access, access.db
-      .from("sv_wa_connections")
-      .select(connectionFields)
-      .eq("company_id", companyId))
-      .order("created_at"),
+    scopeBrands(
+      access,
+      access.db
+        .from("sv_wa_connections")
+        .select(connectionFields)
+        .eq("company_id", companyId),
+    ).order("created_at"),
   ]);
   queryFailure(result.error);
   return {

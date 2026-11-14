@@ -74,7 +74,9 @@ export const requireCompany = cache(async function requireCompany(
   const db = database();
   const { data: member, error } = await db
     .from("sv_memberships")
-    .select("role,display_name,brand_ids,product_ids,sv_companies!inner(id,name,status)")
+    .select(
+      "role,display_name,brand_ids,product_ids,sv_companies!inner(id,name,status)",
+    )
     .eq("company_id", companyId)
     .eq("user_id", user.id)
     .eq("status", "active")
@@ -95,8 +97,14 @@ export const requireCompany = cache(async function requireCompany(
     .select("product,status,starts_at,ends_at")
     .eq("company_id", companyId);
   if (grantError) throw new AccessError("暫時未能核實公司產品方案。", 503);
-  const memberScope: MemberScope = { brandIds: member.brand_ids, productIds: member.product_ids };
-  const products = activeProducts(grants ?? [], Date.now()).filter(p => memberScope.productIds === null || memberScope.productIds.includes(p));
+  const memberScope: MemberScope = {
+    brandIds: member.brand_ids,
+    productIds: member.product_ids,
+  };
+  const products = activeProducts(grants ?? [], Date.now()).filter(
+    (p) =>
+      memberScope.productIds === null || memberScope.productIds.includes(p),
+  );
   return {
     db,
     user,
@@ -182,7 +190,12 @@ export async function loadCompany(
   if (!access.products.length)
     throw new AccessError("公司未有可使用嘅產品方案。");
   const document = await readCompanyDocument(access, customerId);
-  const state = appSchema.parse(projectMemberWorkspace(projectWorkspace(document.state, access.products), access.memberScope));
+  const state = appSchema.parse(
+    projectMemberWorkspace(
+      projectWorkspace(document.state, access.products),
+      access.memberScope,
+    ),
+  );
   return {
     ...document,
     state,

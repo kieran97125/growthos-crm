@@ -74,7 +74,8 @@ begin
 end;$$;
 create function smartvolt_private.team_projection(p_company uuid)returns void language plpgsql security invoker set search_path=''as $$
 declare team jsonb;begin
- select jsonb_agg(jsonb_build_object('id',user_id,'name',display_name,'initials',left(display_name,2))order by(role='owner')desc,display_name,user_id)into team from public.sv_memberships where company_id=p_company and status='active';
+ -- Retain identities referenced by historical threads/flows. Stored membership alone grants access.
+ select jsonb_agg(jsonb_build_object('id',user_id,'name',display_name,'initials',left(display_name,2))order by(role='owner')desc,display_name,user_id)into team from public.sv_memberships where company_id=p_company;
  if team is not null then update public.sv_workspaces set payload=jsonb_set(payload,'{scope,team}',team),revision=revision+1,updated_at=now()where company_id=p_company and payload#>'{scope,team}'is distinct from team;end if;
 end;$$;
 create function public.sv_team_action(p_company uuid,p_actor uuid,p_command uuid,p_action text,p_data jsonb)returns jsonb language plpgsql security invoker set search_path=''as $$

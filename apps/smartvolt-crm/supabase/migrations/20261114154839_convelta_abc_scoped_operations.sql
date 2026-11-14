@@ -10,11 +10,13 @@ declare result jsonb='{}';path text[];paths text[];item jsonb;denied jsonb;brand
 begin
  select brand_ids into brands from public.sv_memberships where company_id=p_company and user_id=p_actor;
  crm=smartvolt_private.member_has_product(p_company,p_actor,'crm');pos=smartvolt_private.member_has_product(p_company,p_actor,'pos');
+ if brands is null and crm and pos then return result;end if;
  foreach paths slice 1 in array array[
   ['inbox','contacts'],['inbox','conversations'],['inbox','messages'],['inbox','bookings'],['studio','flows'],['studio','versions'],['studio','bots'],['studio','articles'],
   ['broadcasts','templates'],['broadcasts','profiles'],['broadcasts','campaigns'],['broadcasts','recipients'],['broadcasts','events'],
   ['pos','catalog'],['pos','resources'],['pos','appointments'],['pos','orders'],['pos','payments'],['pos','refunds'],['pos','entitlements'],['pos','redemptions'],['pos','audit']
  ]loop
+  if brands is null and(paths=array['inbox','contacts']or(paths[1]='pos'and pos)or(paths[1]<>'pos'and crm))then continue;end if;
   denied='[]';
   for item in select value from jsonb_array_elements(coalesce(p#>paths,'[]'))loop
    brand=item->>'brandId';
@@ -225,7 +227,7 @@ begin
  or jsonb_typeof(p_data->'priority')<>'string' or jsonb_typeof(p_data->'status')<>'string'
  or jsonb_typeof(p_data->'assignee_id') not in ('string','null') or jsonb_typeof(p_data->'follow_up_at') not in ('string','null')
  then raise exception 'meta_operations_invalid';end if;
- assignee=(p_data->>'assignee_id')::uuid;
+ assignee=(p_data->>'assignee_id')::uuid;if assignee is not null and(not smartvolt_private.member_has_product(p_company,assignee,'crm')or not smartvolt_private.member_brand_allowed(p_company,assignee,(select brand_id from public.sv_customer_threads where company_id=p_company and thread_id=p_thread and provider='meta')))then raise exception 'customer_assignee_invalid';end if;
  -- Lock memberships before the thread, consistently with access authorization.
  -- A removed/view-only assignee must be explicitly reassigned or cleared.
  if assignee is not null then
@@ -273,7 +275,7 @@ begin
  or jsonb_typeof(p_data->'priority')<>'string' or jsonb_typeof(p_data->'status')<>'string'
  or jsonb_typeof(p_data->'assignee_id') not in ('string','null') or jsonb_typeof(p_data->'follow_up_at') not in ('string','null')
  then raise exception 'meta_operations_invalid';end if;
- assignee=(p_data->>'assignee_id')::uuid;
+ assignee=(p_data->>'assignee_id')::uuid;if assignee is not null and(not smartvolt_private.member_has_product(p_company,assignee,'crm')or not smartvolt_private.member_brand_allowed(p_company,assignee,(select brand_id from public.sv_customer_threads where company_id=p_company and thread_id=p_thread and provider='whatsapp')))then raise exception 'customer_assignee_invalid';end if;
  -- Lock memberships before the thread, consistently with access authorization.
  -- A removed/view-only assignee must be explicitly reassigned or cleared.
  if assignee is not null then
@@ -494,6 +496,27 @@ declare result jsonb;begin
  return result;
 end;$$;
 
+create or replace function public.sv_commit_booking(p_company uuid,p_actor uuid,p_command uuid,p_request uuid,p_expected bigint,p_request_revision bigint,p_selection jsonb,p_payload jsonb)returns jsonb language plpgsql security invoker set search_path='' as $$
+declare b public.sv_booking_requests;r public.sv_inquiry_commands;req jsonb;result jsonb;ap jsonb;
+begin
+ perform public.sv_customer_authorize(p_company,p_actor,true,true);
+ perform public.sv_authorize(p_company,p_actor,'pos',true);perform public.sv_member_scope(p_company,p_actor,(select brand_id from public.sv_booking_requests where company_id=p_company and id=p_request),'pos');
+ perform 1 from public.sv_company_products where company_id=p_company and product='pos' and status='active' and starts_at<=now()and(ends_at is null or ends_at>now())for share;
+ if not found then raise exception 'customer_pos_required';end if;
+ perform pg_advisory_xact_lock(hashtextextended(p_company::text||p_command::text,0));
+ req=jsonb_build_object('kind','convert','request',p_request,'revision',p_expected,'requestRevision',p_request_revision,'selection',p_selection);
+ select * into r from public.sv_inquiry_commands where company_id=p_company and command_id=p_command;
+ if found then if r.actor_id<>p_actor or r.request<>req then raise exception 'customer_idempotency_conflict';end if;return r.result;end if;
+ perform 1 from public.sv_workspaces where company_id=p_company for update;
+ select * into strict b from public.sv_booking_requests where company_id=p_company and id=p_request for update;
+ if b.status<>'requested' or b.revision<>p_request_revision then raise exception 'customer_revision_conflict';end if;
+ if not exists(select 1 from public.sv_customer_threads where company_id=p_company and provider=b.provider and thread_id=b.thread_id and customer_id=b.customer_id)then raise exception 'customer_context_changed';end if;
+ select x into ap from jsonb_array_elements(p_payload #> '{pos,appointments}')x where x->>'id'='request-'||p_request::text;
+ if ap is null or ap->>'requestId'<>p_request::text or ap->>'contactId'<>b.customer_id or ap->>'brandId'<>b.brand_id or ap->>'status'<>'confirmed' or ap->>'serviceId' is distinct from p_selection->>'serviceId' or ap->>'staffId' is distinct from p_selection->>'staffId' or ap->>'resourceId' is distinct from p_selection->>'resourceId' or (ap->>'startsAt')::bigint is distinct from (p_selection->>'startsAt')::bigint or (ap->>'guests')::integer<>b.guests then raise exception 'customer_booking_scope';end if;
+ perform public.sv_commit_workspace(p_company,p_actor,p_expected,p_command,p_payload,'pos');
+ result=jsonb_build_object('saved',true,'appointmentId',ap->>'id');insert into public.sv_inquiry_commands values(p_company,p_command,p_actor,req,result,now());return result;
+end;$$;
+
 create or replace function public.sv_booking_request(p_company uuid,p_actor uuid,p_command uuid,p_id uuid,p_action text,p_data jsonb,p_expected bigint default 0)returns jsonb language plpgsql security invoker set search_path='' as $$
 declare l public.sv_customer_threads;b public.sv_booking_requests;r public.sv_inquiry_commands;req jsonb;outcome jsonb;
 begin
@@ -680,7 +703,7 @@ begin
  select coalesce(jsonb_agg(jsonb_build_object('user_id',m.user_id,'display_name',m.display_name,'role',m.role,'team',coalesce(a.team,''),
  'capacity',coalesce(a.capacity,20),'brand_ids',coalesce(a.brand_ids,'[]'),'paused',coalesce(a.paused,false),'revision',coalesce(a.revision,0),
  'presence',case when a.seen_at>now()-interval '3 minutes'then a.presence else'offline'end,
- 'open_count',(select count(*)from smartvolt_private.ops_inquiries i where i.company_id=p_company and i.assignee_id=m.user_id and i.status='open'))order by m.display_name,m.user_id),'[]'::jsonb)
+ 'open_count',(select count(*)from smartvolt_private.ops_inquiries i where i.company_id=p_company and smartvolt_private.member_brand_allowed(p_company,p_actor,i.brand_id)and i.assignee_id=m.user_id and i.status='open'))order by m.display_name,m.user_id),'[]'::jsonb)
  into members from public.sv_memberships m left join public.sv_agent_routing a on a.company_id=m.company_id and a.user_id=m.user_id
  where m.company_id=p_company and m.status='active'and m.role<>'viewer';
  select jsonb_build_object(
@@ -952,6 +975,8 @@ begin
  if doc.revision <> p_expected then raise exception 'revision_conflict'; end if;
  if p_payload #>> '{scope,companyId}' is distinct from p_company::text then raise exception 'invalid_company_scope'; end if;
  if smartvolt_private.protected_workspace(p_company,p_actor,p_payload)is distinct from smartvolt_private.protected_workspace(p_company,p_actor,doc.payload)then raise exception 'brand_scope';end if;
+ if exists(select 1 from jsonb_array_elements(p_payload#>'{inbox,conversations}')n where n->>'owner'is not null and not exists(select 1 from jsonb_array_elements(doc.payload#>'{inbox,conversations}')o where o->>'id'=n->>'id'and o->'owner'=n->'owner')and(not smartvolt_private.member_has_product(p_company,(n->>'owner')::uuid,'crm')or not smartvolt_private.member_brand_allowed(p_company,(n->>'owner')::uuid,n->>'brandId')))then raise exception 'assignee_invalid';end if;
+ if exists(select 1 from jsonb_array_elements(coalesce(p_payload#>'{pos,appointments}','[]'))n where n->>'staffId'is not null and not exists(select 1 from jsonb_array_elements(coalesce(doc.payload#>'{pos,appointments}','[]'))o where o->>'id'=n->>'id'and o->'staffId'=n->'staffId'and o->'brandId'=n->'brandId')and(not smartvolt_private.member_has_product(p_company,(n->>'staffId')::uuid,'pos')or not smartvolt_private.member_brand_allowed(p_company,(n->>'staffId')::uuid,n->>'brandId')))then raise exception 'assignee_invalid';end if;
  if p_payload->'scope' is distinct from doc.payload->'scope' then raise exception 'scope_is_server_owned'; end if;
  insert into public.sv_workspace_versions(company_id,revision,payload) values(p_company,doc.revision,doc.payload);
  update public.sv_workspaces set payload=p_payload, revision=revision+1, updated_at=now()
@@ -962,6 +987,119 @@ begin
  return jsonb_build_object('state',doc.payload,'revision',doc.revision);
 end;
 $$;
+
+create or replace function smartvolt_private.ops_assign(p_company uuid,p_provider text,p_thread uuid,p_actor uuid default null,p_expected bigint default null,p_force boolean default false)returns jsonb
+language plpgsql security invoker set search_path='' as $$
+declare t record;settings jsonb;rule jsonb;target uuid;event uuid:=gen_random_uuid();work bigint;
+begin
+ -- Ingestion already owns its thread. Other callers skip a busy thread instead
+ -- of inverting thread/company locks against an incoming provider transaction.
+ if p_provider='meta'then perform 1 from public.sv_meta_threads where company_id=p_company and id=p_thread for update skip locked;
+ elsif p_provider='whatsapp'then perform 1 from public.sv_wa_conversations where company_id=p_company and id=p_thread for update skip locked;
+ else raise exception 'ops_invalid';end if;
+ if not found then return jsonb_build_object('saved',false,'queued',true,'reason','busy');end if;
+ perform pg_advisory_xact_lock(hashtextextended('assignment:'||p_company::text,0));
+ select * into strict t from smartvolt_private.ops_inquiries where company_id=p_company and provider=p_provider and thread_id=p_thread;
+ if p_expected is not null and t.revision<>p_expected then raise exception 'ops_revision_conflict';end if;
+ if t.status<>'open' then return jsonb_build_object('saved',false,'queued',false,'reason','resolved');end if;
+ if not p_force and t.assignee_id is not null and exists(select 1 from public.sv_memberships m where m.company_id=p_company and m.user_id=t.assignee_id and m.status='active'and m.role<>'viewer'and smartvolt_private.member_has_product(p_company,m.user_id,'crm')and smartvolt_private.member_brand_allowed(p_company,m.user_id,t.brand_id))then return jsonb_build_object('saved',true,'keptOwner',true);end if;
+ select data into strict settings from public.sv_ops_settings where company_id=p_company;
+ if (settings->>'routingEnabled')::boolean then
+  select x into rule from jsonb_array_elements(settings->'rules')with ordinality a(x,n)
+  where(x->>'enabled')::boolean and(x->>'brandId' is null or x->>'brandId'=t.brand_id)
+  and(x->>'channel'='all' or x->>'channel'=t.channel)
+  and not exists(select 1 from jsonb_array_elements_text(x->'tags')tag where not exists(select 1 from public.sv_customers cu where cu.company_id=p_company and cu.id=t.customer_id and cu.tags ? tag))
+  order by n limit 1;
+  if rule is null then return smartvolt_private.ops_wait(p_company,p_provider,p_thread,'no_rule');end if;
+ else
+  if not p_force then return jsonb_build_object('saved',false,'queued',true,'reason','disabled');end if;
+  rule='{"id":"manual-workload","team":"","onlineOnly":false,"maxOpen":500,"method":"least_open"}'::jsonb;
+ end if;
+ select m.user_id,load.n into target,work from public.sv_memberships m
+ left join public.sv_agent_routing a on a.company_id=m.company_id and a.user_id=m.user_id
+ cross join lateral(select count(*)n from smartvolt_private.ops_inquiries i where i.company_id=p_company and i.assignee_id=m.user_id and i.status='open')load
+ where m.company_id=p_company and m.status='active' and m.role<>'viewer'and smartvolt_private.member_has_product(p_company,m.user_id,'crm')and smartvolt_private.member_brand_allowed(p_company,m.user_id,t.brand_id)
+ and not coalesce(a.paused,false) and (rule->>'team'='' or a.team=rule->>'team')
+ and (coalesce(jsonb_array_length(a.brand_ids),0)=0 or a.brand_ids ? t.brand_id)
+ and (not(rule->>'onlineOnly')::boolean or(a.presence='online' and a.seen_at>now()-interval '3 minutes'))
+ and load.n<least((rule->>'maxOpen')::integer,coalesce(a.capacity,20))
+ order by case when rule->>'method'='least_open' then load.n else 0 end,
+ a.last_assigned_at nulls first,m.user_id limit 1 for share of m;
+ if target is null then return smartvolt_private.ops_wait(p_company,p_provider,p_thread,'no_eligible_agent');end if;
+ -- No intervening manual assignment can be silently overwritten.
+ if p_provider='meta' then
+  update public.sv_meta_threads set assignee_id=target,revision=revision+1,updated_at=now()where company_id=p_company and id=p_thread and revision=t.revision;
+ else
+  update public.sv_wa_conversations set assignee_id=target,revision=revision+1,updated_at=now()where company_id=p_company and id=p_thread and revision=t.revision;
+ end if;
+ if not found then raise exception 'ops_revision_conflict';end if;
+ insert into public.sv_agent_routing(company_id,user_id,last_assigned_at)values(p_company,target,clock_timestamp())
+ on conflict(company_id,user_id)do update set last_assigned_at=excluded.last_assigned_at;
+ update public.sv_routing_queue set state='assigned',last_attempt_at=clock_timestamp()where company_id=p_company and provider=p_provider and thread_id=p_thread;
+ insert into public.sv_customer_events(company_id,customer_id,brand_id,event_key,kind,actor_id,detail)
+ values(p_company,t.customer_id,t.brand_id,'routing:'||event,'routing-assigned',p_actor,
+ jsonb_build_object('provider',p_provider,'threadId',p_thread,'previousOwner',t.assignee_id,'ownerId',target,'ruleId',rule->>'id','method',rule->>'method','openBefore',work));
+ return jsonb_build_object('saved',true,'ownerId',target,'queued',false);
+end;$$;
+
+create or replace function public.sv_ai_finish(p_company uuid,p_actor uuid,p_request uuid,p_result jsonb,p_error text,p_input integer,p_output integer)returns jsonb
+language plpgsql security invoker set search_path='' as $$
+declare r public.sv_ai_requests;doc public.sv_workspaces;enabled boolean;err text:=p_error;
+begin
+ perform public.sv_ai_authorize(p_company,p_actor);
+ select s.enabled into enabled from public.sv_ai_settings s where company_id=p_company for share;
+ select * into strict doc from public.sv_workspaces where company_id=p_company for share;
+ select * into strict r from public.sv_ai_requests where company_id=p_company and request_id=p_request and actor_id=p_actor for update;
+ if r.feature<>'reply' then raise exception 'ai_idempotency_conflict';end if;
+ perform public.sv_member_scope(p_company,p_actor,r.brand_id,r.product);if r.status<>'running' then return jsonb_build_object('status',r.status,'result',r.result,'error_code',r.error_code);end if;
+ if not coalesce(enabled,false) then err='disabled';
+ elsif doc.revision<>r.workspace_revision then err='context_changed';
+ elsif r.source='whatsapp' then
+  perform 1 from public.sv_wa_conversations where company_id=p_company and id=r.source_id::uuid and revision=r.source_revision for share;
+  if not found then err='context_changed';end if;
+ elsif r.source='meta' then
+  perform 1 from public.sv_meta_threads where company_id=p_company and id=r.source_id::uuid and revision=r.source_revision for share;
+  if not found then err='context_changed';end if;
+ end if;
+ if err is null and (p_result is null or jsonb_typeof(p_result)<>'object')then raise exception 'ai_invalid';end if;
+ update public.sv_ai_requests set status=case when err is null then 'completed' else 'failed' end,result=case when err is null then p_result else null end,
+ error_code=err,input_tokens=p_input,output_tokens=p_output,finished_at=now() where company_id=p_company and request_id=p_request returning * into r;
+ return jsonb_build_object('status',r.status,'result',r.result,'error_code',r.error_code);
+end;$$;
+
+create or replace function public.sv_translation_finish(p_company uuid,p_actor uuid,p_request uuid,p_result jsonb,p_error text,p_input integer,p_output integer)returns jsonb
+language plpgsql security invoker set search_path='' as $$
+declare r public.sv_ai_requests;enabled boolean;body text;err text:=p_error;
+begin
+ perform public.sv_ai_authorize(p_company,p_actor);
+ select s.enabled into enabled from public.sv_ai_settings s where company_id=p_company for share;
+ select * into strict r from public.sv_ai_requests where company_id=p_company and request_id=p_request and actor_id=p_actor for update;
+ if r.feature<>'translation' or r.product<>'crm' then raise exception 'ai_idempotency_conflict';end if;
+ body=public.sv_translation_source(p_company,r.brand_id,r.source,r.source_id,r.translation_context->>'messageId');
+ perform public.sv_member_scope(p_company,p_actor,r.brand_id,r.product);if r.status<>'running' then return jsonb_build_object('status',r.status,'result',r.result,'error_code',r.error_code);end if;
+ if not coalesce(enabled,false)then err='disabled';
+ elsif r.translation_context->>'mode'='message'and md5(body)is distinct from r.translation_context->>'sourceHash' then err='source_changed';end if;
+ if err is null and(p_result is null or jsonb_typeof(p_result)is distinct from 'object' or p_result->>'requestId'is distinct from p_request::text or p_result->>'target'is distinct from r.translation_context->>'target' or coalesce(length(btrim(p_result->>'text')),0)not between 1 and 12000)then raise exception 'ai_invalid';end if;
+ update public.sv_ai_requests set status=case when err is null then 'completed'else 'failed'end,result=case when err is null then p_result else null end,error_code=err,input_tokens=p_input,output_tokens=p_output,finished_at=now()where company_id=p_company and request_id=p_request returning * into r;
+ return jsonb_build_object('status',r.status,'result',r.result,'error_code',r.error_code);
+end;$$;
+
+create or replace function public.sv_copilot_finish(p_company uuid,p_actor uuid,p_request uuid,p_result jsonb,p_error text,p_input integer,p_output integer)returns jsonb
+language plpgsql security invoker set search_path='' as $$
+declare r public.sv_ai_requests;s public.sv_ai_settings;d public.sv_workspaces;err text:=p_error;
+begin
+ select * into strict r from public.sv_ai_requests where company_id=p_company and request_id=p_request and source='copilot'and actor_id=p_actor for update;
+ perform public.sv_copilot_authorize(p_company,p_actor,r.product,true);
+ perform public.sv_member_scope(p_company,p_actor,r.brand_id,r.product);if r.status<>'running'then return jsonb_build_object('status',r.status,'result',r.result,'error_code',r.error_code);end if;
+ select * into s from public.sv_ai_settings where company_id=p_company for share;
+ select * into strict d from public.sv_workspaces where company_id=p_company for share;
+ if not coalesce(s.enabled,false)then err='disabled';elsif d.revision<>r.workspace_revision then err='context_changed';end if;
+ if err is null and(p_result is null or jsonb_typeof(p_result)<>'object'or p_result->>'answer'is null or length(p_result->>'answer')not between 1 and 6000)then raise exception 'copilot_invalid';end if;
+ update public.sv_ai_requests set status=case when err is null then'completed'else'failed'end,result=case when err is null then p_result else null end,error_code=err,input_tokens=p_input,output_tokens=p_output,finished_at=now()where company_id=p_company and request_id=p_request returning * into r;
+ if err is null then insert into public.sv_copilot_messages(company_id,id,thread_id,role,body,result)values(p_company,gen_random_uuid(),r.source_id::uuid,'assistant',p_result->>'answer',p_result);end if;
+ update public.sv_copilot_threads set updated_at=now()where company_id=p_company and id=r.source_id::uuid;
+ return jsonb_build_object('status',r.status,'result',r.result,'error_code',r.error_code);
+end;$$;
 
 create or replace function public.sv_copilot_receipt(p_company uuid,p_actor uuid,p_product text,p_request uuid)returns jsonb
 language plpgsql security invoker set search_path='' as $$declare r public.sv_ai_requests;begin

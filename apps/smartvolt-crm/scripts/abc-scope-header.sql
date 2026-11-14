@@ -10,11 +10,13 @@ declare result jsonb='{}';path text[];paths text[];item jsonb;denied jsonb;brand
 begin
  select brand_ids into brands from public.sv_memberships where company_id=p_company and user_id=p_actor;
  crm=smartvolt_private.member_has_product(p_company,p_actor,'crm');pos=smartvolt_private.member_has_product(p_company,p_actor,'pos');
+ if brands is null and crm and pos then return result;end if;
  foreach paths slice 1 in array array[
   ['inbox','contacts'],['inbox','conversations'],['inbox','messages'],['inbox','bookings'],['studio','flows'],['studio','versions'],['studio','bots'],['studio','articles'],
   ['broadcasts','templates'],['broadcasts','profiles'],['broadcasts','campaigns'],['broadcasts','recipients'],['broadcasts','events'],
   ['pos','catalog'],['pos','resources'],['pos','appointments'],['pos','orders'],['pos','payments'],['pos','refunds'],['pos','entitlements'],['pos','redemptions'],['pos','audit']
  ]loop
+  if brands is null and(paths=array['inbox','contacts']or(paths[1]='pos'and pos)or(paths[1]<>'pos'and crm))then continue;end if;
   denied='[]';
   for item in select value from jsonb_array_elements(coalesce(p#>paths,'[]'))loop
    brand=item->>'brandId';

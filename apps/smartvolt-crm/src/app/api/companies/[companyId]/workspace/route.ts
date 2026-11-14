@@ -5,7 +5,10 @@ import { loadCompany, loadCompanyForCommand } from "@/lib/saas/server";
 import { applyCompanyCommand, mutationSchema } from "@/lib/saas/workspace";
 import { failure, json, sameOrigin } from "@/lib/saas/http";
 import { AccessError } from "@/lib/saas/identity";
-import { assertCommandScope, projectMemberWorkspace } from "@/lib/saas/member-scope";
+import {
+  assertCommandScope,
+  projectMemberWorkspace,
+} from "@/lib/saas/member-scope";
 type Context = { params: Promise<{ companyId: string }> };
 export async function GET(request: NextRequest, context: Context) {
   try {
@@ -63,7 +66,10 @@ export async function POST(request: NextRequest, context: Context) {
       throw new AccessError("權限已變更或未能儲存改動，請重新載入。", 409);
     return json({
       ...data,
-      state: projectMemberWorkspace(projectWorkspace(data.state, current.products), current.memberScope),
+      state: projectMemberWorkspace(
+        projectWorkspace(data.state, current.products),
+        current.memberScope,
+      ),
       products: current.products,
     });
   } catch (error) {

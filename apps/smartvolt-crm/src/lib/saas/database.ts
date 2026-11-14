@@ -5,5 +5,7 @@ import { AccessError } from "./identity";
 export function database() {
   const config = saasConfig();
   if (!config) throw new AccessError("公司資料服務尚未啟用。", 503);
-  return createClient(config.url, config.secret, { auth: { persistSession: false, autoRefreshToken: false } });
+  return createClient(config.url, config.secret, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
 }

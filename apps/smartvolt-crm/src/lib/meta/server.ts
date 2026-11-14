@@ -196,11 +196,13 @@ export async function readMeta(
       hasMore: rows.length > 60,
     };
   }
-  const connections = await scopeBrands(a, a.db
-    .from("sv_meta_connections")
-    .select(connectionFields)
-    .eq("company_id", companyId))
-    .order("created_at");
+  const connections = await scopeBrands(
+    a,
+    a.db
+      .from("sv_meta_connections")
+      .select(connectionFields)
+      .eq("company_id", companyId),
+  ).order("created_at");
   check(connections.error);
   const filter = inboxQuerySchema.parse(filters);
   let cursor: { at: string; id: string } | null = null;
@@ -256,7 +258,13 @@ export async function readMeta(
     .eq("company_id", companyId)
     .single();
   check(scope.error);
-  const brands = scopeSchema.parse(scope.data?.payload?.scope).brands.filter(b => a.memberScope.brandIds === null || a.memberScope.brandIds.includes(b.id));
+  const brands = scopeSchema
+    .parse(scope.data?.payload?.scope)
+    .brands.filter(
+      (b) =>
+        a.memberScope.brandIds === null ||
+        a.memberScope.brandIds.includes(b.id),
+    );
   const origin = process.env.SMARTVOLT_APP_URL
     ? new URL(process.env.SMARTVOLT_APP_URL).origin
     : null;

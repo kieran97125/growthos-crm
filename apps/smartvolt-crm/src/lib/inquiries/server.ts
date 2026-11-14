@@ -1,4 +1,8 @@
-import { requireThreadScope, requireCustomerScope, scopeBrands } from "@/lib/saas/scope-server";
+import {
+  requireThreadScope,
+  requireCustomerScope,
+  scopeBrands,
+} from "@/lib/saas/scope-server";
 import { assertBrand } from "@/lib/saas/member-scope";
 import "server-only";
 import { z } from "zod";
@@ -94,14 +98,20 @@ export async function readInquiries(companyId: string, raw: unknown) {
       .eq("status", "active")
       .neq("role", "viewer")
       .order("display_name"),
-    scopeBrands(a, a.db
-      .from("sv_wa_connections")
-      .select("display_phone,state")
-      .eq("company_id", companyId)),
-    scopeBrands(a, a.db
-      .from("sv_meta_connections")
-      .select("channel,label,enabled,last_inbound_at")
-      .eq("company_id", companyId)),
+    scopeBrands(
+      a,
+      a.db
+        .from("sv_wa_connections")
+        .select("display_phone,state")
+        .eq("company_id", companyId),
+    ),
+    scopeBrands(
+      a,
+      a.db
+        .from("sv_meta_connections")
+        .select("channel,label,enabled,last_inbound_at")
+        .eq("company_id", companyId),
+    ),
     a.db
       .from("sv_workspaces")
       .select("payload")
@@ -133,7 +143,12 @@ export async function readInquiries(companyId: string, raw: unknown) {
     members: members.data ?? [],
     brands: z
       .array(z.object({ id: z.string(), name: z.string() }))
-      .parse(w.data?.payload?.scope?.brands).filter(b => a.memberScope.brandIds === null || a.memberScope.brandIds.includes(b.id)),
+      .parse(w.data?.payload?.scope?.brands)
+      .filter(
+        (b) =>
+          a.memberScope.brandIds === null ||
+          a.memberScope.brandIds.includes(b.id),
+      ),
     connections: [
       ...(wa.data ?? []).map((c) => ({
         channel: "whatsapp",
@@ -159,6 +174,18 @@ async function customerWith(
 ): Promise<CustomerDetail> {
   z.string().min(1).max(100).parse(id);
   await requireCustomerScope(a, id);
+  let eventQuery = scopeBrands(
+    a,
+    a.db
+      .from("sv_customer_events")
+      .select("seq,kind,detail,created_at")
+      .eq("company_id", a.company.id)
+      .eq("customer_id", id),
+  );
+  if (!a.products.includes("pos"))
+    eventQuery = eventQuery.not("kind", "like", "pos-%");
+  if (!a.products.includes("crm"))
+    eventQuery = eventQuery.or("kind.like.pos-%,kind.eq.customer-updated");
   const [c, b, links, events, requests] = await Promise.all([
     a.db
       .from("sv_customers")
@@ -166,32 +193,37 @@ async function customerWith(
       .eq("company_id", a.company.id)
       .eq("id", id)
       .maybeSingle(),
-    scopeBrands(a, a.db
-      .from("sv_customer_brands")
-      .select("brand_id")
-      .eq("company_id", a.company.id)
-      .eq("customer_id", id)),
+    scopeBrands(
+      a,
+      a.db
+        .from("sv_customer_brands")
+        .select("brand_id")
+        .eq("company_id", a.company.id)
+        .eq("customer_id", id),
+    ),
     a.products.includes("crm")
-      ? scopeBrands(a, a.db
-          .from("sv_customer_threads")
-          .select("provider,thread_id,brand_id")
-          .eq("company_id", a.company.id)
-          .eq("customer_id", id))
+      ? scopeBrands(
+          a,
+          a.db
+            .from("sv_customer_threads")
+            .select("provider,thread_id,brand_id")
+            .eq("company_id", a.company.id)
+            .eq("customer_id", id),
+        )
       : Promise.resolve({ data: [], error: null }),
-    scopeBrands(a, a.db
-      .from("sv_customer_events")
-      .select("seq,kind,detail,created_at")
-      .eq("company_id", a.company.id)
-      .eq("customer_id", id))
+    eventQuery
       .lt("seq", before ?? Number.MAX_SAFE_INTEGER)
       .order("seq", { ascending: false })
       .limit(51),
     a.products.includes("crm")
-      ? scopeBrands(a, a.db
-          .from("sv_booking_requests")
-          .select("*")
-          .eq("company_id", a.company.id)
-          .eq("customer_id", id))
+      ? scopeBrands(
+          a,
+          a.db
+            .from("sv_booking_requests")
+            .select("*")
+            .eq("company_id", a.company.id)
+            .eq("customer_id", id),
+        )
           .order("created_at", { ascending: false })
           .order("id", { ascending: false })
           .limit(21)
@@ -231,26 +263,23 @@ async function customerWith(
   return {
     customer: { ...c.data, brandIds: (b.data ?? []).map((x) => x.brand_id) },
     links: links.data ?? [],
-    events: history
-      .slice(0, 50)
-      .map((e) => ({
-        ...e,
-        detail: e.kind.startsWith("pos-")
-          ? Object.fromEntries(
-              Object.entries(e.detail as Record<string, unknown>).filter(
-                ([k]) =>
-                  [
-                    "amountCents",
-                    "orderId",
-                    "source",
-                    "serviceName",
-                    "startsAt",
-                    "status",
-                  ].includes(k),
-              ),
-            )
-          : e.detail,
-      })),
+    events: history.slice(0, 50).map((e) => ({
+      ...e,
+      detail: e.kind.startsWith("pos-")
+        ? Object.fromEntries(
+            Object.entries(e.detail as Record<string, unknown>).filter(([k]) =>
+              [
+                "amountCents",
+                "orderId",
+                "source",
+                "serviceName",
+                "startsAt",
+                "status",
+              ].includes(k),
+            ),
+          )
+        : e.detail,
+    })),
     nextEvent: (events.data?.length ?? 0) > 50 ? events.data![49].seq : null,
     requests: reqs,
     hasMoreRequests: (requests.data?.length ?? 0) > 20,

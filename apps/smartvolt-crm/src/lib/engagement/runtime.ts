@@ -40,6 +40,7 @@ export async function waConnection(company: string, id: string) {
 }
 export async function refreshTemplates(company: string, id: string) {
   const { row, credentials } = await waConnection(company, id);
+  if (row.state === "disabled") throw Error("connection_not_ready");
   const templates = await fetchTemplates(row.account_id, credentials);
   const r = await database().rpc("sv_templates_store", {
     p_company: company,

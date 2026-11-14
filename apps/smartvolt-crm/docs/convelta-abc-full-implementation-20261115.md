@@ -112,3 +112,9 @@ Before B3 is final: extend the currently name-only merge fields with actual sour
 - cd7ee3 native PostgreSQL tests passed, including actual competing editor and roster/capacity races. Hosted verify passed unit/database, actual Workflow, build, paint, operations and knowledge interactions, then found a fixture build configuration gap: the newly imported template CSS was not handled by the older inbox/translation esbuild fixtures. Corrected loaders and injected the actual styles; production build was unaffected. Full browser rerun pending.
 - Added a company stop switch for automated customer messages: cancellation is recorded for pending campaign/journey work, new campaigns are blocked while stopped, send admission rechecks it and restarting does not silently revive cancelled jobs. Explicit human replies remain separately authorized.
 - Source still candidate; no production DDL/runtime change or external send. Runtime secret creation remains blocked by the earlier automatic review rejection.
+
+### Pre-release preservation baseline
+
+- Read-only hosted checks confirm production remains A2: workspace revision 5 and all four section fingerprints unchanged; 77 system cards, zero CRM customers, zero WA/Meta connections and no candidate outbox tables. No candidate DDL applied.
+- Hosted security categories remain the existing own-site definer/password warnings, with service-only table INFO. No new production privilege was granted. Baseline results are retained for post-migration comparison.
+- Added covering indexes for new FK/source lookups, and corrected manual-template readiness to show real connection/inbound/acceptance/delivery evidence. Disabled connections cannot synchronize templates. These final candidate changes require exact-source acceptance.

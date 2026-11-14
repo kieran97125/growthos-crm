@@ -102,7 +102,11 @@ export default function ManualTemplateReply({
           : "模板已加入發送，實際結果會顯示喺對話。",
       );
       dialog.current?.close();
-      await onSent();
+      try {
+        await onSent();
+      } catch {
+        setNotice("模板已記錄，請重新讀取對話核對發送結果。");
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "未能確認，請核對同一請求。");
     } finally {
@@ -150,6 +154,11 @@ export default function ManualTemplateReply({
         </p>
         {readError && <p role="alert">{readError.message}</p>}
         {!data && !readError && <p role="status">讀取已批准模板…</p>}
+        {data && !data.connection.ready && (
+          <p className="eng-alert">
+            WhatsApp 渠道未就緒，請先喺公司設定核對接駁。
+          </p>
+        )}
         {data && !data.serviceAllowed && (
           <p className="eng-alert">
             未有呢個品牌嘅服務聯絡同意紀錄。請先喺客戶資料內記錄實際同意來源。
@@ -187,7 +196,10 @@ export default function ManualTemplateReply({
               className="eng-primary"
               disabled={
                 busy ||
-                (!frozen && (!data.serviceAllowed || value.kind !== "template"))
+                (!frozen &&
+                  (!data.serviceAllowed ||
+                    !data.connection.ready ||
+                    value.kind !== "template"))
               }
             >
               {busy ? "提交中…" : frozen ? "核對同一請求" : "發送服務模板"}

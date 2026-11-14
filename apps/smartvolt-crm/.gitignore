@@ -12,3 +12,4 @@ playwright-report/
 supabase/.temp/
 src/app/.well-known/workflow/
 .workflow-data/
+/.swc

@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { CTagHint } from "@/components/copilot/CopilotProvider";
+import ContactPreferences from "@/components/engagement/ContactPreferences";
 import Link from "next/link";
 import {
   CalendarDays,
@@ -363,6 +364,13 @@ export default function CustomerPanel({
               <span key={t}>{t}</span>
             ))}
           </div>
+          <ContactPreferences
+            key={c.id}
+            companyId={companyId}
+            customerId={c.id}
+            brandIds={c.brandIds ?? []}
+            canEdit={canEdit}
+          />
           <p className="iq-note">
             {c.note || "加入客戶偏好及長期備忘，方便同事接手。"}
           </p>

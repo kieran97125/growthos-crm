@@ -1204,3 +1204,4 @@
     margin-top: 20px;
   }
 }
+.iq-preferences{border:1px solid #e2e9f3;border-radius:9px;margin:16px 0;padding:13px 14px;font-size:12px;color:#657b9b}.iq-preferences summary{cursor:pointer;font-weight:600;color:#334f78}.iq-preferences p{line-height:1.8}.iq-preferences fieldset{border:0;margin:0;padding:0;min-width:0}.iq-preferences label{display:grid;gap:6px;margin:12px 0;font-size:11px}.iq-preferences input,.iq-preferences select{width:100%;min-width:0;padding:9px;border:1px solid #d8e3f2;border-radius:7px;font:inherit;background:#fff;color:#405b80}.iq-preferences button{width:100%;margin:8px 0 0}.iq-preferences [role=alert]{color:#a15a28}

@@ -153,6 +153,7 @@ begin
  begin perform public.sv_authorize(p_company,j.actor_id,'crm',true,j.origin<>'manual',j.brand_id);exception when others then why='authority_changed';end;
  if why is null and not exists(select 1 from public.sv_customer_threads where company_id=p_company and customer_id=j.customer_id and brand_id=j.brand_id and provider=j.provider and thread_id=j.thread_id)then why='customer_changed';end if;
  if why is null and j.origin='campaign'and not exists(select 1 from public.sv_campaigns where company_id=p_company and id=j.source_id and status='scheduled')then why='campaign_cancelled';end if;
+ if why is null and j.origin='journey'then why=smartvolt_private.journey_admit(j);end if;
  if why is null and(j.purpose='marketing'and not p.marketing_enabled)then why='marketing_disabled';end if;
  if why is null and not exists(select 1 from public.sv_contact_preferences where company_id=p_company and customer_id=j.customer_id and brand_id=j.brand_id and channel=j.channel and purpose=j.purpose and allowed)then why='consent_missing';end if;
  if why is null and j.provider='whatsapp'and(wc.id is null or cv.id is null or cv.connection_id<>wc.id or wc.brand_id<>j.brand_id or wc.state<>'active'or wc.webhook_verified_at is null)then why='connection_not_ready';end if;
@@ -187,6 +188,15 @@ end;$$;
 
 create function public.sv_delivery_finish(p_company uuid,p_job uuid,p_disposition text,p_provider_id text,p_error text)returns void language plpgsql security invoker set search_path=''as $$
 declare j public.sv_delivery_jobs;begin
+ select * into strict j from public.sv_delivery_jobs where company_id=p_company and id=p_job;
+ if j.provider='whatsapp'then
+  perform 1 from public.sv_wa_connections where company_id=p_company and id=j.connection_id for update;
+  perform 1 from public.sv_wa_conversations where company_id=p_company and id=j.thread_id for update;
+ else
+  perform 1 from public.sv_meta_connections where company_id=p_company and id=j.connection_id for update;
+  perform 1 from public.sv_meta_threads where company_id=p_company and id=j.thread_id for update;
+ end if;
+ perform pg_advisory_xact_lock(hashtextextended('delivery-contact:'||p_company::text||':'||j.customer_id,0));
  select * into strict j from public.sv_delivery_jobs where company_id=p_company and id=p_job for update;
  if j.state not in('dispatching','unknown')then return;end if;
  if p_disposition not in('accepted','definitive','ambiguous')then raise exception 'invalid_outcome';end if;
@@ -249,6 +259,25 @@ declare b text:=p_data->>'brandId';begin
  union all select 1 from public.sv_meta_connections where p_data->>'provider'='meta'and company_id=p_company and id=(p_data->>'connectionId')::uuid and brand_id=b)then raise exception 'brand_scope';end if;
  return smartvolt_private.action_replay(p_company,p_actor,p_command,'engagement:'||p_kind,p_data);end;$$;
 
+create function smartvolt_private.delivery_optout(p_body text)returns boolean language sql immutable security invoker set search_path=''as $$
+ select lower(btrim(p_body))~'^(stop|stop all|unsubscribe|opt out|退訂|取消訂閱|停止推廣|停止所有訊息)[.!。！ ]*$'
+$$;
+create function smartvolt_private.delivery_optout_message()returns trigger language plpgsql security invoker set search_path=''as $$
+declare p text;t uuid;link public.sv_customer_threads;ch text;v_purpose text;begin
+ if not smartvolt_private.delivery_optout(new.body)then return new;end if;
+ if tg_table_name='sv_wa_messages'then if new.direction<>'incoming'then return new;end if;p='whatsapp';t=new.conversation_id;ch='whatsapp';
+ else if new.direction<>'inbound'then return new;end if;p='meta';t=new.thread_id;select c.channel into ch from public.sv_meta_threads mt join public.sv_meta_connections c on c.company_id=mt.company_id and c.id=mt.connection_id where mt.company_id=new.company_id and mt.id=t;end if;
+ select * into link from public.sv_customer_threads where company_id=new.company_id and provider=p and thread_id=t;if not found then return new;end if;
+ perform pg_advisory_xact_lock(hashtextextended('delivery-contact:'||new.company_id::text||':'||link.customer_id,0));
+ for v_purpose in select unnest(case when lower(btrim(new.body))in('stop all','停止所有訊息')then array['marketing','service']else array['marketing']end)loop
+  insert into public.sv_contact_preferences(company_id,customer_id,brand_id,channel,purpose,allowed,source)values(new.company_id,link.customer_id,link.brand_id,ch,v_purpose,false,'customer-message:'||new.id)
+  on conflict(company_id,customer_id,brand_id,channel,purpose)do update set allowed=false,source=excluded.source,revision=sv_contact_preferences.revision+1,updated_at=now();
+  insert into public.sv_preference_events(company_id,customer_id,brand_id,channel,purpose,allowed,source,command_id)values(new.company_id,link.customer_id,link.brand_id,ch,v_purpose,false,'customer-message:'||new.id,case when v_purpose='marketing'then new.id else gen_random_uuid()end)on conflict do nothing;
+  update public.sv_delivery_jobs set state='cancelled',reason='consent_withdrawn',updated_at=now()where company_id=new.company_id and customer_id=link.customer_id and brand_id=link.brand_id and channel=ch and sv_delivery_jobs.purpose=v_purpose and state='scheduled';
+ end loop;return new;end;$$;
+create trigger sv_delivery_optout_wa after insert on public.sv_wa_messages for each row execute function smartvolt_private.delivery_optout_message();
+create trigger sv_delivery_optout_meta after insert on public.sv_meta_messages for each row execute function smartvolt_private.delivery_optout_message();
+
 create function smartvolt_private.delivery_receipt()returns trigger language plpgsql security invoker set search_path=''as $$begin
  if new.state in('sent','delivered','read','failed')then
   update public.sv_delivery_jobs set state=new.state,reason=new.error_code,provider_id=new.provider_id,updated_at=now()where company_id=new.company_id and message_id=new.id and state not in('cancelled','skipped','read')and(state<>'delivered'or new.state in('read','failed'));
@@ -286,7 +315,7 @@ do $$declare t text;f record;begin
  end loop;
  revoke update on public.sv_preference_events,public.sv_delivery_events from service_role;
  revoke all on sequence public.sv_delivery_events_seq_seq from public,anon,authenticated;grant usage,select on sequence public.sv_delivery_events_seq_seq to service_role;
- for f in select oid::regprocedure signature from pg_proc where pronamespace in('public'::regnamespace,'smartvolt_private'::regnamespace)and proname in('delivery_event','delivery_audience','delivery_render','sv_engagement_action','sv_engagement_receipt','sv_engagement_read','sv_templates_store','sv_templates_invalidate','sv_delivery_claim','sv_delivery_finish','delivery_receipt','sv_delivery_scheduler')loop
+ for f in select oid::regprocedure signature from pg_proc where pronamespace in('public'::regnamespace,'smartvolt_private'::regnamespace)and proname in('delivery_event','delivery_audience','delivery_render','delivery_optout','delivery_optout_message','sv_engagement_action','sv_engagement_receipt','sv_engagement_read','sv_templates_store','sv_templates_invalidate','sv_delivery_claim','sv_delivery_finish','delivery_receipt','sv_delivery_scheduler')loop
   execute format('revoke all on function %s from public,anon,authenticated',f.signature);execute format('grant execute on function %s to service_role',f.signature);
  end loop;
 end;$$;

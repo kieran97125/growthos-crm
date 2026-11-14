@@ -37,9 +37,21 @@ jobs:
         run: bash ../../scripts/select-ci-browser.sh
       - name: Verify production cold load and refresh
         run: npm run test:paint
-      # The complete suite below includes operations, knowledge and translation.
-      # Run each browser scenario once per exact source instead of duplicating it.
-      - run: npm run test:e2e
+      - name: Verify campaign composer and explicit delivery intent
+        run: npm run test:e2e -- e2e/engagement.spec.ts
+      - name: Verify remaining CRM browser flows
+        # Together these invocations run all 126 scenarios exactly once. Test
+        # delivery intent first so its failures are visible before long flows.
+        run: |
+          node --input-type=module - <<'JS'
+          import { readdirSync } from 'node:fs';
+          import { spawnSync } from 'node:child_process';
+          const files = readdirSync('e2e')
+            .filter(name => name.endsWith('.spec.ts') && !['engagement.spec.ts', 'initial-paint.spec.ts'].includes(name))
+            .map(name => 'e2e/' + name);
+          const result = spawnSync('npm', ['run', 'test:e2e', '--', ...files], { stdio: 'inherit' });
+          process.exit(result.status ?? 1);
+          JS
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:

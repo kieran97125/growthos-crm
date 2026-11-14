@@ -555,6 +555,7 @@ function CampaignBuilder({
   }
   function submit(e: FormEvent) {
     e.preventDefault();
+    if (step !== 3) return;
     if (frozen) {
       onRetry();
       return;
@@ -861,6 +862,7 @@ function CampaignBuilder({
         )}
         {frozen ? (
           <button
+            key="campaign-retry"
             type="button"
             className="eng-primary"
             disabled={busy}
@@ -870,6 +872,7 @@ function CampaignBuilder({
           </button>
         ) : step < 3 ? (
           <button
+            key="campaign-next"
             type="button"
             className="eng-primary"
             disabled={
@@ -877,7 +880,8 @@ function CampaignBuilder({
                 ? !selected || !audience.data?.audience?.total
                 : !validMessage || !name.trim()
             }
-            onClick={() => {
+            onClick={(event) => {
+              event.preventDefault();
               setLocalError("");
               setStep((s) => s + 1);
             }}
@@ -887,6 +891,8 @@ function CampaignBuilder({
           </button>
         ) : (
           <button
+            key="campaign-submit"
+            type="submit"
             className="eng-primary"
             disabled={
               busy ||

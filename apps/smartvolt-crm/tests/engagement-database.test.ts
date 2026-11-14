@@ -1683,3 +1683,15 @@ test("background C observations retain sources, dedupe, quiet feedback and curre
     before,
   );
 });
+
+test("maintenance wraps the tenant cursor without wasting a scheduled tick and does not advance unacknowledged work", async () => {
+  const first = await rpc<string[]>("sv_execution_tenants", []);
+  assert.ok(first.includes(company));
+  assert.deepEqual(await rpc<string[]>("sv_execution_tenants", []), first);
+  await rpc("sv_execution_ack", [first.at(-1)!]);
+  assert.deepEqual(
+    await rpc<string[]>("sv_execution_tenants", []),
+    first,
+    "reaching the end restarts active companies in this same tick",
+  );
+});

@@ -219,6 +219,9 @@ async function compose(page: Page) {
     .selectOption({ label: "synthetic_offer · en" });
   await dialog.getByLabel("內容欄位 1").fill("{{name}}");
   await dialog.getByRole("button", { name: "下一步" }).click();
+  await expect(
+    dialog.getByRole("heading", { name: "幾時聯絡客人？", exact: true }),
+  ).toBeVisible();
   return dialog;
 }
 test("three-step campaign preserves template variables and converts the chosen Hong Kong time", async ({
@@ -226,6 +229,7 @@ test("three-step campaign preserves template variables and converts the chosen H
 }) => {
   const f = await fixture(page),
     dialog = await compose(page);
+  expect(f.commands).toHaveLength(0);
   await dialog.getByLabel("揀個時間").check();
   await dialog.getByLabel("發送時間（香港）").fill("2027-01-15T10:30");
   await dialog.getByRole("button", { name: "安排發送", exact: true }).click();
@@ -249,6 +253,7 @@ test("lost response retries the same command and retains a single campaign", asy
 }) => {
   const f = await fixture(page, { lost: true }),
     dialog = await compose(page);
+  expect(f.commands).toHaveLength(0);
   await dialog.getByRole("button", { name: "安排發送", exact: true }).click();
   await expect(
     dialog.getByRole("button", { name: "核對同一請求" }),
@@ -290,8 +295,9 @@ test("mobile composer stays within the viewport and supports keyboard dismissal"
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await fixture(page);
+  const f = await fixture(page);
   const dialog = await compose(page);
+  expect(f.commands).toHaveLength(0);
   await expect(
     dialog.getByRole("button", { name: "安排發送", exact: true }),
   ).toBeVisible();

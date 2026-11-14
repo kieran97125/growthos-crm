@@ -113,3 +113,40 @@ export async function actJourney(company: string, raw: unknown) {
   }
   return result.data;
 }
+export async function readJourneyHistory(
+  company: string,
+  id: string,
+  raw: unknown,
+) {
+  const a = await access(company);
+  z.uuid().parse(id);
+  const q = z
+    .object({
+      before: z.iso.datetime({ offset: true }).optional(),
+      beforeId: z.uuid().optional(),
+    })
+    .strict()
+    .parse(raw);
+  const r = await a.db.rpc("sv_journey_history", {
+    p_company: company,
+    p_actor: a.user.id,
+    p_journey: id,
+    p_before: q.before ?? null,
+    p_before_id: q.beforeId ?? null,
+  });
+  engagementFailure(r.error);
+  const all = r.data.runs as { id: string; created_at: string }[],
+    runs = all.slice(0, 30),
+    last = runs.at(-1);
+  return {
+    ...r.data,
+    runs,
+    nextCursor:
+      all.length > 30 && last
+        ? new URLSearchParams({
+            before: last.created_at,
+            beforeId: last.id,
+          }).toString()
+        : null,
+  };
+}

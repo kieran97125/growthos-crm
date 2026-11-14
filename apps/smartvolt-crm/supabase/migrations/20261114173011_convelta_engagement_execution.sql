@@ -138,6 +138,8 @@ declare j public.sv_delivery_jobs;p public.sv_delivery_policies;cv public.sv_wa_
 begin
  select * into j from public.sv_delivery_jobs where company_id=p_company and id=p_id;
  if not found or j.state<>'scheduled'or j.due_at>now()then return jsonb_build_object('dispatch',false);end if;
+ -- Same membership/product -> connection -> thread -> contact -> job order as manual sends.
+ begin perform public.sv_authorize(p_company,j.actor_id,'crm',true,j.origin<>'manual',j.brand_id);exception when others then why='authority_changed';end;
  select * into strict p from public.sv_delivery_policies where company_id=p_company for update;
  if j.provider='whatsapp'then
   select * into wc from public.sv_wa_connections where company_id=p_company and id=j.connection_id for update;
@@ -150,7 +152,6 @@ begin
  select * into strict j from public.sv_delivery_jobs where company_id=p_company and id=p_id for update;
  if j.state<>'scheduled'or j.due_at>now()then return jsonb_build_object('dispatch',false);end if;
  -- A replay never authorizes a second POST. All mutable eligibility is checked now.
- begin perform public.sv_authorize(p_company,j.actor_id,'crm',true,j.origin<>'manual',j.brand_id);exception when others then why='authority_changed';end;
  if why is null and not exists(select 1 from public.sv_customer_threads where company_id=p_company and customer_id=j.customer_id and brand_id=j.brand_id and provider=j.provider and thread_id=j.thread_id)then why='customer_changed';end if;
  if why is null and j.origin='campaign'and not exists(select 1 from public.sv_campaigns where company_id=p_company and id=j.source_id and status='scheduled')then why='campaign_cancelled';end if;
  if why is null and j.origin='journey'then why=smartvolt_private.journey_admit(j);end if;
@@ -169,7 +170,7 @@ begin
  if j.origin<>'manual'and exists(select 1 from public.sv_delivery_jobs k where k.company_id=p_company and k.customer_id=j.customer_id and k.brand_id=j.brand_id and k.purpose=j.purpose and k.attempted_at>now()-make_interval(hours=>p.frequency_hours))then
   update public.sv_delivery_jobs set state='skipped',reason='frequency_limit',updated_at=now()where company_id=p_company and id=p_id;return jsonb_build_object('dispatch',false,'reason','frequency_limit');end if;
  if(select count(*)from public.sv_delivery_jobs k where k.company_id=p_company and k.attempted_at>=date_trunc('day',now()at time zone 'Asia/Hong_Kong')at time zone 'Asia/Hong_Kong')>=p.daily_limit then
-  update public.sv_delivery_jobs set due_at=(date_trunc('day',now()at time zone 'Asia/Hong_Kong')+interval '1 day 9 hours')at time zone 'Asia/Hong_Kong',reason='daily_limit'where company_id=p_company and id=p_id;return jsonb_build_object('dispatch',false,'deferred',true);end if;
+  update public.sv_delivery_jobs set due_at=(date_trunc('day',now()at time zone 'Asia/Hong_Kong')+interval '1 day')at time zone 'Asia/Hong_Kong',reason='daily_limit'where company_id=p_company and id=p_id;return jsonb_build_object('dispatch',false,'deferred',true);end if;
  if(select count(*)from public.sv_delivery_jobs k where k.company_id=p_company and k.attempted_at>now()-interval '1 minute')>=p.minute_limit then
   update public.sv_delivery_jobs set due_at=now()+interval '1 minute',reason='minute_limit'where company_id=p_company and id=p_id;return jsonb_build_object('dispatch',false,'deferred',true);end if;
  if j.provider='whatsapp'then
@@ -293,7 +294,7 @@ language plpgsql security invoker set search_path=''as $$declare s public.sv_del
  select min(due_at)into n from public.sv_delivery_jobs where company_id=p_company and state='scheduled';
  if p_mode='wake'then
   if n is null then return jsonb_build_object('start',false);end if;
-  if s.lease_until>now()then return jsonb_build_object('start',false,'runId',s.run_id);end if;
+  if s.lease_until>now()then return jsonb_build_object('start',false,'runId',s.run_id,'generation',s.generation,'token',s.token);end if;
   update public.sv_delivery_schedulers set generation=generation+1,token=gen_random_uuid(),run_id=null,lease_until=now()+interval '2 minutes',next_at=n where company_id=p_company returning * into s;
   return jsonb_build_object('start',true,'generation',s.generation,'token',s.token);
  end if;

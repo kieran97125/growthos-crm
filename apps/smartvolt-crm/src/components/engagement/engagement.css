@@ -53,7 +53,7 @@
   font-size: 10px;
   letter-spacing: 1.8px;
   font-weight: 750;
-  color: #6782a9;
+  color: #5f718d;
 }
 .eng-header h1 {
   font-size: 28px;
@@ -62,7 +62,7 @@
   margin: 9px 0;
 }
 .eng-header p {
-  color: #75839a;
+  color: #5f718d;
   margin: 0;
   line-height: 1.8;
 }
@@ -81,7 +81,7 @@
 .eng-toolbar > span {
   margin-left: auto;
   font-size: 12px;
-  color: #7a8ba3;
+  color: #5f718d;
 }
 .eng-work input,
 .eng-work select,
@@ -140,7 +140,7 @@
 }
 .eng-campaign p {
   font-size: 12px;
-  color: #8090a6;
+  color: #5f718d;
   margin: 0 0 12px;
 }
 .eng-tags {
@@ -153,7 +153,7 @@
   align-items: center;
   gap: 5px;
   background: #f5f7fb;
-  color: #657793;
+  color: #576c8a;
   border-radius: 5px;
   font-size: 11px;
   padding: 5px 8px;
@@ -169,7 +169,7 @@
 }
 .eng-campaign-status > span {
   font-size: 11px;
-  color: #8795a9;
+  color: #5f718d;
 }
 .eng-campaign-actions {
   display: grid;
@@ -181,7 +181,7 @@
   background: none;
   min-height: 28px;
   font-size: 12px;
-  color: #8090a6;
+  color: #5f718d;
   box-shadow: none;
 }
 .eng-empty {
@@ -209,7 +209,7 @@
   letter-spacing: -0.3px;
 }
 .eng-empty p {
-  color: #7c8ba0;
+  color: #5f718d;
   line-height: 1.9;
   margin-bottom: 24px;
 }
@@ -243,7 +243,7 @@
 }
 .eng-details > summary > span {
   font-size: 11px;
-  color: #8a9ab0;
+  color: #5f718d;
   margin-left: auto;
   font-weight: 400;
 }
@@ -259,7 +259,7 @@
   font-size: 12px;
 }
 .eng-readiness span {
-  color: #7688a2;
+  color: #5f718d;
 }
 .eng-policy {
   border-top: 1px solid #e7edf5;
@@ -319,7 +319,7 @@
 }
 .eng-hint {
   font-size: 12px;
-  color: #7b8da7;
+  color: #5f718d;
   line-height: 1.8;
 }
 .eng-dialog {
@@ -367,7 +367,7 @@
   align-items: center;
   gap: 8px;
   font-size: 12px;
-  color: #95a1b5;
+  color: #5f718d;
   padding-bottom: 15px;
 }
 .eng-steps li > span {
@@ -402,7 +402,7 @@
 .eng-dialog label > span {
   font-weight: 400;
   font-size: 11px;
-  color: #8795a9;
+  color: #5f718d;
 }
 .eng-audience {
   background: #f4f8ff;
@@ -449,7 +449,7 @@
 }
 .eng-message-preview > span {
   font-size: 10px;
-  color: #8495ad;
+  color: #5f718d;
 }
 .eng-message-preview p {
   white-space: pre-wrap;
@@ -476,7 +476,7 @@
 }
 .eng-confirm p {
   font-size: 12px;
-  color: #7688a2;
+  color: #5f718d;
   line-height: 1.9;
 }
 .eng-dialog-footer {
@@ -489,7 +489,7 @@
   gap: 12px;
 }
 .eng-results > p {
-  color: #7a8ca6;
+  color: #5f718d;
   font-size: 12px;
   line-height: 1.8;
 }
@@ -523,7 +523,7 @@
 .eng-work th,
 .eng-dialog th {
   font-weight: 500;
-  color: #8091aa;
+  color: #5f718d;
   background: #f7f9fc;
 }
 .eng-work td,
@@ -677,7 +677,7 @@
   margin: 0 0 12px;
 }
 .eng-recipes p {
-  color: #7c8da5;
+  color: #5f718d;
   font-size: 12px;
   line-height: 1.9;
   margin: 0 0 20px;
@@ -700,7 +700,7 @@
 }
 .eng-section-title > span {
   font-size: 11px;
-  color: #8b9bb2;
+  color: #5f718d;
 }
 .eng-small-empty {
   min-height: 180px;
@@ -781,3 +781,4 @@
     display: none;
   }
 }
+.eng-history-run{padding:20px 0;border-top:1px solid #e3eaf4}.eng-history-run h3{font-size:14px;display:flex;justify-content:space-between;gap:15px;margin:0 0 8px}.eng-history-run h3 small{font-size:11px;color:#5f718d;font-weight:400}.eng-history-run>p{font-size:12px;color:#5f718d;line-height:1.8;margin:0 0 12px}

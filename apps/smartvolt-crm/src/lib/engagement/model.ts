@@ -40,7 +40,7 @@ export const definitionSchema = z
     if (d.kind === "template" && (!d.name || !d.locale || !d.fingerprint))
       c.addIssue({ code: "custom", message: "請選擇正式模板。" });
     if (
-      /{{(?!name}})/.test(d.body) ||
+      (d.kind==="text" && /{{(?!name}})/.test(d.body)) ||
       d.values.some((v) => /{{(?!name}})/.test(v.value))
     )
       c.addIssue({ code: "custom", message: "只支援客戶姓名變數。" });

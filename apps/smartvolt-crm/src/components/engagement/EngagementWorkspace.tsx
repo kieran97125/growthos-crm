@@ -315,6 +315,7 @@ export default function EngagementWorkspace({
       </details>
       <dialog
         ref={dialog}
+        aria-labelledby="eng-new-campaign"
         className="eng-dialog"
         onClose={() => setOpen(false)}
         onCancel={() => setOpen(false)}
@@ -322,7 +323,7 @@ export default function EngagementWorkspace({
         <div className="eng-dialog-head">
           <div>
             <span className="eng-eyebrow">NEW CAMPAIGN</span>
-            <h2>安排一則客戶訊息</h2>
+            <h2 id="eng-new-campaign">安排一則客戶訊息</h2>
           </div>
           <button
             aria-label="關閉新增推播"
@@ -350,13 +351,14 @@ export default function EngagementWorkspace({
       </dialog>
       <dialog
         ref={resultsDialog}
+        aria-labelledby="eng-campaign-results"
         className="eng-dialog eng-results"
         onClose={() => setSelected(null)}
       >
         <div className="eng-dialog-head">
           <div>
             <span className="eng-eyebrow">DELIVERY RESULTS</span>
-            <h2>{selected?.name}</h2>
+            <h2 id="eng-campaign-results">{selected?.name}</h2>
           </div>
           <button
             aria-label="關閉發送結果"

@@ -129,9 +129,9 @@ declare j public.sv_journeys;ident uuid:=(p_data->>'id')::uuid;r jsonb;step json
 
 create function public.sv_journey_read(p_company uuid,p_actor uuid,p_after timestamptz default null,p_after_id uuid default null)returns jsonb language plpgsql security invoker set search_path=''as $$begin
  perform public.sv_authorize(p_company,p_actor,'crm');return jsonb_build_object('journeys',coalesce((select jsonb_agg(q order by q.created_at desc,q.id desc)from(select j.*,v.steps,
- (select count(*)from public.sv_journey_runs r where r.company_id=p_company and r.journey_id=j.id and r.status='active')active_runs,
- (select count(*)from public.sv_delivery_jobs d join public.sv_journey_runs r on r.company_id=d.company_id and r.id=d.source_id where d.company_id=p_company and r.journey_id=j.id and d.state in('accepted','sent','delivered','read'))accepted
- from public.sv_journeys j join public.sv_journey_versions v on v.company_id=j.company_id and v.journey_id=j.id and v.version=j.published_version where j.company_id=p_company and smartvolt_private.member_brand_allowed(p_company,p_actor,j.brand_id)and(p_after is null or(j.created_at,j.id)<(p_after,p_after_id))order by j.created_at desc,j.id desc limit 31)q),'[]'));end;$$;
+ (select count(*)from public.sv_journey_runs r where r.company_id=p_company and r.journey_id=j.id and r.status='active'and exists(select 1 from public.sv_journey_sources s where s.company_id=r.company_id and s.source_key=r.source_key and(s.product='crm'or smartvolt_private.member_has_product(p_company,p_actor,'pos'))))active_runs,
+ (select count(*)from public.sv_delivery_jobs d join public.sv_journey_runs r on r.company_id=d.company_id and r.id=d.source_id where d.company_id=p_company and r.journey_id=j.id and d.state in('accepted','sent','delivered','read')and exists(select 1 from public.sv_journey_sources s where s.company_id=r.company_id and s.source_key=r.source_key and(s.product='crm'or smartvolt_private.member_has_product(p_company,p_actor,'pos'))))accepted
+ from public.sv_journeys j join public.sv_journey_versions v on v.company_id=j.company_id and v.journey_id=j.id and v.version=j.published_version where j.company_id=p_company and(j.recipe<>'completed'or smartvolt_private.member_has_product(p_company,p_actor,'pos'))and smartvolt_private.member_brand_allowed(p_company,p_actor,j.brand_id)and(p_after is null or(j.created_at,j.id)<(p_after,p_after_id))order by j.created_at desc,j.id desc limit 31)q),'[]'));end;$$;
 
 do $$declare t text;f record;begin
  foreach t in array array['sv_journeys','sv_journey_versions','sv_journey_sources','sv_journey_runs']loop execute format('alter table public.%I enable row level security',t);execute format('revoke all on public.%I from public,anon,authenticated,service_role',t);execute format('grant select,insert,update on public.%I to service_role',t);end loop;
@@ -149,6 +149,17 @@ create function smartvolt_private.journey_handoff()returns trigger language plpg
 revoke all on function smartvolt_private.journey_handoff()from public,anon,authenticated;grant execute on function smartvolt_private.journey_handoff()to service_role;
 create trigger sv_journey_wa_handoff after insert on public.sv_wa_thread_activity for each row execute function smartvolt_private.journey_handoff();
 create trigger sv_journey_meta_handoff after insert on public.sv_meta_thread_activity for each row execute function smartvolt_private.journey_handoff();
+
+create function public.sv_journey_history(p_company uuid,p_actor uuid,p_journey uuid,p_before timestamptz default null,p_before_id uuid default null)returns jsonb language plpgsql security invoker set search_path=''as $$
+declare brand text;begin
+ select brand_id into brand from public.sv_journeys where company_id=p_company and id=p_journey;
+ perform public.sv_member_scope(p_company,p_actor,brand);
+ return jsonb_build_object('total',(select count(*)from public.sv_journey_runs r join public.sv_journey_sources s on s.company_id=r.company_id and s.source_key=r.source_key where r.company_id=p_company and r.journey_id=p_journey and(s.product='crm'or smartvolt_private.member_has_product(p_company,p_actor,'pos'))),
+ 'runs',coalesce((select jsonb_agg(q order by q.created_at desc,q.id desc)from(select r.id,r.version,r.created_at,r.status,r.reason,c.name customer_name,s.recipe,s.product,
+ coalesce((select jsonb_agg(jsonb_build_object('id',d.id,'state',d.state,'reason',d.reason,'due_at',d.due_at,'updated_at',d.updated_at)order by d.due_at,d.id)from public.sv_delivery_jobs d where d.company_id=p_company and d.source_id=r.id and d.origin='journey'),'[]')jobs
+ from public.sv_journey_runs r join public.sv_customers c on c.company_id=r.company_id and c.id=r.customer_id join public.sv_journey_sources s on s.company_id=r.company_id and s.source_key=r.source_key
+ where r.company_id=p_company and r.journey_id=p_journey and(s.product='crm'or smartvolt_private.member_has_product(p_company,p_actor,'pos'))and(p_before is null or(r.created_at,r.id)<(p_before,p_before_id))order by r.created_at desc,r.id desc limit 31)q),'[]'));end;$$;
+revoke all on function public.sv_journey_history(uuid,uuid,uuid,timestamptz,uuid)from public,anon,authenticated;grant execute on function public.sv_journey_history(uuid,uuid,uuid,timestamptz,uuid)to service_role;
 
 create function public.sv_journey_receipt(p_company uuid,p_actor uuid,p_command uuid,p_kind text,p_data jsonb)returns jsonb language plpgsql security invoker set search_path=''as $$
 declare brand text;begin

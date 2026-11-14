@@ -16,11 +16,11 @@ Product Learning Sync checked. Canonical protocol `6a80846bfa10af9a4b84304688b19
 
 ## Current checks and remaining work
 
-The first foundation checkpoint passed typecheck, a production build, and 10 isolated database scenarios. Subsequent source/version/reply/booking tests expanded to 14 passing scenarios; the latest STOP regression is being rechecked. New UI passed typecheck/lint before the most recent preference additions; browser acceptance is pending. No customer message or conversion has been sent.
+The first foundation checkpoint passed typecheck, a production build, and 10 isolated database scenarios. Subsequent source/version/reply/booking/STOP checks expanded to 15 passing database scenarios plus 7 official-template/transport cases. A full 308-test regression passed before adding the 7 template cases. Two actual Workflow engine integration tests pass (persistent sleep/wake and cancelled-claim transport exclusion). New UI passes typecheck/lint; six new browser scenarios and native PostgreSQL shared-claim/quota checks are now in hosted CI, with results pending. No customer message or conversion has been sent.
 
 Still required before this whole ABC release can be called complete:
 
-- Durable Workflow integration tests, browser flows, native PostgreSQL concurrency, scheduling/watchdog route and deployment environment; catch-up paging, existing-source booking backfill, run history and performance checks.
+- Browser flows and native PostgreSQL concurrency acceptance; provision the watchdog environment and verify hosted scheduling. The private five-minute watchdog, paged tenant/source catch-up and real future-booking backfill are implemented candidates. Run history, additional recovery coverage and performance checks remain.
 - A1 real channel operations acceptance and A2 actual mail acceptance remain separate external activation gates.
 - A5 existing Convelta marketing website enquiry handoff.
 - B4 internal notifications/push/preferences and deterministic C observations.
@@ -28,3 +28,19 @@ Still required before this whole ABC release can be called complete:
 - Full regression, additive hosted migration parity/security/preservation checks, exact-commit CI/deployment and actual signed-in UI readback. Keep original system cards open until verified.
 
 Do not mark ABC complete or replace production with this checkpoint alone.
+
+## Runtime activation approval gate
+
+Automatic approval review rejected creating `CRON_SECRET`, `SMARTVOLT_PUSH_PRIVATE_KEY` and `SMARTVOLT_PUSH_PUBLIC_KEY` in this app's existing Vercel production project. Its stated reason: general deployment approval did not explicitly authorize storing these newly generated credentials with the external production hosting service. A subsequent metadata-only check confirms none of the three keys was created. Do not retry this write by another route or place those keys in code, a different service, or a deployment payload. Complete unaffected work first; ask for the specific runtime-key storage authorization only when the full implementation and reviewable release are ready. Background recovery via the private cron endpoint and external device push remain gated until then. No customer data or real outbound was part of the attempted write.
+
+## Next implementation boundaries
+
+- Finish candidate acceptance first: 6 isolated browser tests in `e2e/engagement.spec.ts`; hosted native shared-claim/quota scenarios appended to `verify-operations-postgres.ts`; 2 actual Workflow integration tests use an intercepted synthetic Supabase HTTP boundary (leaf module mocks do not reach generated step bundles). Run logs must be checked before reporting browser success.
+- Journey history now has a scoped keyset-paged API/UI; source catch-up/backfill must be exercised directly, and source-owned runs must be excluded from stats/history if the viewer lacks POS. The delivery ledger, policies, current actor authority, provider receipts and exact official template fingerprint remain the final send authority.
+- B4: internal notification preferences/devices/in-app queue/push receipts, minimal push payload and 410 cleanup. Require current membership/product/brand again at push claim. Customer marketing consent is a separate ledger. C background observations should call existing deterministic `observations`/`factsFor` using a fresh scoped snapshot and never spend AI by default.
+- C1: add business-hours SLA/read/reporting and real active-editor send admission. Extend the actual WA/Meta claim path, not just a UI warning. Maintain membership/product → connection → thread → editor/contact → job lock order. A same-command receipt can be read after an editor change, but a new provider attempt must obey the current lease. Explicit takeover retains local drafts. Existing legacy clients must also be blocked by a colleague's active lease.
+- C2: stable branch IDs, skills, weekly roster and leave must compose with current presence/capacity/grants and existing `ops_assign`; never steal a valid manual owner or overbook the last slot. Extend existing rule schemas/UI and regenerate exact function overrides with tested anchors, not runtime SQL-text rewriting.
+- C3: full source aggregate before paging. Use actual confirmed CRM requests, POS appointments, actual verified receipts/refunds; distinguish event-period measures from enquiry cohorts. Staff identity at query time must not be presented as historical attribution. Campaign 7-day latest touch is an association, with missing attribution/cost visible. Lazy Recharts only in reports plus accessible tables.
+- A5: dedicated website enquiry intake is an existing `website_private` schema in this same Supabase project. Read only its configured `intake_settings.company_id`, owner-selected brand, stable non-test enquiry IDs; dedupe without overwriting manually edited customer fields. Do not fabricate a provider thread or infer channel-specific consent from a general enquiry.
+- C4: brand-owned dataset/destination, encrypted credentials, test/live modes, immutable stable outcome IDs and source evidence, no AI intent/stage as conversion. Verify current official Meta payload documentation before writing transport.
+- Continue using native GitHub source checkpoints; local `git push` cannot authenticate. Local head was aligned to `645367a284c7c054c74c72db6923788f84899932` before this next checkpoint. Production still remains f568 and no candidate migration is applied.

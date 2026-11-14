@@ -19,6 +19,7 @@ import {
 import type { EngagementPage } from "@/lib/engagement/model";
 import { engagementFetcher } from "./fetcher";
 import JourneyBuilder from "./JourneyBuilder";
+import JourneyHistory from "./JourneyHistory";
 import "./engagement.css";
 type Recipe = keyof typeof recipeNames;
 const icons = {
@@ -36,6 +37,7 @@ export default function JourneyWorkspace({
   engagement: EngagementPage;
 }) {
   const [recipe, setRecipe] = useState<Recipe | null>(null),
+    [history, setHistory] = useState<{ id: string; name: string } | null>(null),
     [cursor, setCursor] = useState(""),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
@@ -207,6 +209,9 @@ export default function JourneyWorkspace({
                   ))}
                 </details>
               </div>
+              <button onClick={() => setHistory({ id: j.id, name: j.name })}>
+                執行紀錄
+              </button>
               {data.canManage && (
                 <button
                   disabled={busy || frozen}
@@ -241,15 +246,26 @@ export default function JourneyWorkspace({
       <p className="eng-hint">
         已排程工作會跟公司發送節奏執行；未獲同意、超過回覆時限或來源已改變嘅訊息會停止，並保留原因。
       </p>
+      {history && (
+        <JourneyHistory
+          key={history.id}
+          companyId={companyId}
+          journey={history}
+          onClose={() => setHistory(null)}
+        />
+      )}
       <dialog
         ref={dialog}
+        aria-labelledby="eng-new-journey"
         className="eng-dialog"
         onClose={() => setRecipe(null)}
       >
         <div className="eng-dialog-head">
           <div>
             <span className="eng-eyebrow">NEW JOURNEY</span>
-            <h2>{recipe ? recipeNames[recipe] : "自動追客"}</h2>
+            <h2 id="eng-new-journey">
+              {recipe ? recipeNames[recipe] : "自動追客"}
+            </h2>
           </div>
           <button
             aria-label="關閉流程設定"

@@ -25,7 +25,9 @@ export default function FeedbackWorkspace({
   companyId: string;
   initial: FeedbackPage;
 }) {
-  const [brand, setBrand] = useState(initial.brands[0]?.id ?? ""),
+  const [brand, setBrand] = useState(
+      initial.selectedBrand ?? initial.brands[0]?.id ?? "",
+    ),
     [cursor, setCursor] = useState(""),
     url = `/api/companies/${companyId}/meta-feedback`,
     {
@@ -33,9 +35,16 @@ export default function FeedbackWorkspace({
       error,
       mutate,
     } = useSWR<FeedbackPage>(
-      url + (cursor ? "?" + cursor : ""),
+      url +
+        "?brand=" +
+        encodeURIComponent(brand) +
+        (cursor ? "&" + cursor : ""),
       engagementFetcher,
-      { fallbackData: cursor ? undefined : initial, refreshInterval: 30000 },
+      {
+        fallbackData:
+          !cursor && brand === initial.selectedBrand ? initial : undefined,
+        refreshInterval: 30000,
+      },
     ),
     c = useRecordedCommand(url, () => mutate()),
     setting = data.settings.find((s) => s.brandId === brand);
@@ -64,7 +73,10 @@ export default function FeedbackWorkspace({
         <select
           value={brand}
           disabled={c.busy || c.frozen}
-          onChange={(e) => setBrand(e.target.value)}
+          onChange={(e) => {
+            setBrand(e.target.value);
+            setCursor("");
+          }}
         >
           {data.brands.map((b) => (
             <option key={b.id} value={b.id}>

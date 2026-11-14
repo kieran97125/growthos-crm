@@ -36,6 +36,7 @@ export async function readSales(
   return {
     ...d,
     canEdit: a.actor.role !== "viewer",
+    canManage: ["owner", "manager"].includes(a.actor.role),
     rows,
     next:
       d.rows.length > 30 && last

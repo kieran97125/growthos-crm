@@ -682,6 +682,7 @@ export async function webhookIngest(
   connectionId: string,
   raw: Uint8Array,
   signature: string | null,
+  onAccepted?: (company: string) => void,
 ): Promise<{
   received: true;
   inserted: number;
@@ -711,6 +712,7 @@ export async function webhookIngest(
   });
   queryFailure(result.error);
   const summary = mandatoryRow(result.data);
+  onAccepted?.(connection.company_id as string);
   return {
     received: true,
     inserted: integer(summary.inserted)!,

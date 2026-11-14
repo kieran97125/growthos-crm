@@ -1,3 +1,4 @@
+import { scheduleDeliveryWake } from "@/lib/engagement/request-signal";
 import type { NextRequest } from "next/server";
 import { failure } from "@/lib/saas/http";
 import { boundedBytes } from "@/lib/whatsapp/http";
@@ -17,6 +18,7 @@ export async function POST(request: NextRequest) {
     await receiveMeta(
       await boundedBytes(request, 1048576),
       request.headers.get("x-hub-signature-256"),
+      scheduleDeliveryWake,
     );
     return new Response("EVENT_RECEIVED", {
       headers: { "Cache-Control": "no-store" },

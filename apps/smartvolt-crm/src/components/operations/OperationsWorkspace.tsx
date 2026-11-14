@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useCallback, useState } from "react";
 import useSWRInfinite from "swr/infinite";
+import OperationsNavigation from "./OperationsNavigation";
 import { operationsFetcher, operationsReadOptions } from "./fetcher";
 import {
   ArrowUpRight,
@@ -125,28 +126,6 @@ export default function OperationsWorkspace({
           </h1>
         </div>
         <div className="co-heading-actions">
-          {page?.canManage && (
-            <Link
-              href={`/company/${companyId}/crm/reports`}
-              className="co-secondary"
-            >
-              成效報表 <ArrowUpRight size={15} />
-            </Link>
-          )}
-          <Link
-            href={`/company/${companyId}/crm/sales`}
-            className="co-secondary"
-          >
-            官網查詢 <ArrowUpRight size={15} />
-          </Link>
-          {page?.canManage && (
-            <Link
-              href={`/company/${companyId}/crm/supervision`}
-              className="co-secondary"
-            >
-              主管工作台 <ArrowUpRight size={15} />
-            </Link>
-          )}
           <Link href={`/company/${companyId}/crm`} className="co-secondary">
             開啟收件匣 <ArrowUpRight size={15} />
           </Link>
@@ -160,6 +139,11 @@ export default function OperationsWorkspace({
           </button>
         </div>
       </header>
+      <OperationsNavigation
+        companyId={companyId}
+        current="operations"
+        canManage={page?.canManage}
+      />
       <div className="co-filterbar">
         <label>
           <span className="co-sr">品牌</span>

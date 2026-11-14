@@ -25,6 +25,7 @@ export const salesAction = z.discriminatedUnion("action", [
 export type SalesPage = {
   available: boolean;
   canConfigure: boolean;
+  canManage: boolean;
   canEdit: boolean;
   setting: { brandId: string; enabled: boolean; revision: number } | null;
   brands: { id: string; name: string }[];

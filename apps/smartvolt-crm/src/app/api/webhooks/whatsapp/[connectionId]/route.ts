@@ -1,3 +1,4 @@
+import { scheduleDeliveryWake } from "@/lib/engagement/request-signal";
 import type { NextRequest } from "next/server";
 import { failure, json } from "@/lib/saas/http";
 import { boundedBytes } from "@/lib/whatsapp/http";
@@ -30,6 +31,7 @@ export async function POST(request: NextRequest, context: Context) {
         (await context.params).connectionId,
         raw,
         request.headers.get("x-hub-signature-256"),
+        scheduleDeliveryWake,
       ),
     );
   } catch (error) {

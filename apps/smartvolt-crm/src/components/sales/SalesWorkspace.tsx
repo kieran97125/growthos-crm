@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import OperationsNavigation from "@/components/operations/OperationsNavigation";
 import useSWR from "swr";
 import type { SalesPage } from "@/lib/sales/model";
 import { engagementFetcher } from "@/components/engagement/fetcher";
@@ -45,6 +46,11 @@ export default function SalesWorkspace({
           返回跟進工作台
         </Link>
       </header>
+      <OperationsNavigation
+        companyId={companyId}
+        current="sales"
+        canManage={data.canManage}
+      />
       {(error || command.error || command.notice) && (
         <p
           role={error || command.error ? "alert" : "status"}
@@ -139,7 +145,7 @@ export default function SalesWorkspace({
                     {e.source_snapshot.email && " · " + e.source_snapshot.email}
                   </p>
                   <Link
-                    href={`/company/${companyId}/crm/customers?customer=${encodeURIComponent(e.customer_id)}`}
+                    href={`/company/${companyId}/crm/customers?contact=${encodeURIComponent(e.customer_id)}`}
                   >
                     開啟客戶紀錄
                   </Link>

@@ -82,7 +82,7 @@ export function buildFeedbackEvent(
   };
   if (/^\+[1-9][0-9]{6,14}$/.test(a.phone))
     user_data.ph = [hash(a.phone.slice(1))];
-  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(a.email))
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(a.email.trim()))
     user_data.em = [hash(a.email.trim().toLowerCase())];
   if (!user_data.ph && !user_data.em) throw Error("matching_data_missing");
   if (

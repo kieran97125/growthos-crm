@@ -1,4 +1,4 @@
-import webpush from "web-push";
+import * as webpush from "web-push";
 import { database } from "@/lib/saas/database";
 import { checked } from "@/lib/engagement/runtime";
 export function pushConfiguration() {

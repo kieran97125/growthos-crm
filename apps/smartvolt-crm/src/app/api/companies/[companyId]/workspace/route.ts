@@ -1,3 +1,4 @@
+import { scheduleDeliveryWake } from "@/lib/engagement/request-signal";
 import { managerCommands } from "@/lib/pos/model";
 import type { NextRequest } from "next/server";
 import { projectWorkspace, productSchema } from "@/lib/saas/products";
@@ -64,6 +65,7 @@ export async function POST(request: NextRequest, context: Context) {
       );
     if (error)
       throw new AccessError("權限已變更或未能儲存改動，請重新載入。", 409);
+    if (current.products.includes("crm")) scheduleDeliveryWake(companyId);
     return json({
       ...data,
       state: projectMemberWorkspace(

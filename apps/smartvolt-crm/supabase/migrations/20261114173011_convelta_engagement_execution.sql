@@ -193,6 +193,7 @@ begin
   update public.sv_delivery_jobs set due_at=(date_trunc('day',now()at time zone 'Asia/Hong_Kong')+interval '1 day')at time zone 'Asia/Hong_Kong',reason='daily_limit'where company_id=p_company and id=p_id;return jsonb_build_object('dispatch',false,'deferred',true);end if;
  if(select count(*)from public.sv_delivery_jobs k where k.company_id=p_company and k.attempted_at>now()-interval '1 minute')>=p.minute_limit then
   update public.sv_delivery_jobs set due_at=now()+interval '1 minute',reason='minute_limit'where company_id=p_company and id=p_id;return jsonb_build_object('dispatch',false,'deferred',true);end if;
+ if j.provider='whatsapp'and exists(select 1 from public.sv_wa_messages m where m.company_id=p_company and m.conversation_id=j.thread_id and m.direction='outgoing'and m.state in('dispatching','unknown'))then update public.sv_delivery_jobs set state='skipped',reason='send_unresolved'where company_id=p_company and id=p_id;return jsonb_build_object('dispatch',false,'reason','send_unresolved');end if;
  if j.provider='whatsapp'then
   insert into public.sv_wa_messages(company_id,connection_id,conversation_id,client_id,fingerprint,direction,body,message_type,provider_at,author_id,author_name,state)
   values(p_company,j.connection_id,j.thread_id,j.id,encode(sha256(convert_to(j.payload::text,'UTF8')),'hex'),'outgoing',j.payload->>'body',j.payload->>'kind',ms,j.actor_id,case when j.origin='manual'then '同事'else '自動跟進'end,'dispatching')returning id into message;

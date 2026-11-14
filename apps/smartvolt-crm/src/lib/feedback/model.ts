@@ -43,6 +43,7 @@ export const feedbackAction = z.discriminatedUnion("action", [
     .strict(),
 ]);
 export type FeedbackPage = {
+  selectedBrand: string;
   canConfigure: boolean;
   brands: { id: string; name: string }[];
   consents: {

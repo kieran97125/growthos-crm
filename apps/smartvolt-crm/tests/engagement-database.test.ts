@@ -1310,3 +1310,202 @@ test("reports use the complete scoped source before pagination and hide POS mone
     /permission denied|immutable/,
   );
 });
+
+test("feedback requires specific measurement evidence and current source and fences accepted/unknown sends", async () => {
+  const c = await customer();
+  await db.query(
+    "update sv_customers set phone='+85260000001'where company_id=$1 and id=$2",
+    [company, c.id],
+  );
+  await rpc("sv_feedback_action", [
+    company,
+    owner,
+    randomUUID(),
+    "setting",
+    JSON.stringify({
+      brandId: "main",
+      datasetId: "11111",
+      businessId: "22222",
+      adAccountId: "33333",
+      label: "Synthetic",
+      credentials: { synthetic: true },
+      enabled: true,
+      mode: "test",
+      testCode: "SYNTHETIC",
+      revision: 0,
+    }),
+  ]);
+  const booking = randomUUID();
+  await db.query(
+    "insert into sv_booking_requests(company_id,id,customer_id,brand_id,provider,thread_id,service,desired_at,guests,status)values($1,$2,$3,'main','whatsapp',$4,'Verified',$5,1,'confirmed')",
+    [
+      company,
+      booking,
+      c.id,
+      c.thread,
+      new Date(Date.now() + 86400000).toISOString(),
+    ],
+  );
+  await rpc("sv_feedback_prepare", [company]);
+  assert.equal(
+    await value("select count(*)v from sv_feedback_jobs where company_id=$1", [
+      company,
+    ]),
+    0,
+  );
+  await rpc("sv_feedback_action", [
+    company,
+    owner,
+    randomUUID(),
+    "consent",
+    JSON.stringify({
+      brandId: "main",
+      customerId: c.id,
+      allowed: true,
+      consentedAt: new Date(Date.now() - 60000).toISOString(),
+      source: "Synthetic recorded measurement opt-in",
+      revision: 0,
+    }),
+  ]);
+  await rpc("sv_feedback_prepare", [company]);
+  const id = await value<string>(
+    "select id v from sv_feedback_jobs where company_id=$1",
+    [company],
+  );
+  assert.ok(id);
+  const first = await rpc("sv_feedback_claim", [company, id, 0]);
+  assert.equal(first.dispatch, true);
+  assert.equal(first.eventName, "Schedule");
+  assert.equal(
+    (await rpc("sv_feedback_claim", [company, id, 0])).dispatch,
+    false,
+  );
+  await rpc("sv_feedback_finish", [
+    company,
+    id,
+    "unknown",
+    "synthetic_timeout",
+    "{}",
+  ]);
+  await rpc("sv_feedback_prepare", [company]);
+  assert.equal(
+    (await rpc("sv_feedback_claim", [company, id, 0])).dispatch,
+    false,
+  );
+  assert.equal(
+    await value("select count(*)v from sv_feedback_jobs where company_id=$1", [
+      company,
+    ]),
+    1,
+  );
+  const read = await rpc<{ settings: unknown[]; jobs: unknown[] }>(
+    "sv_feedback_read",
+    [company, agent],
+  );
+  assert.equal(read.settings.length, 0);
+  assert.equal(read.jobs.length, 0);
+  await assert.rejects(
+    rpc("sv_feedback_receipt", [
+      company,
+      outsider,
+      randomUUID(),
+      JSON.stringify({ brandId: "main" }),
+    ]),
+    /access_denied/,
+  );
+});
+
+test("verified partial receipts, full payment and refunds remain separate from booking status", async () => {
+  const c = await customer(),
+    order = "order-" + randomUUID(),
+    payment = (amount: number) =>
+      db.query(
+        "insert into sv_pos_payments(company_id,id,order_id,amount_cents,method,reference,occurred_at,actor,source,workspace_revision,snapshot)values($1,$2,$3,$4,'cash','',$5,'Synthetic','manual_verified',1,'{}')",
+        [company, "receipt-" + randomUUID(), order, amount, Date.now()],
+      );
+  await db.query(
+    "insert into sv_pos_orders(company_id,id,number,brand_id,contact_id,subtotal_cents,discount_cents,total_cents,voided,created_at,workspace_revision,snapshot)values($1,$2,$2,'main',$3,10000,0,10000,false,$4,1,'{}')",
+    [company, order, c.id, Date.now()],
+  );
+  await payment(7000);
+  assert.equal(
+    await value(
+      "select count(*)v from sv_business_outcomes where company_id=$1 and source_key=$2 and kind='purchase'",
+      [company, "purchase:" + order],
+    ),
+    0,
+  );
+  await payment(3000);
+  assert.equal(
+    await value(
+      "select count(*)v from sv_business_outcomes where company_id=$1 and source_key=$2 and kind='purchase'",
+      [company, "purchase:" + order],
+    ),
+    1,
+  );
+  await db.query(
+    "insert into sv_pos_refunds(company_id,id,order_id,amount_cents,reason,occurred_at,actor,source,workspace_revision,snapshot)values($1,$2,$3,2000,'Verified refund',$4,'Synthetic','manual_verified',2,'{}')",
+    [company, "refund-" + randomUUID(), order, Date.now()],
+  );
+  const r = await rpc<{
+    metrics: { receiptsCents: number; refundsCents: number };
+  }>("sv_reports_read", [
+    company,
+    owner,
+    "2026-11-01",
+    "2026-12-01",
+    new Date().toISOString(),
+    "main",
+    "period",
+  ]);
+  assert.equal(r.metrics.receiptsCents, 10000);
+  assert.equal(r.metrics.refundsCents, 2000);
+  const before = await rpc<{ metrics: { receiptsCents: number } }>(
+    "sv_reports_read",
+    [
+      company,
+      owner,
+      "2026-11-01",
+      "2026-12-01",
+      "2026-11-01T00:00:00Z",
+      "main",
+      "period",
+    ],
+  );
+  assert.equal(before.metrics.receiptsCents, 0);
+});
+test("report campaign paging cannot change whole totals or repeat the previous page", async () => {
+  await db.query(
+    "insert into sv_campaigns(company_id,id,brand_id,connection_id,provider,channel,name,purpose,definition,audience,due_at,created_by,created_at)select $1,gen_random_uuid(),'main',$2,'whatsapp','whatsapp','Synthetic page '||s,'marketing','{}','{}',now(),$3,now()+make_interval(secs=>s)from generate_series(1,73)s",
+    [company, connection, owner],
+  );
+  const read = (before: string | null = null, id: string | null = null) =>
+    rpc<{
+      campaignTotal: number;
+      campaigns: { id: string; created_at: string }[];
+      metrics: { inquiries: number };
+    }>("sv_reports_read", [
+      company,
+      owner,
+      "2026-11-01",
+      "2026-12-01",
+      new Date().toISOString(),
+      "main",
+      "period",
+      before,
+      id,
+    ]);
+  const one = await read();
+  assert.ok(one.campaignTotal >= 73);
+  assert.equal(one.campaigns.length, 31);
+  const last = one.campaigns[29],
+    two = await read(last.created_at, last.id);
+  assert.equal(two.campaignTotal, one.campaignTotal);
+  assert.equal(two.metrics.inquiries, one.metrics.inquiries);
+  assert.equal(
+    two.campaigns.some((x) =>
+      one.campaigns.slice(0, 30).some((y) => y.id === x.id),
+    ),
+    false,
+  );
+});

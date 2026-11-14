@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import OperationsNavigation from "@/components/operations/OperationsNavigation";
 import useSWR from "swr";
 import { ArrowUpRight, Clock3, Settings2, X } from "lucide-react";
 import type {
@@ -132,6 +133,11 @@ export default function SupervisionWorkspace({
           <ArrowUpRight size={15} />
         </Link>
       </header>
+      <OperationsNavigation
+        companyId={companyId}
+        current="supervision"
+        canManage={true}
+      />
       {(error || notice || readError) && (
         <p
           role={error || readError ? "alert" : "status"}

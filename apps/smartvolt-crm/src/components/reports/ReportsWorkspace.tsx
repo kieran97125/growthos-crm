@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import OperationsNavigation from "@/components/operations/OperationsNavigation";
 import dynamic from "next/dynamic";
 import useSWR from "swr";
 import { BarChart3, RefreshCw } from "lucide-react";
@@ -83,6 +84,11 @@ export default function ReportsWorkspace({
           返回跟進工作台
         </Link>
       </header>
+      <OperationsNavigation
+        companyId={companyId}
+        current="reports"
+        canManage={true}
+      />
       <form
         className="eng-toolbar"
         onSubmit={(e) => {
@@ -93,7 +99,7 @@ export default function ReportsWorkspace({
             to: String(f.get("to")),
             brand: String(f.get("brand")),
             mode: String(f.get("mode")) as "period" | "cohort",
-            asOf: new Date().toISOString(),
+            asOf: new Date(String(f.get("cutoff")) + ":00+08:00").toISOString(),
           });
         }}
       >
@@ -120,6 +126,18 @@ export default function ReportsWorkspace({
             <option value="period">期內發生嘅結果</option>
             <option value="cohort">期內首次查詢嘅客戶</option>
           </select>
+        </label>
+        <label>
+          統計截止（香港）
+          <input
+            name="cutoff"
+            type="datetime-local"
+            required
+            defaultValue={new Date(Date.parse(query.asOf) + 8 * 3600000)
+              .toISOString()
+              .slice(0, 16)}
+            max={new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 16)}
+          />
         </label>
         <button className="eng-primary">
           <BarChart3 size={15} />
@@ -148,7 +166,7 @@ export default function ReportsWorkspace({
         {query.mode === "cohort"
           ? "只追蹤所選期間首次查詢嘅客戶，其後結果計至截止時間。"
           : "按結果實際記錄時間計算所選期間。"}{" "}
-        新查詢按原始對話／網站提交計；同一客人有幾個渠道，亦會分開顯示。
+        只使用截止前已記錄嘅結果。新查詢按原始對話／網站提交計；同一客人有幾個渠道，亦會分開顯示。
       </p>
       <section className="sup-metrics report-metrics" aria-label="成效總覽">
         {[

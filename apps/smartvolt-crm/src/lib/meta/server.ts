@@ -478,7 +478,11 @@ export function metaChallenge(params: URLSearchParams) {
     throw new AccessError("Webhook 驗證失敗。", 400);
   return challenge;
 }
-export async function receiveMeta(raw: Buffer, signature: string | null) {
+export async function receiveMeta(
+  raw: Buffer,
+  signature: string | null,
+  onAccepted?: (company: string) => void,
+) {
   const config = platform();
   if (!signatureValid(raw, signature, config.appSecret))
     throw new AccessError("Webhook 簽署無效。", 403);
@@ -500,7 +504,7 @@ export async function receiveMeta(raw: Buffer, signature: string | null) {
     const first = group[0];
     const c = await db
       .from("sv_meta_connections")
-      .select("id")
+      .select("id,company_id")
       .eq("app_id", config.appId)
       .eq("channel", first.channel)
       .eq("account_id", first.accountId)
@@ -513,6 +517,7 @@ export async function receiveMeta(raw: Buffer, signature: string | null) {
       p_events: group,
     });
     check(ingested.error);
+    if (c.data.company_id) onAccepted?.(c.data.company_id);
   }
   return { received: true };
 }

@@ -248,7 +248,7 @@ async function main() {
   async function delivery() {
     const thread = await inquiry();
     await sql(
-      `update sv_meta_threads set last_inbound_at=${Date.now()}where id=${quote(thread)};`,
+      `update sv_meta_threads set last_inbound_at=${Date.now()} where id=${quote(thread)};`,
     );
     const customer = await sql(
       `select customer_id from sv_customer_threads where company_id=${quote(company)}and provider='meta'and thread_id=${quote(thread)};`,

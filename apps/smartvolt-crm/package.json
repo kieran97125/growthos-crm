@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test --test-concurrency=1 tests/*.test.ts",
+    "test": "node --wasm-num-compilation-tasks=1 --import tsx --test --test-concurrency=1 tests/*.test.ts",
     "test:e2e": "playwright test",
     "test:paint": "playwright test --config=playwright.paint.config.ts",
     "ai:verify": "node --import tsx scripts/verify-ai.ts",

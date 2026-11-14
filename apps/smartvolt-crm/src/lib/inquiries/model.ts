@@ -66,6 +66,7 @@ export const actionSchema = z.discriminatedUnion("action", [
       action: z.literal("send"),
       revision: rev,
       body: text,
+      editorToken: z.uuid().optional(),
       replyTo: z.uuid().optional(),
     })
     .strict(),

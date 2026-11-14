@@ -50,6 +50,7 @@ export const metaAction = z.discriminatedUnion("action", [
       clientId: uuid,
       revision: z.number().int().min(0),
       body: bodySchema,
+      editorToken: uuid.optional(),
     })
     .strict(),
   z.object({ action: z.enum(["resolve", "reopen"]), threadId: uuid }).strict(),
@@ -96,6 +97,11 @@ const messageFields =
   "id,thread_id,seq,direction,body,provider_id,state,provider_at,created_at,error_code,referral";
 function check(error: { code?: string; message?: string } | null) {
   if (!error) return;
+  if (/editor_conflict|editor_expired/.test(error.message ?? ""))
+    throw new AccessError(
+      "回覆已由另一個視窗或同事接手。請重新核對；草稿會保留。",
+      409,
+    );
   if (/meta_(access|product|brand|connection)/.test(error.message ?? ""))
     throw new AccessError("你無權操作此公司或通訊連接。", 403);
   if (/meta_assignee_invalid/.test(error.message ?? ""))
@@ -424,6 +430,7 @@ export async function actMeta(companyId: string, input: unknown) {
     p_client: data.clientId,
     p_expected: data.revision,
     p_body: data.body,
+    p_editor_token: data.editorToken ?? null,
   });
   check(claimed.error);
   if (!claimed.data.dispatch)

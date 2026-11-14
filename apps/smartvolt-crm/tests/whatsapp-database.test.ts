@@ -581,6 +581,13 @@ test("claim durably records one send, replays without redispatch and rejects sta
     "update public.sv_memberships set status='active' where company_id=$1 and user_id=$2",
     [company, agent],
   );
+  await assert.rejects(claim({ actor: agent }), /send_unresolved/);
+  await finish(
+    first.message.id,
+    "definitive",
+    null,
+    "synthetic_attempt_completed",
+  );
 });
 
 test("ambiguous response never resends; signed callback reconciles provider ID and receipt order survives HTTP completion", async () => {

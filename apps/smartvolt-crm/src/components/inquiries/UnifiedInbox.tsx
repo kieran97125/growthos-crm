@@ -29,6 +29,7 @@ import ThreadOperationsPanel, {
   type OperationDraft,
 } from "@/components/meta/ThreadOperations";
 import InquiryOperations from "@/components/operations/InquiryOperations";
+import { useReplyLease } from "@/components/operations/useReplyLease";
 import { inboxQueues } from "@/lib/meta/operations";
 import {
   actionSchema,
@@ -403,9 +404,22 @@ export default function UnifiedInbox({
   const draft = drafts[key] ?? "",
     locked = busy || !!pending,
     canEdit = overview?.canEdit ?? false;
+  const replyLease = useReplyLease(
+    companyId,
+    selected?.provider,
+    selected?.id,
+    canEdit,
+  );
   async function send() {
     if (!detail || !selected || !draft.trim()) return;
     const body = draft;
+    const editorToken = note ? null : await replyLease.acquire();
+    if (!note && !editorToken) return;
+    if (
+      selectedRef.current?.id !== selected.id ||
+      selectedRef.current?.provider !== selected.provider
+    )
+      return;
     const ok = await mutate("inbox", {
       action: note ? "note" : "send",
       provider: selected.provider,
@@ -413,6 +427,7 @@ export default function UnifiedInbox({
       commandId: crypto.randomUUID(),
       revision: detail.thread.revision,
       body,
+      ...(!note && editorToken ? { editorToken } : {}),
       ...(!note && quote && selected.provider === "whatsapp"
         ? { replyTo: quote.id }
         : {}),
@@ -780,6 +795,31 @@ export default function UnifiedInbox({
               <label className="iq-sr-only" htmlFor="iq-reply">
                 {note ? "內部備註" : "回覆草稿"}
               </label>
+              {!note &&
+                (replyLease.error ||
+                  (replyLease.state.occupied && !replyLease.state.held)) && (
+                  <div
+                    className="iq-editor-status"
+                    role={replyLease.error ? "alert" : "status"}
+                  >
+                    <span>
+                      {replyLease.error ||
+                        (replyLease.state.actorName ?? "另一位同事") +
+                          " 正在回覆；你嘅草稿會保留。"}
+                    </span>
+                    {replyLease.state.occupied &&
+                      !replyLease.state.held &&
+                      canEdit && (
+                        <button
+                          type="button"
+                          disabled={locked || replyLease.busy}
+                          onClick={() => void replyLease.acquire(true)}
+                        >
+                          接手回覆
+                        </button>
+                      )}
+                  </div>
+                )}
               <textarea
                 data-copilot-activity="replying"
                 id="iq-reply"
@@ -787,9 +827,13 @@ export default function UnifiedInbox({
                 maxLength={2000}
                 value={draft}
                 disabled={!canEdit || locked}
-                onChange={(e) =>
-                  setDrafts((old) => ({ ...old, [key]: e.target.value }))
-                }
+                onFocus={() => {
+                  if (!note) void replyLease.acquire();
+                }}
+                onChange={(e) => {
+                  if (!note) replyLease.touch();
+                  setDrafts((old) => ({ ...old, [key]: e.target.value }));
+                }}
                 placeholder={
                   note ? "只供團隊查看…" : "輸入回覆，或者加入 AI 建議…"
                 }
@@ -828,8 +872,12 @@ export default function UnifiedInbox({
                   disabled={
                     !canEdit ||
                     locked ||
+                    replyLease.busy ||
                     !draft.trim() ||
-                    (!note && (!openWindow || unresolved))
+                    (!note &&
+                      (!openWindow ||
+                        unresolved ||
+                        (replyLease.state.occupied && !replyLease.state.held)))
                   }
                 >
                   <Send size={15} />

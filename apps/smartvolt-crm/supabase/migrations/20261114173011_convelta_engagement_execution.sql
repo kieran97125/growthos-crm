@@ -33,7 +33,7 @@ create table public.sv_delivery_jobs(
  purpose text not null check(purpose in('marketing','service')),origin text not null check(origin in('campaign','journey','manual')),
  source_id uuid not null,source_key text not null,actor_id uuid not null,payload jsonb not null,due_at timestamptz not null,
  state text not null default 'scheduled'check(state in('scheduled','dispatching','accepted','sent','delivered','read','failed','unknown','skipped','cancelled')),
- reason text,attempted_at timestamptz,message_id uuid,provider_id text,created_at timestamptz not null default now(),updated_at timestamptz not null default now(),
+ reason text,attempted_at timestamptz,message_id uuid,provider_id text,editor_token uuid,created_at timestamptz not null default now(),updated_at timestamptz not null default now(),
  primary key(company_id,id),unique(company_id,source_key),foreign key(company_id,customer_id,brand_id)references public.sv_customer_brands(company_id,customer_id,brand_id)
 );
 create index sv_delivery_due on public.sv_delivery_jobs(company_id,due_at,id)where state='scheduled';
@@ -120,9 +120,9 @@ begin
   if counted=0 or counted>10000 or(p_kind='manual'and counted<>1)then raise exception 'invalid_audience';end if;
   insert into public.sv_campaigns(company_id,id,brand_id,connection_id,provider,channel,name,purpose,definition,audience,due_at,created_by)
   values(p_company,ident,brand,conn,v_provider,v_channel,p_data->>'name',p_data->>'purpose',p_data->'definition',p_data->'audience',(p_data->>'dueAt')::timestamptz,p_actor);
-  insert into public.sv_delivery_jobs(company_id,brand_id,customer_id,provider,channel,connection_id,thread_id,purpose,origin,source_id,source_key,actor_id,payload,due_at)
+  insert into public.sv_delivery_jobs(company_id,brand_id,customer_id,provider,channel,connection_id,thread_id,purpose,origin,source_id,source_key,actor_id,payload,due_at,editor_token)
   select p_company,brand,a.customer_id,v_provider,v_channel,conn,a.thread_id,p_data->>'purpose',case when p_kind='manual'then 'manual'else 'campaign'end,ident,'campaign:'||ident||':'||a.customer_id,p_actor,
-  smartvolt_private.delivery_render(p_data->'definition',a.customer_name),(p_data->>'dueAt')::timestamptz from smartvolt_private.delivery_audience(p_company,p_actor,brand,v_provider,conn,p_data->'audience')a;
+  smartvolt_private.delivery_render(p_data->'definition',a.customer_name),(p_data->>'dueAt')::timestamptz,case when p_kind='manual'then(p_data->>'editorToken')::uuid end from smartvolt_private.delivery_audience(p_company,p_actor,brand,v_provider,conn,p_data->'audience')a;
   r=jsonb_build_object('saved',true,'id',ident,'recipients',counted);
  elsif p_kind='cancel'then
   update public.sv_campaigns set status='cancelled'where company_id=p_company and id=c.id;
@@ -132,6 +132,8 @@ begin
  insert into public.sv_action_receipts(company_id,command_id,actor_id,kind,data,result)values(p_company,p_command,p_actor,'engagement:'||p_kind,coalesce(p_request,p_data),r);return r;
 end;$$;
 
+-- Optional domain admission is explicitly overridden by the editor module.
+create function smartvolt_private.delivery_editor_admit(p_job public.sv_delivery_jobs)returns text language sql volatile security invoker set search_path=''as $$select null::text$$;
 create function public.sv_delivery_claim(p_company uuid,p_id uuid)returns jsonb language plpgsql security invoker set search_path=''as $$
 declare j public.sv_delivery_jobs;p public.sv_delivery_policies;cv public.sv_wa_conversations;mc public.sv_meta_connections;mt public.sv_meta_threads;
  wc public.sv_wa_connections;why text;message uuid;ms bigint:=floor(extract(epoch from now())*1000);hour integer:=extract(hour from now()at time zone 'Asia/Hong_Kong');
@@ -148,6 +150,7 @@ begin
   select * into mc from public.sv_meta_connections where company_id=p_company and id=j.connection_id for update;
   select * into mt from public.sv_meta_threads where company_id=p_company and id=j.thread_id for update;
  end if;
+ if why is null then why=smartvolt_private.delivery_editor_admit(j);end if;
  perform pg_advisory_xact_lock(hashtextextended('delivery-contact:'||p_company::text||':'||j.customer_id,0));
  select * into strict j from public.sv_delivery_jobs where company_id=p_company and id=p_id for update;
  if j.state<>'scheduled'or j.due_at>now()then return jsonb_build_object('dispatch',false);end if;
@@ -316,7 +319,7 @@ do $$declare t text;f record;begin
  end loop;
  revoke update on public.sv_preference_events,public.sv_delivery_events from service_role;
  revoke all on sequence public.sv_delivery_events_seq_seq from public,anon,authenticated;grant usage,select on sequence public.sv_delivery_events_seq_seq to service_role;
- for f in select oid::regprocedure signature from pg_proc where pronamespace in('public'::regnamespace,'smartvolt_private'::regnamespace)and proname in('delivery_event','delivery_audience','delivery_render','delivery_optout','delivery_optout_message','sv_engagement_action','sv_engagement_receipt','sv_engagement_read','sv_templates_store','sv_templates_invalidate','sv_delivery_claim','sv_delivery_finish','delivery_receipt','sv_delivery_scheduler')loop
+ for f in select oid::regprocedure signature from pg_proc where pronamespace in('public'::regnamespace,'smartvolt_private'::regnamespace)and proname in('delivery_event','delivery_audience','delivery_render','delivery_optout','delivery_optout_message','delivery_editor_admit','sv_engagement_action','sv_engagement_receipt','sv_engagement_read','sv_templates_store','sv_templates_invalidate','sv_delivery_claim','sv_delivery_finish','delivery_receipt','sv_delivery_scheduler')loop
   execute format('revoke all on function %s from public,anon,authenticated',f.signature);execute format('grant execute on function %s to service_role',f.signature);
  end loop;
 end;$$;

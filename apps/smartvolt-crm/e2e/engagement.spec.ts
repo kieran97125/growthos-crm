@@ -28,7 +28,12 @@ test.beforeAll(async () => {
       format: "iife",
       jsx: "automatic",
       loader: { ".css": "empty" },
-      define: { "process.env.NODE_ENV": '"test"' },
+      define: {
+        "process.env": JSON.stringify({
+          NODE_ENV: "test",
+          __NEXT_ROUTER_BASEPATH: "",
+        }),
+      },
     })
   ).outputFiles[0].text;
 });

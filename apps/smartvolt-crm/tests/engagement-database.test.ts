@@ -383,11 +383,15 @@ const publish = (data: object) =>
     "publish",
     JSON.stringify(data),
   ]);
-async function incoming(thread: string, at = Date.now(),body="Synthetic reply") {
+async function incoming(
+  thread: string,
+  at = Date.now(),
+  body = "Synthetic reply",
+) {
   const id = randomUUID();
   await db.query(
     "insert into sv_wa_messages(id,company_id,connection_id,conversation_id,provider_id,fingerprint,direction,body,message_type,provider_at,author_name,state)values($1,$2,$3,$4,$5,$6,'incoming',$8,'text',$7,'Customer','delivered')",
-    [id, company, connection, thread, "wamid." + id, "a".repeat(64), at,body],
+    [id, company, connection, thread, "wamid." + id, "a".repeat(64), at, body],
   );
   return id;
 }
@@ -411,11 +415,28 @@ test("real incoming source creates a version-bound journey and another reply rep
   );
   assert.equal(n, 1);
 });
-test("inbound STOP cancels marketing and records an opt-out without starting a new chase",async()=>{
- const c=await customer();await consent(c.id);const data=campaign(c.id);await action("campaign",data);const id=await job(data.id);
- await incoming(c.thread,Date.now(),"STOP");assert.equal((await state(id)).state,"cancelled");
- assert.equal(await value("select allowed v from sv_contact_preferences where company_id=$1 and customer_id=$2 and purpose='marketing'",[company,c.id]),false);
- assert.equal(await value("select count(*)v from sv_journey_sources where company_id=$1 and thread_id=$2 and active",[company,c.thread]),0);
+test("inbound STOP cancels marketing and records an opt-out without starting a new chase", async () => {
+  const c = await customer();
+  await consent(c.id);
+  const data = campaign(c.id);
+  await action("campaign", data);
+  const id = await job(data.id);
+  await incoming(c.thread, Date.now(), "STOP");
+  assert.equal((await state(id)).state, "cancelled");
+  assert.equal(
+    await value(
+      "select allowed v from sv_contact_preferences where company_id=$1 and customer_id=$2 and purpose='marketing'",
+      [company, c.id],
+    ),
+    false,
+  );
+  assert.equal(
+    await value(
+      "select count(*)v from sv_journey_sources where company_id=$1 and thread_id=$2 and active",
+      [company, c.thread],
+    ),
+    0,
+  );
 });
 test("human send admission stops auto-followups while internal notes do not", async () => {
   const c = await customer(),
@@ -524,4 +545,186 @@ test("late incoming events do not burst old delays; published versions cannot be
     ),
     /invalid_delays/,
   );
+});
+
+const editor = (
+  thread: string,
+  token: string,
+  mode: string,
+  actor = owner,
+  revision: number | null = null,
+) =>
+  rpc<{ held: boolean; occupied: boolean; revision: number }>(
+    "sv_editor_action",
+    [company, actor, "whatsapp", thread, token, mode, revision],
+  );
+const humanClaim = (
+  thread: string,
+  token: string | null,
+  actor = owner,
+  command = randomUUID(),
+  body = "Synthetic human reply",
+  revision = 0,
+) =>
+  rpc<{ dispatch: boolean; message: { id: string } }>("sv_wa_claim_send", [
+    company,
+    actor,
+    thread,
+    revision,
+    command,
+    body,
+    null,
+    token,
+  ]);
+test("current editor protects real send admission, takeover retains the old receipt and an unresolved send still blocks", async () => {
+  const c = await customer(),
+    a = randomUUID(),
+    b = randomUUID(),
+    command = randomUUID();
+  await db.query(
+    "update sv_memberships set brand_ids=array['main']where company_id=$1 and user_id=$2",
+    [company, agent],
+  );
+  try {
+    const held = await editor(c.thread, a, "acquire");
+    assert.equal(held.held, true);
+    const blocked = await editor(c.thread, b, "acquire", agent);
+    assert.equal(blocked.held, false);
+    assert.equal(blocked.occupied, true);
+    await assert.rejects(humanClaim(c.thread, null, agent), /editor_conflict/);
+    const first = await humanClaim(c.thread, a, owner, command);
+    assert.equal(first.dispatch, true);
+    const takeover = await editor(
+      c.thread,
+      b,
+      "takeover",
+      agent,
+      held.revision,
+    );
+    assert.equal(takeover.held, true);
+    assert.equal(
+      (await editor(c.thread, b, "takeover", agent, held.revision)).revision,
+      takeover.revision,
+    );
+    assert.equal(
+      (await humanClaim(c.thread, a, owner, command)).dispatch,
+      false,
+    );
+    await assert.rejects(
+      humanClaim(c.thread, a, owner, randomUUID(), "Retained draft", 1),
+      /editor_conflict/,
+    );
+    await assert.rejects(
+      humanClaim(c.thread, b, agent, randomUUID(), "New owner draft", 1),
+      /send_unresolved/,
+    );
+    await rpc("sv_wa_finish_send", [
+      company,
+      first.message.id,
+      "definitive",
+      null,
+      "synthetic_finish",
+    ]);
+    const actual = await humanClaim(
+      c.thread,
+      b,
+      agent,
+      randomUUID(),
+      "New owner reply",
+      2,
+    );
+    assert.equal(actual.dispatch, true);
+  } finally {
+    await db.query(
+      "update sv_memberships set brand_ids=array['other']where company_id=$1 and user_id=$2",
+      [company, agent],
+    );
+  }
+});
+test("two windows for the same member cannot share a lease; expiry requires reacquisition", async () => {
+  const c = await customer(),
+    a = randomUUID(),
+    b = randomUUID();
+  await editor(c.thread, a, "acquire");
+  assert.equal((await editor(c.thread, b, "acquire")).held, false);
+  await assert.rejects(humanClaim(c.thread, b), /editor_conflict/);
+  await db.query(
+    "update sv_thread_editors set expires_at='epoch'where company_id=$1 and thread_id=$2",
+    [company, c.thread],
+  );
+  await assert.rejects(humanClaim(c.thread, a), /editor_expired/);
+  assert.equal((await editor(c.thread, a, "acquire")).held, true);
+  const released = await editor(c.thread, a, "release");
+  assert.equal(released.held, false);
+  assert.equal(
+    (await editor(c.thread, a, "release")).revision,
+    released.revision,
+  );
+});
+test("an active human editor prevents an automatic campaign attempt even for its creator", async () => {
+  const c = await customer();
+  await consent(c.id);
+  const t = randomUUID();
+  await editor(c.thread, t, "acquire");
+  const data = campaign(c.id);
+  await action("campaign", data);
+  const id = await job(data.id);
+  assert.equal((await rpc("sv_delivery_claim", [company, id])).dispatch, false);
+  assert.equal((await state(id)).reason, "human_takeover");
+  assert.equal(
+    await value(
+      "select count(*)v from sv_wa_messages where company_id=$1 and conversation_id=$2 and direction='outgoing'",
+      [company, c.thread],
+    ),
+    0,
+  );
+});
+test("a utility template outside the text window requires the exact current editor and service consent", async () => {
+  const c = await customer(),
+    token = randomUUID();
+  await editor(c.thread, token, "acquire");
+  await db.query(
+    "update sv_wa_conversations set last_inbound_at=0 where id=$1",
+    [c.thread],
+  );
+  await action("preference", {
+    customerId: c.id,
+    brandId: "main",
+    channel: "whatsapp",
+    purpose: "service",
+    allowed: true,
+    source: "Synthetic service consent",
+    revision: 0,
+  });
+  const definition = {
+    kind: "template",
+    name: "synthetic_service",
+    locale: "en",
+    fingerprint: "b".repeat(64),
+    body: "Confirmed service",
+    values: [],
+  };
+  await rpc("sv_templates_store", [
+    company,
+    connection,
+    JSON.stringify({ synthetic: true }),
+    JSON.stringify([
+      {
+        name: definition.name,
+        language: "en",
+        fingerprint: definition.fingerprint,
+        status: "APPROVED",
+        category: "UTILITY",
+        supported: true,
+      },
+    ]),
+  ]);
+  const data = campaign(c.id, {
+    definition,
+    purpose: "service",
+    editorToken: token,
+  });
+  await action("manual", data);
+  const id = await job(data.id);
+  assert.equal((await rpc("sv_delivery_claim", [company, id])).dispatch, true);
 });

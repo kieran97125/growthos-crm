@@ -1,3 +1,4 @@
+import { createEditorFixture } from "./support/editor";
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { build } from "esbuild";
@@ -195,8 +196,13 @@ async function mock(
     followups: [],
     handoff: null,
   };
+  const editorFixture = createEditorFixture();
   await page.route("**/api/companies/**", async (r) => {
     const url = new URL(r.request().url());
+    if (url.pathname.endsWith("/editor")) {
+      await editorFixture(r);
+      return;
+    }
     if (url.pathname.endsWith("/operations")) {
       if (r.request().method() === "POST") {
         const c = operationsAction.parse(r.request().postDataJSON());

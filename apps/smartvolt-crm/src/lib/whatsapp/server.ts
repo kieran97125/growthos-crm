@@ -76,6 +76,13 @@ function queryFailure(error: { code?: string; message?: string } | null): void {
     )
   )
     throw new AccessError("你未有執行此 WhatsApp 操作嘅權限。", 403);
+  if (/editor_conflict|editor_expired/.test(error.message ?? ""))
+    throw new AccessError(
+      "回覆已由另一個視窗或同事接手。請重新核對；草稿會保留。",
+      409,
+    );
+  if (/send_unresolved/.test(error.message ?? ""))
+    throw new AccessError("上一則訊息仍待平台確認，請先核對發送結果。", 409);
   if (
     error.code === "23505" &&
     /sv_wa_connections_app_identity/i.test(error.message ?? "")
@@ -514,6 +521,7 @@ export async function sendMessage(
     p_client_id: command.clientId,
     p_body: command.body,
     p_reply_to: command.replyTo ?? null,
+    p_editor_token: command.editorToken ?? null,
   });
   queryFailure(claimResult.error);
   const claim = mandatoryRow(claimResult.data);

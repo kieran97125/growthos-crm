@@ -40,7 +40,7 @@ export const definitionSchema = z
     if (d.kind === "template" && (!d.name || !d.locale || !d.fingerprint))
       c.addIssue({ code: "custom", message: "請選擇正式模板。" });
     if (
-      (d.kind==="text" && /{{(?!name}})/.test(d.body)) ||
+      (d.kind === "text" && /{{(?!name}})/.test(d.body)) ||
       d.values.some((v) => /{{(?!name}})/.test(v.value))
     )
       c.addIssue({ code: "custom", message: "只支援客戶姓名變數。" });
@@ -72,7 +72,14 @@ const campaign = {
 const command = { commandId: z.uuid() };
 export const engagementAction = z.discriminatedUnion("action", [
   z.object({ ...command, action: z.literal("campaign"), ...campaign }).strict(),
-  z.object({ ...command, action: z.literal("manual"), ...campaign }).strict(),
+  z
+    .object({
+      ...command,
+      action: z.literal("manual"),
+      ...campaign,
+      editorToken: z.uuid(),
+    })
+    .strict(),
   z.object({ ...command, action: z.literal("cancel"), id: z.uuid() }).strict(),
   z
     .object({
@@ -126,6 +133,7 @@ export const stateNames: Record<DeliveryState, string> = {
   cancelled: "已取消",
 };
 export const reasonNames: Record<string, string> = {
+  human_takeover: "真人已接手，已停止自動訊息",
   authority_changed: "同事權限已更改",
   customer_changed: "客戶連結已更改",
   campaign_cancelled: "推播已取消",

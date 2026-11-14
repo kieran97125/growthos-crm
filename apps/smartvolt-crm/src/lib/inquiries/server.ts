@@ -763,6 +763,7 @@ export async function actInquiry(companyId: string, raw: unknown) {
         clientId: c.commandId,
         revision: c.revision,
         body: c.body,
+        ...(c.editorToken ? { editorToken: c.editorToken } : {}),
       });
     if (c.action === "read")
       return actMeta(companyId, {
@@ -778,6 +779,7 @@ export async function actInquiry(companyId: string, raw: unknown) {
       revision: c.revision,
       body: c.body,
       ...(c.replyTo ? { replyTo: c.replyTo } : {}),
+      ...(c.editorToken ? { editorToken: c.editorToken } : {}),
     });
   return conversationCommand(companyId, c.threadId, {
     clientId: c.commandId,

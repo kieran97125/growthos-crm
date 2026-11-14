@@ -1,4 +1,11 @@
 -- Current stored brand/product grants, before paging, aggregation, replay or mutation.
+create function public.sv_pos_staff_list(p_company uuid,p_actor uuid,p_brand text)returns jsonb language plpgsql security invoker set search_path=''as $$declare r jsonb;begin
+ perform public.sv_member_scope(p_company,p_actor,p_brand,'pos');
+ select coalesce(jsonb_agg(jsonb_build_object('user_id',m.user_id)order by m.display_name,m.user_id),'[]'::jsonb)into r from public.sv_memberships m
+ where m.company_id=p_company and m.status='active'and m.role<>'viewer'and smartvolt_private.member_has_product(p_company,m.user_id,'pos')and smartvolt_private.member_brand_allowed(p_company,m.user_id,p_brand);return r;
+end;$$;
+revoke all on function public.sv_pos_staff_list(uuid,uuid,text)from public,anon,authenticated;
+grant execute on function public.sv_pos_staff_list(uuid,uuid,text)to service_role;
 -- A model answer may combine products and brands. Its request's display brand alone
 -- cannot prove the scope of the evidence used. Keep the actual scope separately.
 create table public.sv_copilot_evidence_scopes(
@@ -110,6 +117,61 @@ begin
  if v_role is null or v_role='viewer' then raise exception 'access_denied';end if;
  if not smartvolt_private.member_has_product(p_company,p_actor,'crm')then raise exception 'access_denied';end if;return v_role;
 end;$$;
+
+create or replace function public.sv_wa_save_connection(p_company uuid,p_actor uuid,p_config jsonb) returns jsonb
+ language plpgsql security invoker set search_path='' as $$
+declare v public.sv_wa_connections;v_id uuid;v_brand text;v_changed boolean;
+begin
+ if smartvolt_private.wa_require_actor(p_company,p_actor)<>'owner' then raise exception 'owner_required';end if;
+ if jsonb_typeof(p_config) is distinct from 'object' then raise exception 'invalid_connection';end if;
+ v_id:=coalesce(nullif(p_config->>'id','')::uuid,gen_random_uuid());v_brand:=p_config->>'brandId';
+ perform 1 from public.sv_workspaces w where w.company_id=p_company and exists(
+ select 1 from jsonb_array_elements(w.payload#>'{scope,brands}') b where b->>'id'=v_brand) for share;
+ if not found then raise exception 'brand_missing';end if;perform public.sv_member_scope(p_company,p_actor,v_brand,'crm');
+ select * into v from public.sv_wa_connections where id=v_id for update;
+ if found then
+  if v.company_id<>p_company then raise exception 'connection_scope';end if;
+  if (v.brand_id is distinct from v_brand or v.phone_number_id is distinct from p_config->>'phoneNumberId'
+   or v.account_id is distinct from p_config->>'accountId' or v.app_id is distinct from p_config->>'appId'
+   or v.messaging_account_id is distinct from nullif(p_config->>'messagingAccountId',''))
+   and exists(select 1 from public.sv_wa_conversations where connection_id=v_id) then raise exception 'connection_identity_in_use';end if;
+  v_changed:=v.encrypted_credentials is distinct from p_config->'encryptedCredentials'
+   or v.verify_token_hash is distinct from p_config->>'verifyTokenHash'
+   or v.brand_id is distinct from v_brand or v.app_id is distinct from p_config->>'appId'
+   or v.phone_number_id is distinct from p_config->>'phoneNumberId' or v.account_id is distinct from p_config->>'accountId'
+   or v.messaging_account_id is distinct from nullif(p_config->>'messagingAccountId','');
+  update public.sv_wa_connections set brand_id=v_brand,app_id=p_config->>'appId',account_id=p_config->>'accountId',
+   messaging_account_id=nullif(p_config->>'messagingAccountId',''),phone_number_id=p_config->>'phoneNumberId',display_phone=p_config->>'displayPhone',
+   encrypted_credentials=p_config->'encryptedCredentials',verify_token_hash=p_config->>'verifyTokenHash',
+   state=case when v_changed then 'configured' else state end,webhook_verified_at=case when v_changed then null else webhook_verified_at end,
+   last_inbound_at=case when v_changed then null else last_inbound_at end,updated_at=now() where id=v_id returning * into v;
+ else
+  insert into public.sv_wa_connections(id,company_id,brand_id,app_id,account_id,messaging_account_id,phone_number_id,display_phone,encrypted_credentials,verify_token_hash)
+  values(v_id,p_company,v_brand,p_config->>'appId',p_config->>'accountId',nullif(p_config->>'messagingAccountId',''),p_config->>'phoneNumberId',
+   p_config->>'displayPhone',p_config->'encryptedCredentials',p_config->>'verifyTokenHash') returning * into v;
+ end if;
+ return to_jsonb(v)-'encrypted_credentials'-'verify_token_hash';
+end;$$;
+
+create or replace function public.sv_meta_save(p_company uuid,p_actor uuid,p_config jsonb) returns uuid
+language plpgsql security invoker set search_path='' as $$
+declare cid uuid := (p_config->>'id')::uuid; existing public.sv_meta_connections;
+begin
+ perform public.sv_meta_authorize(p_company,p_actor,true,true);
+ if not exists(select 1 from public.sv_workspaces w,jsonb_array_elements(w.payload #> '{scope,brands}') b where w.company_id=p_company and b->>'id'=p_config->>'brandId')then raise exception 'meta_brand_scope';end if;
+ perform public.sv_member_scope(p_company,p_actor,p_config->>'brandId','crm');select * into existing from public.sv_meta_connections where id=cid for update;
+ if found then
+  if existing.company_id<>p_company or existing.brand_id<>p_config->>'brandId' or existing.channel<>p_config->>'channel' or existing.account_id<>p_config->>'accountId' or existing.page_id<>p_config->>'pageId' or existing.app_id<>p_config->>'appId' then raise exception 'meta_connection_scope';end if;
+  update public.sv_meta_connections set credentials=p_config->'credentials',label=p_config->>'label',enabled=true where id=cid;
+ else
+  insert into public.sv_meta_connections(id,company_id,brand_id,channel,app_id,page_id,account_id,label,credentials)
+  values(cid,p_company,p_config->>'brandId',p_config->>'channel',p_config->>'appId',p_config->>'pageId',p_config->>'accountId',p_config->>'label',p_config->'credentials');
+ end if;
+ return cid;
+end;$$;
+
+create or replace function public.sv_meta_disable(p_company uuid,p_actor uuid,p_connection uuid) returns void language plpgsql security invoker set search_path='' as $$begin perform public.sv_meta_authorize(p_company,p_actor,true,true);
+ if exists(select 1 from public.sv_meta_connections where company_id=p_company and id=p_connection)then perform public.sv_member_scope(p_company,p_actor,(select brand_id from public.sv_meta_connections where company_id=p_company and id=p_connection),'crm');end if;update public.sv_meta_connections set enabled=false where id=p_connection and company_id=p_company;if not found then raise exception 'meta_connection_missing';end if;end;$$;
 
 create or replace function public.sv_customer_authorize(p_company uuid,p_actor uuid,p_write boolean default false,p_crm boolean default false) returns text
 language plpgsql security invoker set search_path='' as $$

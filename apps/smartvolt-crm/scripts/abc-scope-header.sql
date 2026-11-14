@@ -1,4 +1,11 @@
 -- Current stored brand/product grants, before paging, aggregation, replay or mutation.
+create function public.sv_pos_staff_list(p_company uuid,p_actor uuid,p_brand text)returns jsonb language plpgsql security invoker set search_path=''as $$declare r jsonb;begin
+ perform public.sv_member_scope(p_company,p_actor,p_brand,'pos');
+ select coalesce(jsonb_agg(jsonb_build_object('user_id',m.user_id)order by m.display_name,m.user_id),'[]'::jsonb)into r from public.sv_memberships m
+ where m.company_id=p_company and m.status='active'and m.role<>'viewer'and smartvolt_private.member_has_product(p_company,m.user_id,'pos')and smartvolt_private.member_brand_allowed(p_company,m.user_id,p_brand);return r;
+end;$$;
+revoke all on function public.sv_pos_staff_list(uuid,uuid,text)from public,anon,authenticated;
+grant execute on function public.sv_pos_staff_list(uuid,uuid,text)to service_role;
 -- A model answer may combine products and brands. Its request's display brand alone
 -- cannot prove the scope of the evidence used. Keep the actual scope separately.
 create table public.sv_copilot_evidence_scopes(

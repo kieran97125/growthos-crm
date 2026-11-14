@@ -54,6 +54,28 @@ edit("wa_require_actor", [
     "if not smartvolt_private.member_has_product(p_company,p_actor,'crm')then raise exception 'access_denied';end if;return v_role;",
   ],
 ]);
+edit("sv_wa_save_connection", [
+  [
+    "if not found then raise exception 'brand_missing';end if;",
+    "if not found then raise exception 'brand_missing';end if;" +
+      check("v_brand"),
+  ],
+]);
+edit("sv_meta_save", [
+  [
+    "select * into existing from",
+    check("p_config->>'brandId'") + "select * into existing from",
+  ],
+]);
+guardAfterAuth(
+  "sv_meta_disable",
+  "perform public.sv_meta_authorize(p_company,p_actor,true,true);",
+  "if exists(select 1 from public.sv_meta_connections where company_id=p_company and id=p_connection)then " +
+    check(
+      "(select brand_id from public.sv_meta_connections where company_id=p_company and id=p_connection)",
+    ) +
+    "end if;",
+);
 edit("sv_customer_authorize", [
   [
     "return r;",

@@ -86,7 +86,9 @@ export async function readOperations(
     companyId,
     actorId: a.user.id,
     canEdit: a.actor.role !== "viewer",
-    canManage: ["owner", "manager"].includes(a.actor.role),
+    canManage:
+      ["owner", "manager"].includes(a.actor.role) &&
+      a.memberScope.brandIds === null,
     hasPos: a.products.includes("pos"),
     records,
     nextCursor:
@@ -113,19 +115,55 @@ export async function operationsContext(
     p_thread: id,
   });
   checked(r.error);
-  return { ...r.data, canEdit: a.actor.role !== "viewer", actorId: a.user.id, canManage: ["owner", "manager"].includes(a.actor.role) };
+  return {
+    ...r.data,
+    canEdit: a.actor.role !== "viewer",
+    actorId: a.user.id,
+    canManage: ["owner", "manager"].includes(a.actor.role),
+  };
 }
 export async function operationsTasks(companyId: string, raw: unknown) {
-  const a = await access(companyId), q = z.object({ brand: z.string().min(1).max(100).optional(), after: z.string().max(700).optional() }).strict().parse(raw);
+  const a = await access(companyId),
+    q = z
+      .object({
+        brand: z.string().min(1).max(100).optional(),
+        after: z.string().max(700).optional(),
+      })
+      .strict()
+      .parse(raw);
   let cursor: z.infer<typeof cursorSchema> | undefined;
   if (q.after) {
-    try { if (!/^[A-Za-z0-9_-]+$/.test(q.after)) throw new Error(); cursor = cursorSchema.parse(JSON.parse(Buffer.from(q.after, "base64url").toString())); z.uuid().parse(cursor.key); }
-    catch { throw new AccessError("分頁位置失效，請重新查閱。", 400); }
+    try {
+      if (!/^[A-Za-z0-9_-]+$/.test(q.after)) throw new Error();
+      cursor = cursorSchema.parse(
+        JSON.parse(Buffer.from(q.after, "base64url").toString()),
+      );
+      z.uuid().parse(cursor.key);
+    } catch {
+      throw new AccessError("分頁位置失效，請重新查閱。", 400);
+    }
   }
-  const r = await a.db.rpc("sv_ops_tasks", { p_company: companyId, p_actor: a.user.id, p_brand: q.brand ?? null, p_after: cursor?.at ?? null, p_after_id: cursor?.key ?? null });
+  const r = await a.db.rpc("sv_ops_tasks", {
+    p_company: companyId,
+    p_actor: a.user.id,
+    p_brand: q.brand ?? null,
+    p_after: cursor?.at ?? null,
+    p_after_id: cursor?.key ?? null,
+  });
   checked(r.error);
-  const data = r.data as { tasks: import("./model").Followup[]; total: number }, tasks = data.tasks.slice(0, 50), last = tasks.at(-1);
-  return { tasks, total: data.total, nextCursor: data.tasks.length > 50 && last ? Buffer.from(JSON.stringify({ at: last.due_at, key: last.id })).toString("base64url") : null };
+  const data = r.data as { tasks: import("./model").Followup[]; total: number },
+    tasks = data.tasks.slice(0, 50),
+    last = tasks.at(-1);
+  return {
+    tasks,
+    total: data.total,
+    nextCursor:
+      data.tasks.length > 50 && last
+        ? Buffer.from(
+            JSON.stringify({ at: last.due_at, key: last.id }),
+          ).toString("base64url")
+        : null,
+  };
 }
 export async function operationsAttention(companyId: string) {
   const a = await access(companyId);

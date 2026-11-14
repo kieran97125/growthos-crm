@@ -48,6 +48,7 @@ function key() {
   );
 }
 function ready() {
+  if (process.env.SMARTVOLT_INVITATIONS_ENABLED !== "true") return false;
   try {
     key();
     mailOrigin();

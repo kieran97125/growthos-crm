@@ -515,6 +515,16 @@ test("C evidence scopes protect combined product/brand facts even when the displ
     return request;
   }
   await grant(null, ["crm", "pos"]);
+  assert.equal(
+    (
+      await call<{ user_id: string }[]>("sv_pos_staff_list", [
+        company,
+        owner,
+        "main",
+      ])
+    ).some((m) => m.user_id === agent),
+    true,
+  );
   const combined = await receipt();
   assert.equal(
     await call("smartvolt_private.copilot_receipt_allowed", [
@@ -525,6 +535,16 @@ test("C evidence scopes protect combined product/brand facts even when the displ
     true,
   );
   await grant(null, ["crm"]);
+  assert.equal(
+    (
+      await call<{ user_id: string }[]>("sv_pos_staff_list", [
+        company,
+        owner,
+        "main",
+      ])
+    ).some((m) => m.user_id === agent),
+    false,
+  );
   await assert.rejects(
     call("sv_copilot_receipt", [company, agent, "crm", combined]),
     /brand_scope/,

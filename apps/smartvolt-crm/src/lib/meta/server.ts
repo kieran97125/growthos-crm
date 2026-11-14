@@ -4,6 +4,7 @@ import { createHmac, hkdfSync, randomUUID, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { database, requireCompany } from "@/lib/saas/server";
 import { AccessError, scopeSchema } from "@/lib/saas/identity";
+import { assertBrand } from "@/lib/saas/member-scope";
 import { requireProduct } from "@/lib/saas/products";
 import {
   readMasterKey,
@@ -301,6 +302,7 @@ export async function actMeta(companyId: string, input: unknown) {
   if (data.action === "connect") {
     if (a.actor.role !== "owner")
       throw new AccessError("接駁需要公司擁有人權限。", 403);
+    assertBrand(a.memberScope, data.brandId);
     const config = platform(),
       master = key();
     let inspected;

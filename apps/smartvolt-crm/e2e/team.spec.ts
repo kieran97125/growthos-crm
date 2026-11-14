@@ -149,6 +149,12 @@ for (const mobile of [false, true])
   }, info) => {
     if (mobile) await page.setViewportSize({ width: 390, height: 844 });
     const f = await fixture(page);
+    await page.screenshot({
+      path: info.outputPath(
+        `team-overview-${mobile ? "mobile" : "desktop"}.png`,
+      ),
+      fullPage: true,
+    });
     await page.getByRole("button", { name: "邀請同事", exact: true }).click();
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();

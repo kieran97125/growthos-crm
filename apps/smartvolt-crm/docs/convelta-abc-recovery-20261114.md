@@ -1,5 +1,7 @@
 # Convelta A/B/C implementation recovery checkpoint
 
+> Update, 2026-11-15 (HKT): the fresh environment confirmed the previous uncommitted feature code was not retained. A2 has been reconstructed and saved in [draft PR #11](https://github.com/kieran97125/growthos-crm/pull/11). Read the [A2 implementation checkpoint](convelta-abc-a2-implementation-20261114.md) first for current source and acceptance. The sections below remain the historical interruption record, not a claim that old feature files survived or that ABC is complete. Production has not been updated.
+
 Date: 2026-11-14 (Hong Kong). Status: **development interrupted; not accepted or released**.
 
 The user authorized implementing batches A, B and C first (13 work packages) from [the expansion roadmap](convelta-expansion-roadmap-20261114.md). D/E/F remain outside this implementation request. Keep the beginner-friendly existing navigation and shared, company-isolated SaaS architecture.

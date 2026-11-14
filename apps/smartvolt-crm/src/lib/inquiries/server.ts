@@ -8,7 +8,7 @@ import "server-only";
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
-import { loadCompany, requireCompany } from "@/lib/saas/server";
+import { loadCompanyForCommand, requireCompany } from "@/lib/saas/server";
 import { requireProduct } from "@/lib/saas/products";
 import { AccessError } from "@/lib/saas/identity";
 import { appSchema } from "@/lib/demo/state";
@@ -443,7 +443,9 @@ export async function readInquiry(
   return { ...customer, thread: row, messages, nextBefore, activity };
 }
 async function bookingContext(companyId: string, requestId: string) {
-  const a = await loadCompany(companyId, "pos");
+  // Reduce the authoritative aggregate on the server; a scoped UI document must
+  // never replace another brand's retained records during a POS conversion.
+  const a = await loadCompanyForCommand(companyId, { type: "pos" });
   requireProduct(a.products, "crm");
   const r = await a.db
     .from("sv_booking_requests")
@@ -495,16 +497,16 @@ export async function availability(
     );
   const service = services.find((s) => s.id === q.serviceId),
     choices: Availability["choices"] = [];
-  const active = await a.db
-    .from("sv_memberships")
-    .select("user_id")
-    .eq("company_id", companyId)
-    .eq("status", "active")
-    .neq("role", "viewer");
+  const active = await a.db.rpc("sv_pos_staff_list", {
+    p_company: companyId,
+    p_actor: a.user.id,
+    p_brand: a.request.brand_id,
+  });
   checked(active.error);
+  const staffIds = z.array(z.object({ user_id: z.uuid() })).parse(active.data);
   if (service && a.request.status === "requested")
     for (const staff of a.scope.team.filter((s) =>
-      active.data?.some((m) => m.user_id === s.id),
+      staffIds.some((m) => m.user_id === s.id),
     ))
       for (const resource of service.resourceKind === "none"
         ? [null]
@@ -573,6 +575,7 @@ export async function actInquiry(companyId: string, raw: unknown) {
   if (a.actor.role === "viewer")
     throw new AccessError("你目前只有檢視權限。", 403);
   if (c.action === "booking-convert") {
+    const ctx = await bookingContext(companyId, c.requestId);
     const req = {
       kind: "convert",
       request: c.requestId,
@@ -601,7 +604,6 @@ export async function actInquiry(companyId: string, raw: unknown) {
         throw new AccessError("同一操作識別碼已用於另一項改動。", 409);
       return receipt.data.result;
     }
-    const ctx = await bookingContext(companyId, c.requestId);
     if (ctx.actor.role === "viewer")
       throw new AccessError("你目前只有檢視權限。", 403);
     if (
@@ -675,6 +677,7 @@ export async function actInquiry(companyId: string, raw: unknown) {
     return r.data;
   }
   if (!("provider" in c)) throw new AccessError("操作格式不完整。", 400);
+  await requireThreadScope(a, c.provider, c.threadId);
   // Every thread action must resolve an actual company-owned provider link.
   const link = await a.db
     .from("sv_customer_threads")

@@ -1,8 +1,8 @@
 # Convelta ABC full implementation
 
-User authorization: complete and deploy **all original A/B/C packages**, 2026-11-15 HKT. This record is an implementation checkpoint, not a release claim.
+User authorization: complete and deploy **all original A/B/C packages**, 2026-11-15 HKT. Latest runtime release is now `58e489f8f78993ce1f584cf659449d1dc15c60a6`, READY as `dpl_7hcaDVRs7zHTSL7G6mbxteRnWUQ2` at app.convelta.io. Current capability/activation evidence is in `convelta-abc-release-20261115.md`.
 
-Production remains the accepted A2 permission release `f5682878742697aa52cf2a5309b51f355ea16424`; its hosted migrations and customer/workspace preservation baseline are recorded in `convelta-a2-release-20261115.md`. New migrations below are local candidates, not applied.
+The paragraphs below preserve chronological development checkpoints. Earlier candidate-only, unfinished and A2-production statements are historical. Thirteen additive migrations are now installed with exact SQL parity; original workspace fingerprints are unchanged. External channel/mail/Meta/device acceptance remains explicitly separate. No new production push key was stored.
 
 Product Learning Sync checked. Canonical protocol `6a80846bfa10af9a4b84304688b19a326d0752b6`, index `1080e9542f7845a4a34a1815c85466f162fa3a76`, main checkpoint `e52e473ae1685b3c2be0a040ab19f5ee55c66b8d`; reviewed draft checkpoint remains PR 88 in leadhub-source-os. Considered the July 26 broadcast boundary, July 29 connector readiness, July 31 member lifecycle, August 10 permission-aware aggregates, October 6 optional operator settings, October 15 brand financial dashboards, August 3 conversion destination, November 11 account-owned report segments and August 5 Auth callback contracts. Only neutral contracts are adopted; no pilot implementation, credentials, customer records or identity imported.
 
@@ -31,7 +31,7 @@ Do not mark ABC complete or replace production with this checkpoint alone.
 
 ## Runtime activation approval gate
 
-Automatic approval review rejected creating `CRON_SECRET`, `SMARTVOLT_PUSH_PRIVATE_KEY` and `SMARTVOLT_PUSH_PUBLIC_KEY` in this app's existing Vercel production project. Its stated reason: general deployment approval did not explicitly authorize storing these newly generated credentials with the external production hosting service. A subsequent metadata-only check confirms none of the three keys was created. Do not retry this write by another route or place those keys in code, a different service, or a deployment payload. Complete unaffected work first; ask for the specific runtime-key storage authorization only when the full implementation and reviewable release are ready. Background recovery via the private cron endpoint and external device push remain gated until then. No customer data or real outbound was part of the attempted write.
+Automatic approval review rejected creating `CRON_SECRET`, `SMARTVOLT_PUSH_PRIVATE_KEY` and `SMARTVOLT_PUSH_PUBLIC_KEY` in this app's existing Vercel production project. Its stated reason: general deployment approval did not explicitly authorize storing these newly generated credentials with the external production hosting service. A subsequent metadata-only check confirms none of the three keys was created. Do not retry this write by another route or place those keys in code, a different service, or a deployment payload. Complete unaffected work first; ask for the specific runtime-key storage authorization only when the full implementation and reviewable release are ready. Background recovery subsequently moved to a genuinely private Schedules function target, removing the cron-key requirement without any substitute credential disclosure. Only the two device-push runtime keys remain blocked by that storage rejection. No customer data or real outbound was part of the attempted write.
 
 ## Next implementation boundaries
 
@@ -161,3 +161,9 @@ Before B3 is final: extend the currently name-only merge fields with actual sour
 - Run 192 passed the actual HKT schedule, zero-submit-before-review, single-command lost-response reconciliation, full recipient pagination, viewer restrictions and accessibility. The runtime submit defect is fixed.
 - Its only remaining campaign failure measured the mobile dialog at 398px in a 390px viewport. Corrected the dialog and its descendants to border-box sizing so padding is included in the declared responsive width. The geometry assertion and Escape test remain unchanged.
 - Hosted unit/database count is now 341 with the cursor-wrap regression; native PostgreSQL, two Workflow cases, build and four production paint cases pass. Remaining browser flows in this run were correctly skipped after the focused geometry failure; they still require the corrected-source full run.
+
+### Verified ABC runtime release
+
+- Exact source 58e489f passes 341 unit/database, 2 Workflow, 4 paint and all 126 browser cases; native PostgreSQL and original CRM workflow pass. READY production dpl_7hcaDVRs7zHTSL7G6mbxteRnWUQ2 now owns app.convelta.io.
+- Real unauthenticated HTTP boundaries and private-function 404 were read back. Workspace fingerprints and zero customer/outbound/invitation/new-model baseline remain unchanged. Owner-scoped DB module reads work; live authenticated UI is honestly pending because browser context was lost and fallback showed the login wall.
+- Subsequent workflow-only changes preserve the six campaign screenshots in a separate output directory instead of letting the other 120 cases clean them. Runtime App code and SQL are unchanged. First private schedule invocation and external device/channel/mail/Meta acceptance remain on follow-up cards.

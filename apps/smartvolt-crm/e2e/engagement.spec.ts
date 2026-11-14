@@ -226,7 +226,7 @@ async function compose(page: Page) {
 }
 test("three-step campaign preserves template variables and converts the chosen Hong Kong time", async ({
   page,
-}) => {
+}, info) => {
   const f = await fixture(page),
     dialog = await compose(page);
   expect(f.commands).toHaveLength(0);
@@ -244,7 +244,7 @@ test("three-step campaign preserves template variables and converts the chosen H
     expect(c.definition.values[0].value).toBe("{{name}}");
   }
   await page.screenshot({
-    path: "test-results/engagement-campaign-desktop.png",
+    path: info.outputPath("engagement-campaign-desktop.png"),
     fullPage: true,
   });
 });
@@ -293,7 +293,7 @@ test("viewer has no campaign or policy mutation controls", async ({ page }) => {
 });
 test("mobile composer stays within the viewport and supports keyboard dismissal", async ({
   page,
-}) => {
+}, info) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const f = await fixture(page);
   const dialog = await compose(page);
@@ -304,7 +304,7 @@ test("mobile composer stays within the viewport and supports keyboard dismissal"
   const box = await dialog.boundingBox();
   expect(box!.width).toBeLessThanOrEqual(390);
   await page.screenshot({
-    path: "test-results/engagement-campaign-mobile.png",
+    path: info.outputPath("engagement-campaign-mobile.png"),
     fullPage: true,
   });
   await page.keyboard.press("Escape");

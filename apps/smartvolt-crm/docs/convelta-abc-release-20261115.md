@@ -1,8 +1,16 @@
 # Convelta ABC 發布驗收記錄
 
-狀態：資料庫已安裝；正式 App 切換待最後驗收，本段不代表已上線。
+狀態：ABC 本輪程式功能已於 2026-11-15 06:03 HKT 正式發佈至 https://app.convelta.io；渠道、郵件、Meta 資產與裝置啟用條件按下表保留。
 
 使用者已授權完成及發布原來 A1–A5、B1–B4、C1–C4。這是共用 CRM 程式能力，仍按產品、角色、品牌及來源權限使用；A5 只處理 Convelta 自身官網查詢。
+
+## 正式來源
+
+- Runtime commit：`58e489f8f78993ce1f584cf659449d1dc15c60a6`。
+- Production：`dpl_7hcaDVRs7zHTSL7G6mbxteRnWUQ2`，READY，正式 alias `app.convelta.io`；Node 24。
+- 回復來源：原 A2 `dpl_3VPZTuN3tSGfQw6gQgGZqLUKKRky` 保留；資料庫為相容的新增 schema，不移除業務紀錄。
+- [CRM CI 43645028088](https://github.com/kieran97125/growthos-crm/actions/runs/43645028088)：341 程式／資料庫、2 實際 Workflow、4 正式編譯首屏及 126 瀏覽器（6 推播＋120 其餘）全部通過。原 CRM CI 43645028182 亦通過。
+- 原始 browser artifact `14133737642`，SHA256 `60007afe0bef626d556c9c5b31b76b69ce8082c03774c6b2a1322bb4917d47d4` 已下載核對。分階段測試會清理預設輸出資料夾，後續純驗收設定改動將推播圖片分開保留；不改 App runtime。
 
 ## 本輪功能
 
@@ -24,13 +32,15 @@
 
 ## 驗收與來源
 
-- 本機 340 項程式／資料庫測試通過；原生 PostgreSQL 競爭派客、接客最後一位、編輯／接手、同意及共用配額通過。
+- 正式來源 341 項程式／資料庫測試通過；原生 PostgreSQL 競爭派客、接客最後一位、編輯／接手、同意及共用配額通過。
 - 實際 Workflow 引擎的持久睡眠／醒來及取消 admission 有獨立驗收。
-- 上一輪完整瀏覽器 123／126 通過；剩餘三項模板測試已按實際名稱及選項修正，最後一輪結果待讀回。
+- 126 項瀏覽器全部通過：推播確認前零提交、香港排程、斷線同一請求、完整分頁、權限、手機及無障礙；已修正第二步按鈕提早提交及手機邊框超出。
 - 四十張新表均 RLS 且 browser 無 raw table 權限；七十六個相關程序均 invoker、空 search path、browser 不可 execute。
 - 工作區 revision 5；inbox/POS/studio/broadcast 指紋與原始 A2 一致。客戶、渠道接駁及外發仍為零；無新邀請或模型請求。
 - 安全 WARN 保持原有 own-site definer／password 類別；新服務端表的 RLS-no-policy INFO 不以放開 browser 作修正。兩個新 SLA FK 索引已補齊。
-- 本機連接瀏覽器失去原始 context；未把測試 fixture／資料庫 Owner RPC 當作新正式登入畫面驗收。
+- 本機連接瀏覽器失去原始 context；替代瀏覽器只到正式登入頁，未把測試 fixture／資料庫 Owner RPC 當作新正式登入畫面驗收。已保留登入頁，沒有索取或讀取密碼／cookie。
+- 正式未登入 HTTP 讀回：10 個受保護 API GET 回 401，報表頁 307 到登入，無 Origin 提交 403、同站 Origin 且無登入提交 401；私人 maintenance GET／POST 均 404。回應採 private/no-store，沒有建立臨時驗證分享連結。
+- 部署後首次 error/fatal 日誌掃描為空；屬初始觀測，不是長期無錯誤保證。背景排程已配置私人 15 分鐘觸發；首輪實際 invocation 仍待讀回。
 
 ## 已安裝 SQL 原文
 

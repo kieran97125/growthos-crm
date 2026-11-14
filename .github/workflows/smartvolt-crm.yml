@@ -38,7 +38,7 @@ jobs:
       - name: Verify production cold load and refresh
         run: npm run test:paint
       - name: Verify campaign composer and explicit delivery intent
-        run: npm run test:e2e -- e2e/engagement.spec.ts
+        run: npm run test:e2e -- e2e/engagement.spec.ts --output=campaign-test-results
       - name: Verify remaining CRM browser flows
         # Together these invocations run all 126 scenarios exactly once. Test
         # delivery intent first so its failures are visible before long flows.
@@ -58,6 +58,7 @@ jobs:
           name: smartvolt-browser-evidence
           path: |
             apps/smartvolt-crm/test-results/
+            apps/smartvolt-crm/campaign-test-results/
             apps/smartvolt-crm/paint-test-results/
           retention-days: 7
 

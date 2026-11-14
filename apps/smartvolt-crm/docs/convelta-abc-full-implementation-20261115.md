@@ -100,3 +100,9 @@ Before B3 is final: extend the currently name-only merge fields with actual sour
 - Added bounded background pools: admitted peers finish even if another receipt fails. Notification and Meta provider work no longer serializes all network timeouts. Maintenance processes bounded company pairs and only acknowledges the last actually processed batch; unfinished tenants are not skipped when a time budget expires.
 - Added native PostgreSQL races for roster-qualified final capacity and competing editor/takeover. Added source-money, whole-page totals and current measurement-consent feedback cases; focused 33-case source/provider suite passed before the pool addition.
 - Corrected a React purity lint finding in the new report cutoff control; server-side future-cutoff validation remains authoritative. Type/lint and latest focused pool suite rerun are in progress. Full browser and native CI remain required before release.
+
+### First-record concurrency and loading correction
+
+- Administrative records created by a first write now start at revision 1; an empty form's expected revision 0 cannot overwrite another newly saved record. Added serialization for absent settings/cost rows where needed and a regression proving stale consent/branch forms fail without changing the first writer's data.
+- Changed brand/page loaders to avoid displaying the previous view as the new view; an acknowledged save followed by a failed refresh remains reported as saved. Adjusted shared forms and compact mobile navigation.
+- Local focused source/provider/background suite: 35 passed. Native CI for cd7ee3 passed roster-qualified final slot and competing editor takeover; its main job passed unit/database, Workflow integration, build, production paint, operations and knowledge checks and is running browser acceptance. Latest revision/loading changes require the next exact-source CI pass.

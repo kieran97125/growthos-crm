@@ -24,16 +24,21 @@ export default function SalesWorkspace({
 }) {
   const [cursor, setCursor] = useState(""),
     url = `/api/companies/${companyId}/sales`,
-    {
-      data = initial,
-      mutate,
-      error,
-    } = useSWR<SalesPage>(
+    { data, mutate, error } = useSWR<SalesPage>(
       url + (cursor ? "?" + cursor : ""),
       engagementFetcher,
       { fallbackData: cursor ? undefined : initial, refreshInterval: 30000 },
     ),
     command = useRecordedCommand(url, () => mutate());
+  if (!data)
+    return (
+      <main className="eng-work">
+        <h1>官網查詢</h1>
+        <p role={error ? "alert" : "status"}>
+          {error?.message ?? "讀取最新資料中…"}
+        </p>
+      </main>
+    );
   return (
     <main className="eng-work">
       <header className="eng-header">

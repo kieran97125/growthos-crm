@@ -10,7 +10,7 @@ create table public.sv_delivery_policies(
 create table public.sv_contact_preferences(
  company_id uuid not null,customer_id text not null,brand_id text not null,channel text not null check(channel in('whatsapp','messenger','instagram')),
  purpose text not null check(purpose in('marketing','service')),allowed boolean not null,source text not null check(length(source) between 1 and 500),
- revision bigint not null default 0,updated_at timestamptz not null default now(),primary key(company_id,customer_id,brand_id,channel,purpose),
+ revision bigint not null default 1,updated_at timestamptz not null default now(),primary key(company_id,customer_id,brand_id,channel,purpose),
  foreign key(company_id,customer_id,brand_id)references public.sv_customer_brands(company_id,customer_id,brand_id)
 );
 create table public.sv_preference_events(

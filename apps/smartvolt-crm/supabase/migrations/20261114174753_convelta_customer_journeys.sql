@@ -3,7 +3,7 @@
 create table public.sv_journeys(
  company_id uuid not null references public.sv_companies(id),id uuid not null,brand_id text not null,name text not null check(length(name)between 1 and 100),
  recipe text not null check(recipe in('unanswered','appointment','completed')),provider text not null check(provider in('whatsapp','meta')),connection_id uuid not null,
- purpose text not null check(purpose in('marketing','service')),enabled boolean not null default false,revision bigint not null default 0,published_version integer not null,
+ purpose text not null check(purpose in('marketing','service')),enabled boolean not null default false,revision bigint not null default 1,published_version integer not null,
  created_by uuid not null,created_at timestamptz not null default now(),primary key(company_id,id)
 );
 create table public.sv_journey_versions(

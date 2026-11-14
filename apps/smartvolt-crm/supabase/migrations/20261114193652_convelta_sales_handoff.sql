@@ -1,5 +1,5 @@
 -- Product Learning Sync checked: Convelta own-site intake only, stable source identity; no inferred channel consent.
-create table public.sv_sales_intake_settings(company_id uuid primary key references public.sv_companies(id),brand_id text not null,enabled boolean not null default false,revision bigint not null default 0,configured_by uuid not null);
+create table public.sv_sales_intake_settings(company_id uuid primary key references public.sv_companies(id),brand_id text not null,enabled boolean not null default false,revision bigint not null default 1,configured_by uuid not null);
 create table public.sv_sales_enquiries(company_id uuid not null references public.sv_companies(id),source_id uuid not null,customer_id text not null,brand_id text not null,reference text not null,source_snapshot jsonb not null,source_created_at timestamptz not null,source_revision bigint not null,status text not null default 'new'check(status in('new','contacted','demo_scheduled','closed')),owner_id uuid,follow_up_at timestamptz,note text not null default ''check(length(note)<=2000),revision bigint not null default 0,primary key(company_id,source_id),foreign key(company_id,customer_id,brand_id)references public.sv_customer_brands(company_id,customer_id,brand_id),foreign key(company_id,owner_id)references public.sv_memberships(company_id,user_id));
 create index sv_sales_enquiries_page on public.sv_sales_enquiries(company_id,source_created_at desc,source_id desc);
 create function smartvolt_private.sales_ingest(p_row jsonb)returns void language plpgsql security invoker set search_path=''as $$
@@ -38,6 +38,7 @@ create function public.sv_sales_action(p_company uuid,p_actor uuid,p_command uui
  else select *into strict e from public.sv_sales_enquiries where company_id=p_company and source_id=(p_data->>'id')::uuid;perform public.sv_member_scope(p_company,p_actor,e.brand_id);end if;
  r=smartvolt_private.action_replay(p_company,p_actor,p_command,'sales:'||p_kind,p_data);if r is not null then return r;end if;
  if p_kind='setting'then
+  perform pg_advisory_xact_lock(hashtextextended('sales-setting:'||p_company,0));
   select revision into rev from public.sv_sales_intake_settings where company_id=p_company for update;if coalesce(rev,0)<>(p_data->>'revision')::bigint then raise exception 'revision_conflict';end if;
   if exists(select 1 from public.sv_sales_enquiries where company_id=p_company)and exists(select 1 from public.sv_sales_intake_settings where company_id=p_company and brand_id<>p_data->>'brandId')then raise exception 'brand_identity_changed';end if;
   insert into public.sv_sales_intake_settings(company_id,brand_id,enabled,configured_by)values(p_company,p_data->>'brandId',(p_data->>'enabled')::boolean,p_actor)on conflict(company_id)do update set enabled=excluded.enabled,brand_id=excluded.brand_id,revision=sv_sales_intake_settings.revision+1;

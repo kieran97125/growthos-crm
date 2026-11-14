@@ -61,7 +61,7 @@ const policy = (extra = {}) =>
     revision: 0,
     ...extra,
   });
-const consent = (id: string, allowed = true, extra = {}) =>
+const consent = async (id: string, allowed = true, extra = {}) =>
   action("preference", {
     customerId: id,
     brandId: "main",
@@ -69,7 +69,12 @@ const consent = (id: string, allowed = true, extra = {}) =>
     purpose: "marketing",
     allowed,
     source: "Synthetic explicit opt-in evidence",
-    revision: 0,
+    revision: Number(
+      await value(
+        "select coalesce((select revision from sv_contact_preferences where company_id=$1 and customer_id=$2 and brand_id='main'and channel='whatsapp'and purpose='marketing'),0)v",
+        [company, id],
+      ),
+    ),
     ...extra,
   });
 const campaign = (id: string, extra = {}) => ({
@@ -1013,7 +1018,7 @@ test("roster applies stable branch, skills, actual shift and leave independently
     leavePeriods: [
       { from: "2026-11-16T09:00:00+08:00", to: "2026-11-16T12:00:00+08:00" },
     ],
-    revision: 0,
+    revision: 1,
   });
   assert.equal(
     await rpc("smartvolt_private.roster_eligible", [
@@ -1373,11 +1378,11 @@ test("feedback requires specific measurement evidence and current source and fen
     [company],
   );
   assert.ok(id);
-  const first = await rpc("sv_feedback_claim", [company, id, 0]);
+  const first = await rpc("sv_feedback_claim", [company, id, 1]);
   assert.equal(first.dispatch, true);
   assert.equal(first.eventName, "Schedule");
   assert.equal(
-    (await rpc("sv_feedback_claim", [company, id, 0])).dispatch,
+    (await rpc("sv_feedback_claim", [company, id, 1])).dispatch,
     false,
   );
   await rpc("sv_feedback_finish", [
@@ -1389,7 +1394,7 @@ test("feedback requires specific measurement evidence and current source and fen
   ]);
   await rpc("sv_feedback_prepare", [company]);
   assert.equal(
-    (await rpc("sv_feedback_claim", [company, id, 0])).dispatch,
+    (await rpc("sv_feedback_claim", [company, id, 1])).dispatch,
     false,
   );
   assert.equal(
@@ -1507,5 +1512,48 @@ test("report campaign paging cannot change whole totals or repeat the previous p
       one.campaigns.slice(0, 30).some((y) => y.id === x.id),
     ),
     false,
+  );
+});
+
+test("first-record revisions reject another writer's stale empty-form submission", async () => {
+  const c = await customer();
+  await consent(c.id);
+  await assert.rejects(
+    action("preference", {
+      customerId: c.id,
+      brandId: "main",
+      channel: "whatsapp",
+      purpose: "marketing",
+      allowed: false,
+      source: "Synthetic stale form",
+      revision: 0,
+    }),
+    /revision_conflict/,
+  );
+  const id = randomUUID(),
+    branch = { id, name: "First saved name", active: true, revision: 0 };
+  await rpc("sv_roster_action", [
+    company,
+    owner,
+    randomUUID(),
+    "branch",
+    JSON.stringify(branch),
+  ]);
+  await assert.rejects(
+    rpc("sv_roster_action", [
+      company,
+      owner,
+      randomUUID(),
+      "branch",
+      JSON.stringify({ ...branch, name: "Stale competing form" }),
+    ]),
+    /revision_conflict/,
+  );
+  assert.equal(
+    await value(
+      "select name v from sv_routing_branches where company_id=$1 and id=$2",
+      [company, id],
+    ),
+    "First saved name",
   );
 });

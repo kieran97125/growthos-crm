@@ -35,7 +35,11 @@ export function useRecordedCommand(
       pending.current = null;
       setFrozen(false);
       setNotice("已儲存。");
-      await onSaved();
+      try {
+        await onSaved();
+      } catch {
+        setNotice("已儲存，暫時未能更新畫面；請重新整理。");
+      }
       return true;
     } catch (e) {
       setError(

@@ -290,7 +290,7 @@ async function main() {
   );
   const withdrawn = await delivery();
   await sql(
-    `select sv_engagement_action(${quote(company)},${quote(owner)},${quote(randomUUID())},'preference',${quote(JSON.stringify({ customerId: withdrawn.customer, brandId: "main", channel: "messenger", purpose: "marketing", allowed: false, source: "Native synthetic withdrawal", revision: 0 }))}::jsonb);`,
+    `select sv_engagement_action(${quote(company)},${quote(owner)},${quote(randomUUID())},'preference',${quote(JSON.stringify({ customerId: withdrawn.customer, brandId: "main", channel: "messenger", purpose: "marketing", allowed: false, source: "Native synthetic withdrawal", revision: 1 }))}::jsonb);`,
   );
   assert.equal((await claim(withdrawn.job)).dispatch, false);
   assert.equal(

@@ -18,17 +18,14 @@ export default function NotificationWorkspace({
     [deviceBusy, setDeviceBusy] = useState(false),
     [deviceError, setDeviceError] = useState(""),
     url = `/api/companies/${companyId}/notifications`,
-    {
-      data = initial,
-      error,
-      mutate,
-    } = useSWR<NotificationPage>(
+    { data, error, mutate } = useSWR<NotificationPage>(
       url + (cursor ? "?" + cursor : ""),
       engagementFetcher,
       { fallbackData: cursor ? undefined : initial, refreshInterval: 30000 },
     ),
     c = useRecordedCommand(url, () => mutate());
   async function enable() {
+    if (!data) return;
     setDeviceBusy(true);
     setDeviceError("");
     try {
@@ -85,6 +82,15 @@ export default function NotificationWorkspace({
       setDeviceBusy(false);
     }
   }
+  if (!data)
+    return (
+      <main className="eng-work">
+        <h1>C 提醒</h1>
+        <p role={error ? "alert" : "status"}>
+          {error?.message ?? "讀取最新資料中…"}
+        </p>
+      </main>
+    );
   return (
     <main className="eng-work">
       <header className="eng-header">

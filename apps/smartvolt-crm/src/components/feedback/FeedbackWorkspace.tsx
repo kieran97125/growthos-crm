@@ -30,11 +30,7 @@ export default function FeedbackWorkspace({
     ),
     [cursor, setCursor] = useState(""),
     url = `/api/companies/${companyId}/meta-feedback`,
-    {
-      data = initial,
-      error,
-      mutate,
-    } = useSWR<FeedbackPage>(
+    { data, error, mutate } = useSWR<FeedbackPage>(
       url +
         "?brand=" +
         encodeURIComponent(brand) +
@@ -47,7 +43,16 @@ export default function FeedbackWorkspace({
       },
     ),
     c = useRecordedCommand(url, () => mutate()),
-    setting = data.settings.find((s) => s.brandId === brand);
+    setting = data?.settings.find((s) => s.brandId === brand);
+  if (!data)
+    return (
+      <main className="eng-work">
+        <h1>Meta 成效回傳</h1>
+        <p role={error ? "alert" : "status"}>
+          {error?.message ?? "讀取最新資料中…"}
+        </p>
+      </main>
+    );
   return (
     <main className="eng-work">
       <header className="eng-header">

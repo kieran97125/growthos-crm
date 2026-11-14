@@ -1052,3 +1052,204 @@ test("roster applies stable branch, skills, actual shift and leave independently
     /brand_scope/,
   );
 });
+
+test("notification feed deduplicates facts, snoozes and finishes reminders independently of source tasks", async () => {
+  const c = await customer(),
+    id = randomUUID();
+  await db.query(
+    "insert into sv_followup_tasks(company_id,id,customer_id,brand_id,provider,thread_id,title,due_at,owner_id,source_key)values($1,$2,$3,'main','whatsapp',$4,'Real due follow-up',now()-interval '1 hour',$5,$6)",
+    [company, id, c.id, c.thread, owner, "synthetic:" + id],
+  );
+  const read = () =>
+    rpc<{
+      rows: { id: string; title: string; revision: number }[];
+      total: number;
+    }>("sv_notification_read", [company, owner]);
+  const first = await read(),
+    n = first.rows.find((n) => n.title === "Real due follow-up")!;
+  assert.ok(n);
+  assert.equal((await read()).total, first.total);
+  const cmd = randomUUID(),
+    data = {
+      id: n.id,
+      revision: n.revision,
+      until: new Date(Date.now() + 3600000).toISOString(),
+    };
+  await rpc("sv_notification_action", [
+    company,
+    owner,
+    cmd,
+    "snooze",
+    JSON.stringify(data),
+  ]);
+  await rpc("sv_notification_action", [
+    company,
+    owner,
+    cmd,
+    "snooze",
+    JSON.stringify(data),
+  ]);
+  assert.equal(
+    (await read()).rows.some((x) => x.id === n.id),
+    false,
+  );
+  await rpc("sv_notification_action", [
+    company,
+    owner,
+    randomUUID(),
+    "done",
+    JSON.stringify({ id: n.id, revision: n.revision + 1 }),
+  ]);
+  assert.equal(
+    await value(
+      "select status v from sv_followup_tasks where company_id=$1 and id=$2",
+      [company, id],
+    ),
+    "open",
+  );
+  await assert.rejects(
+    rpc("sv_notification_action", [
+      company,
+      outsider,
+      randomUUID(),
+      "done",
+      JSON.stringify({ id: n.id, revision: 1 }),
+    ]),
+    /access_denied/,
+  );
+});
+test("push admission checks current facts and device ownership and never retries an unknown attempt", async () => {
+  const c = await customer(),
+    id = randomUUID();
+  await db.query(
+    "insert into sv_followup_tasks(company_id,id,customer_id,brand_id,provider,thread_id,title,due_at,owner_id,source_key)values($1,$2,$3,'main','whatsapp',$4,'Push fixture',now(),$5,$6)",
+    [company, id, c.id, c.thread, owner, "push:" + id],
+  );
+  await rpc("sv_notification_sync", [company, owner]);
+  await rpc("sv_notification_action", [
+    company,
+    owner,
+    randomUUID(),
+    "preferences",
+    JSON.stringify({
+      revision: 0,
+      data: {
+        assignment: true,
+        followup: true,
+        sla: true,
+        push: true,
+        quietStart: 0,
+        quietEnd: 0,
+      },
+    }),
+  ]);
+  await rpc("sv_notification_action", [
+    company,
+    owner,
+    randomUUID(),
+    "device",
+    JSON.stringify({
+      endpoint: "https://fcm.googleapis.com/synthetic-only/" + randomUUID(),
+      p256dh: "synthetic",
+      auth: "synthetic",
+      label: "Synthetic",
+    }),
+  ]);
+  const first = await rpc<{ notificationId: string; deviceId: string }[]>(
+    "sv_push_claim",
+    [company, owner],
+  );
+  assert.ok(first.length);
+  assert.equal(
+    (await rpc<unknown[]>("sv_push_claim", [company, owner])).length,
+    0,
+  );
+  const a = first[0];
+  await rpc("sv_push_finish", [
+    company,
+    owner,
+    a.notificationId,
+    a.deviceId,
+    "unknown",
+    "synthetic_unknown",
+    false,
+  ]);
+  assert.equal(
+    (await rpc<unknown[]>("sv_push_claim", [company, owner])).length,
+    0,
+  );
+  await rpc("sv_notification_action", [
+    company,
+    owner,
+    randomUUID(),
+    "revoke",
+    JSON.stringify({ id: a.deviceId }),
+  ]);
+  assert.equal(
+    await value(
+      "select active v from sv_push_devices where company_id=$1 and id=$2",
+      [company, a.deviceId],
+    ),
+    false,
+  );
+});
+test("own-site handoff preserves source IDs, excludes tests and does not overwrite edited customers or infer channel consent", async () => {
+  await db.exec(
+    "reset role;create schema website_private;create table website_private.intake_settings(singleton boolean,company_id uuid,active boolean);create table website_private.enquiries(id uuid,company_id uuid,name text,phone text,email text,reference text,message text,interest text,consent_version text,marketing_consent boolean,created_at timestamptz,revision bigint,is_test boolean);grant usage on schema website_private to service_role;grant all on all tables in schema website_private to service_role;create trigger synthetic_intake after insert or update on website_private.enquiries for each row execute function smartvolt_private.sales_trigger();set role service_role;",
+  );
+  await db.query(
+    "insert into website_private.intake_settings values(true,$1,true)",
+    [company],
+  );
+  const id = randomUUID();
+  for (const isTest of [false, true])
+    await db.query(
+      "insert into website_private.enquiries values($1,$2,'Web customer','+85260000001','synthetic@example.invalid',$3,'Actual enquiry','crm','fixture-v1',true,now(),1,$4)",
+      [isTest ? randomUUID() : id, company, "CV-" + randomUUID(), isTest],
+    );
+  await rpc("sv_sales_action", [
+    company,
+    owner,
+    randomUUID(),
+    "setting",
+    JSON.stringify({ brandId: "main", enabled: true, revision: 0 }),
+  ]);
+  assert.equal(
+    await value(
+      "select count(*)v from sv_sales_enquiries where company_id=$1",
+      [company],
+    ),
+    1,
+  );
+  await db.query(
+    "update sv_customers set name='Manually edited'where company_id=$1 and id=$2",
+    [company, "website:" + id],
+  );
+  await rpc("sv_sales_catchup", [company]);
+  assert.equal(
+    await value(
+      "select name v from sv_customers where company_id=$1 and id=$2",
+      [company, "website:" + id],
+    ),
+    "Manually edited",
+  );
+  assert.equal(
+    await value(
+      "select count(*)v from sv_contact_preferences where company_id=$1 and customer_id=$2",
+      [company, "website:" + id],
+    ),
+    0,
+  );
+  assert.equal(
+    await value(
+      "select count(*)v from sv_customer_threads where company_id=$1 and customer_id=$2",
+      [company, "website:" + id],
+    ),
+    0,
+  );
+  const denied = await rpc<{ rows: unknown[] }>("sv_sales_read", [
+    company,
+    agent,
+  ]);
+  assert.equal(denied.rows.length, 0);
+});

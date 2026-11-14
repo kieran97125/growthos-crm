@@ -715,3 +715,23 @@
     padding: 24px 18px;
   }
 }
+
+.cq-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  color: #344966;
+  border: 1px solid #d9e3ef;
+  border-radius: 10px;
+  text-decoration: none;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.cq-tool:hover {
+  background: #edf4ff;
+}
+.cq-tool:focus-visible {
+  outline: 2px solid #3468ce;
+  outline-offset: 3px;
+}

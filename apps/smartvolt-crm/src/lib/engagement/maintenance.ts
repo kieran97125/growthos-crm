@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { database } from "@/lib/saas/database";
 import { checked } from "./runtime";
+import { dispatchNotifications } from "@/lib/notifications/runtime";
 import { wakeDelivery } from "./scheduler";
 export function validCronAuthorization(value: string | null) {
   const secret = process.env.CRON_SECRET;
@@ -16,11 +17,30 @@ export async function maintenance() {
   const companies = r.data as string[];
   let completed = 0,
     failed = 0;
+  const deadline = Date.now() + 220000;
   for (const company of companies) {
+    if (Date.now() > deadline) break;
     try {
       const caught = await db.rpc("sv_journey_catchup", { p_company: company });
       checked(caught.error);
       await wakeDelivery(company);
+      checked((await db.rpc("sv_sales_catchup", { p_company: company })).error);
+      const members = await db.rpc("sv_notification_members", {
+        p_company: company,
+      });
+      checked(members.error);
+      for (const actor of members.data as string[]) {
+        if (Date.now() > deadline) break;
+        checked(
+          (
+            await db.rpc("sv_notification_sync", {
+              p_company: company,
+              p_actor: actor,
+            })
+          ).error,
+        );
+        await dispatchNotifications(company, actor);
+      }
       completed++;
     } catch {
       failed++;

@@ -590,6 +590,15 @@ export function CopilotProvider({
                 <X size={19} />
               </button>
             </header>
+            {context.product === "crm" && (
+              <Link
+                className="cc-status"
+                href={`/company/${companyId}/crm/notifications`}
+                onClick={() => setOpen(false)}
+              >
+                查看跟進提醒 →
+              </Link>
+            )}
             <Suspense fallback={<p className="cc-status">正在開啟 C…</p>}>
               <Surface compact />
             </Suspense>

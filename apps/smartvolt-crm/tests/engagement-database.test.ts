@@ -1,0 +1,80 @@
+import {before,after,test}from "node:test";
+import assert from "node:assert/strict";
+import {randomUUID}from "node:crypto";
+import {readFileSync,readdirSync}from "node:fs";
+import {PGlite}from "@electric-sql/pglite";
+import {createCompanyState}from "../src/lib/saas/workspace";
+const db=new PGlite(),company=randomUUID(),foreign=randomUUID(),owner=randomUUID(),outsider=randomUUID(),agent=randomUUID(),connection=randomUUID();
+async function value<T=any>(sql:string,args:unknown[]=[]):Promise<T>{return(await db.query<{v:T}>(sql,args)).rows[0]?.v;}
+const rpc=<T=any>(fn:string,args:unknown[])=>value<T>(`select ${fn}(${args.map((_,i)=>`$${i+1}`).join(",")})v`,args);
+const action=(kind:string,data:object,actor=owner,command=randomUUID(),tenant=company)=>rpc("sv_engagement_action",[tenant,actor,command,kind,JSON.stringify(data)]);
+async function customer(){
+ const contact=randomUUID(),thread=randomUUID();
+ await db.query("insert into sv_wa_contacts(id,company_id,display_name)values($1,$2,'Test name')",[contact,company]);
+ await db.query("insert into sv_wa_conversations(id,company_id,connection_id,contact_id,brand_id,remote_id,remote_kind,last_message_at,last_inbound_at)values($1,$2,$3,$4,'main',$5,'bsuid',$6,$6)",[thread,company,connection,contact,"synthetic-"+thread,Date.now()]);
+ const id=await value<string>("select customer_id v from sv_customer_threads where company_id=$1 and thread_id=$2",[company,thread]);return {id,thread};
+}
+const policy=(extra={})=>action("policy",{marketingEnabled:true,quietStart:0,quietEnd:0,frequencyHours:72,dailyLimit:1000,minuteLimit:100,revision:0,...extra});
+const consent=(id:string,allowed=true,extra={})=>action("preference",{customerId:id,brandId:"main",channel:"whatsapp",purpose:"marketing",allowed,source:"Synthetic explicit opt-in evidence",revision:0,...extra});
+const campaign=(id:string,extra={})=>({id:randomUUID(),brandId:"main",provider:"whatsapp",connectionId:connection,name:"Synthetic campaign",purpose:"marketing",definition:{kind:"text",body:"Hello {{name}}",values:[]},audience:{customer:id},dueAt:new Date().toISOString(),...extra});
+async function job(source:string){return value<string>("select id v from sv_delivery_jobs where company_id=$1 and source_id=$2",[company,source]);}
+async function state(id:string){return value<{state:string;reason:string}>("select jsonb_build_object('state',state,'reason',reason)v from sv_delivery_jobs where company_id=$1 and id=$2",[company,id]);}
+before(async()=>{
+ await db.exec("create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create table auth.users(id uuid primary key);create function auth.uid()returns uuid language sql as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;grant usage on schema auth,public to authenticated,service_role;alter default privileges in schema public grant all on tables to service_role;");
+ for(const f of readdirSync("supabase/migrations").filter(f=>f.endsWith(".sql")).sort())await db.exec(readFileSync("supabase/migrations/"+f,"utf8"));
+ for(const user of [owner,outsider,agent])await db.query("insert into auth.users values($1)",[user]);await db.exec("set role service_role");
+ for(const [id,user]of [[company,owner],[foreign,outsider]])await rpc("sv_provision_company",[id,"Synthetic",user,"Owner",JSON.stringify(createCompanyState({companyId:id,companyName:"Synthetic",brands:[{id:"main",name:"Main",short:"M"},{id:"other",name:"Other",short:"O"}],team:[{id:user,name:"Owner",initials:"O"}]})),["crm","pos"]]);
+ await db.query("insert into sv_memberships(company_id,user_id,role,display_name,brand_ids,product_ids)values($1,$2,'manager','Scoped',array['other'],array['crm'])",[company,agent]);
+ await db.query("insert into sv_wa_connections(id,company_id,brand_id,app_id,account_id,phone_number_id,encrypted_credentials,verify_token_hash,state,webhook_verified_at)values($1,$2,'main','800001','800002','800003','{\"synthetic\":true}',$3,'active',now())",[connection,company,"a".repeat(64)]);
+ await policy();
+});
+after(()=>db.close());
+test("queue snapshots one recipient and renders the actual customer name",async()=>{
+ const c=await customer();await consent(c.id);const data=campaign(c.id),command=randomUUID();const r=await action("campaign",data,owner,command);assert.equal(r.recipients,1);
+ assert.deepEqual(await action("campaign",data,owner,command),r);
+ assert.equal(await value("select count(*)v from sv_delivery_jobs where source_id=$1",[data.id]),1);
+ const id=await job(data.id);assert.equal(await value("select payload->>'body'v from sv_delivery_jobs where id=$1",[id]),"Hello Test name");
+ const claim=await rpc("sv_delivery_claim",[company,id]);assert.equal(claim.dispatch,true);
+ assert.equal((await rpc("sv_delivery_claim",[company,id])).dispatch,false);
+ await rpc("sv_delivery_finish",[company,id,"ambiguous",null,"delivery_unknown"]);
+ assert.equal((await state(id)).state,"unknown");assert.equal((await rpc("sv_delivery_claim",[company,id])).dispatch,false);
+});
+test("missing opt-in skips with a factual recipient reason",async()=>{
+ const c=await customer(),data=campaign(c.id);await action("campaign",data);const id=await job(data.id);assert.equal((await rpc("sv_delivery_claim",[company,id])).dispatch,false);assert.equal((await state(id)).reason,"consent_missing");
+});
+test("withdrawal cancels scheduled jobs and retains immutable consent evidence",async()=>{
+ const c=await customer();await consent(c.id);const data=campaign(c.id);await action("campaign",data);await consent(c.id,false);
+ const id=await job(data.id);assert.equal((await state(id)).state,"cancelled");assert.equal((await rpc("sv_delivery_claim",[company,id])).dispatch,false);
+ await assert.rejects(db.query("update sv_preference_events set allowed=true where customer_id=$1",[c.id]),/permission denied|immutable/);
+});
+test("campaign cancellation does not revoke an already admitted attempt",async()=>{
+ const c=await customer();await consent(c.id);const data=campaign(c.id);await action("campaign",data);const id=await job(data.id);await rpc("sv_delivery_claim",[company,id]);await action("cancel",{id:data.id});assert.equal((await state(id)).state,"dispatching");
+});
+test("closed reply window blocks free text even with consent",async()=>{
+ const c=await customer();await consent(c.id);await db.query("update sv_wa_conversations set last_inbound_at=0 where id=$1",[c.thread]);const data=campaign(c.id);await action("campaign",data);const id=await job(data.id);await rpc("sv_delivery_claim",[company,id]);assert.equal((await state(id)).reason,"window_closed");
+});
+test("fresh current authority is required at send and cached command replay",async()=>{
+ const c=await customer();await consent(c.id);await db.query("update sv_memberships set brand_ids=array['main']where company_id=$1 and user_id=$2",[company,agent]);const data=campaign(c.id),cmd=randomUUID();await action("campaign",data,agent,cmd);
+ await db.query("update sv_memberships set brand_ids=array['other']where company_id=$1 and user_id=$2",[company,agent]);
+ await assert.rejects(action("campaign",data,agent,cmd),/brand_scope/);const id=await job(data.id);await rpc("sv_delivery_claim",[company,id]);assert.equal((await state(id)).reason,"authority_changed");
+ await assert.rejects(action("campaign",data,outsider),/access_denied/);
+});
+test("official template must be approved, unchanged and freshly synchronized",async()=>{
+ const c=await customer();await consent(c.id);await db.query("update sv_wa_conversations set last_inbound_at=0 where id=$1",[c.thread]);
+ const definition={kind:"template",name:"synthetic_offer",locale:"en",fingerprint:"a".repeat(64),body:"Synthetic template",values:[]};const data=campaign(c.id,{definition});await action("campaign",data);const id=await job(data.id);await rpc("sv_delivery_claim",[company,id]);assert.equal((await state(id)).reason,"template_changed");
+ await rpc("sv_templates_store",[company,connection,JSON.stringify({synthetic:true}),JSON.stringify([{name:definition.name,language:"en",fingerprint:definition.fingerprint,status:"APPROVED",category:"MARKETING",supported:true}])]);
+ const next=campaign(c.id,{definition});await action("campaign",next);assert.equal((await rpc("sv_delivery_claim",[company,await job(next.id)])).dispatch,true);
+});
+test("full results totals are computed before keyset pagination",async()=>{
+ const r=await rpc("sv_engagement_read",[company,owner,JSON.stringify({})]);assert.ok(r.campaigns.length>=6);const id=r.campaigns[0].id;const result=await rpc("sv_engagement_read",[company,owner,JSON.stringify({campaign:id})]);assert.equal(result.resultTotal,1);assert.equal(result.results.length,1);
+ const restricted=await rpc("sv_engagement_read",[company,agent,"{}"]);assert.equal(restricted.campaigns.length,0);assert.equal(restricted.connections.length,0);
+});
+test("scheduler recovers with a new generation and fences an old run",async()=>{
+ const c=await customer();const data=campaign(c.id,{dueAt:new Date(Date.now()+3600000).toISOString()});await action("campaign",data);
+ const first=await rpc("sv_delivery_scheduler",[company,"wake"]);assert.equal(first.start,true);const again=await rpc("sv_delivery_scheduler",[company,"wake"]);assert.equal(again.start,false);
+ await db.query("update sv_delivery_schedulers set lease_until='epoch'where company_id=$1",[company]);const next=await rpc("sv_delivery_scheduler",[company,"wake"]);assert.equal(next.generation,first.generation+1);
+ assert.equal((await rpc("sv_delivery_scheduler",[company,"tick",first.generation,first.token])).active,false);
+});
+test("browser roles have no raw-table or execution-RPC privileges",async()=>{
+ for(const role of ["anon","authenticated"]){assert.equal(await value("select has_table_privilege($1,'sv_delivery_jobs','select')v",[role]),false);assert.equal(await value("select has_function_privilege($1,'sv_delivery_claim(uuid,uuid)','execute')v",[role]),false);}
+});

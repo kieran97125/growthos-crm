@@ -303,3 +303,19 @@ export async function inspectPhoneNumber(
       : null,
   };
 }
+
+/** Approved template, using the same one-attempt transport as ordinary replies. */
+export async function sendTemplate(
+  input: GraphCredentials & {to:WaIdentity;name:string;locale:string;components:unknown[];opaqueCallbackData:string;messagingAccountId?:string},
+  fetchImpl:typeof fetch=fetch,
+):Promise<WaSendResult>{
+  if(!validCredentials(input)||!buildTextPayload({...input,text:"template"})||!/^\w{1,512}$/.test(input.name)||!/^\w{2,20}$/.test(input.locale))return failure("invalid_request","definitive");
+  const identity=input.to.kind==="phone"?{to:input.to.id}:{recipient:input.to.id};
+  const reply=await request(input,{method:"POST",body:JSON.stringify({messaging_product:"whatsapp",recipient_type:"individual",...identity,type:"template",template:{name:input.name,language:{code:input.locale},components:input.components},biz_opaque_callback_data:input.opaqueCallbackData,...(input.messagingAccountId?{messaging_account_id:input.messagingAccountId}:{})})},fetchImpl,GRAPH_TIMEOUT_MS);
+  if("ok"in reply)return reply;
+  if(!reply.response.ok)return graphFailure(reply.response.status,reply.data);
+  const data=reply.data;
+  const first=isRecord(data)&&Array.isArray(data.messages)&&isRecord(data.messages[0])?data.messages[0]:null;
+  if(!first||!safeString(first.id,512)||!isRecord(data)||data.error)return failure("provider_response_invalid","ambiguous");
+  return {ok:true,accepted:true,providerId:first.id};
+}

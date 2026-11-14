@@ -17,6 +17,7 @@ import type {
   WaSendResponse,
 } from "@/lib/whatsapp/responses";
 import WhatsAppInboxView, { type PendingSend } from "./WhatsAppInboxView";
+import { useReplyLease } from "@/components/operations/useReplyLease";
 import {
   isForeground,
   serviceWindowOpen,
@@ -145,6 +146,12 @@ export default function WhatsAppInbox({
   const newestSeq = useRef(0);
   const messageRequests = useRef(new Set<string>());
   const selected = conversations.find((c) => c.id === selectedId) ?? null;
+  const replyLease = useReplyLease(
+    companyId,
+    "whatsapp",
+    selectedId ?? undefined,
+    canSend,
+  );
 
   const loadConnections = useCallback(async () => {
     try {
@@ -387,6 +394,14 @@ export default function WhatsAppInbox({
     if (!current || !canSend || sendLocks.current.has(current.id)) return;
     const saved = pending[current.id];
     const draft = drafts[current.id] || "";
+    const editorToken =
+      retry && saved ? saved.editorToken : await replyLease.acquire();
+    if (
+      !editorToken ||
+      selectedRef.current !== current.id ||
+      sendLocks.current.has(current.id)
+    )
+      return;
     const attempt: PendingSend | null =
       retry && saved
         ? { ...saved, revision: current.revision, phase: "sending" }
@@ -396,6 +411,7 @@ export default function WhatsAppInbox({
             Array.from(draft).length <= 4096
           ? {
               clientId: crypto.randomUUID(),
+              editorToken,
               body: draft.trim(),
               ...(quotes[current.id]
                 ? { replyTo: quotes[current.id]!.id }
@@ -419,6 +435,7 @@ export default function WhatsAppInbox({
               body: attempt.body,
               replyTo: attempt.replyTo,
               revision: attempt.revision,
+              editorToken: attempt.editorToken,
             }),
           },
         ),
@@ -495,6 +512,8 @@ export default function WhatsAppInbox({
       companyId={companyId}
       companyName={companyName}
       canSend={canSend}
+      editor={replyLease}
+      onBeginReply={() => void replyLease.acquire()}
       canManage={canManage}
       connections={connections}
       conversations={visible}
@@ -519,6 +538,7 @@ export default function WhatsAppInbox({
       onSelect={selectConversation}
       onBack={() => selectConversation(null)}
       onDraft={(value) => {
+        replyLease.touch();
         if (selectedId) setDrafts((old) => ({ ...old, [selectedId]: value }));
       }}
       onQuote={(message) => {

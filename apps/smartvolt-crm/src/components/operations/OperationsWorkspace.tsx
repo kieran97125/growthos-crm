@@ -125,6 +125,14 @@ export default function OperationsWorkspace({
           </h1>
         </div>
         <div className="co-heading-actions">
+          {page?.canManage && (
+            <Link
+              href={`/company/${companyId}/crm/supervision`}
+              className="co-secondary"
+            >
+              主管工作台 <ArrowUpRight size={15} />
+            </Link>
+          )}
           <Link href={`/company/${companyId}/crm`} className="co-secondary">
             開啟收件匣 <ArrowUpRight size={15} />
           </Link>

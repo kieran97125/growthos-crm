@@ -62,7 +62,7 @@ export const sendInput = z
     revision,
     body: messageBody,
     replyTo: uuid.optional(),
-    editorToken: uuid.optional(),
+    editorToken: uuid,
   })
   .strict();
 export const commandInput = z

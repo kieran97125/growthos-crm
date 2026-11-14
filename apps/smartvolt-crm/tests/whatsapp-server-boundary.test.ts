@@ -124,6 +124,7 @@ test("a full 4096-character astral reply fits the bounded JSON request with its 
     clientId: "d1bfd800-4e9b-4b27-8c92-160c0161358b",
     revision: 3,
     replyTo: "ed7ab656-3445-43d8-b94a-0c83eb7376cd",
+    editorToken: "a8521d90-4b13-43df-9f01-8cd4af82bb18",
     body: "🙂".repeat(4096),
   };
   const encoded = JSON.stringify(intent);
@@ -145,12 +146,18 @@ test("commands accept local UUIDs only and callers cannot supply a recipient or 
     clientId: "d1bfd800-4e9b-4b27-8c92-160c0161358b",
     revision: 3,
   };
+  const sendBase = {
+    ...base,
+    editorToken: "a8521d90-4b13-43df-9f01-8cd4af82bb18",
+  };
+  assert.equal(sendInput.safeParse({ ...base, body: "你好" }).success, false);
   assert.equal(
-    sendInput.safeParse({ ...base, body: "你好", to: "85212345678" }).success,
+    sendInput.safeParse({ ...sendBase, body: "你好", to: "85212345678" })
+      .success,
     false,
   );
   assert.equal(
-    sendInput.safeParse({ ...base, body: " ", replyTo: "wamid.private" })
+    sendInput.safeParse({ ...sendBase, body: " ", replyTo: "wamid.private" })
       .success,
     false,
   );

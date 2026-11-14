@@ -728,3 +728,158 @@ test("a utility template outside the text window requires the exact current edit
   const id = await job(data.id);
   assert.equal((await rpc("sv_delivery_claim", [company, id])).dispatch, true);
 });
+
+test("working-hour deadlines skip weekends and holidays and preserve real DST duration", async () => {
+  const p = {
+    timeZone: "Asia/Hong_Kong",
+    hoursEnabled: true,
+    responseMinutes: 15,
+    weekly: [1, 2, 3, 4, 5].map((day) => ({ day, start: 540, end: 1080 })),
+    holidays: ["2026-11-16"],
+  };
+  const from = "2026-11-13T17:55:00+08:00",
+    to = "2026-11-17T09:10:00+08:00";
+  assert.equal(
+    await value("select smartvolt_private.work_minutes($1,$2,$3)::float8 v", [
+      from,
+      to,
+      JSON.stringify(p),
+    ]),
+    15,
+  );
+  const due = await value<string>(
+    "select smartvolt_private.work_due($1,15,$2)::text v",
+    [from, JSON.stringify(p)],
+  );
+  assert.equal(Date.parse(due), Date.parse(to));
+  const dst = {
+    ...p,
+    timeZone: "America/New_York",
+    weekly: [{ day: 7, start: 0, end: 240 }],
+    holidays: [],
+  };
+  assert.equal(
+    await value("select smartvolt_private.work_minutes($1,$2,$3)::float8 v", [
+      "2026-11-01T00:00:00-04:00",
+      "2026-11-01T04:00:00-05:00",
+      JSON.stringify(dst),
+    ]),
+    300,
+  );
+});
+test("supervision measures actual accepted human replies, ignores notes, and freezes office-hour policy", async () => {
+  const c = await customer();
+  await incoming(c.thread);
+  const p = await value<{
+    policy: { responseMinutes: number };
+    response_due_at: string;
+  }>(
+    "select jsonb_build_object('policy',policy,'response_due_at',response_due_at)v from sv_sla_episodes where company_id=$1 and thread_id=$2 order by started_at desc limit 1",
+    [company, c.thread],
+  );
+  const newPolicy = (await value(
+    "select smartvolt_private.sla_default()v",
+  )) as Record<string, unknown>;
+  await rpc("sv_sla_policy_action", [
+    company,
+    owner,
+    randomUUID(),
+    "main",
+    0,
+    JSON.stringify({ ...newPolicy, responseMinutes: 90 }),
+  ]);
+  assert.equal(
+    await value(
+      "select (policy->>'responseMinutes')::integer v from sv_sla_episodes where company_id=$1 and thread_id=$2",
+      [company, c.thread],
+    ),
+    p.policy.responseMinutes,
+  );
+  await db.query(
+    "insert into sv_wa_messages(company_id,connection_id,conversation_id,fingerprint,direction,body,message_type,provider_at,author_id,author_name,state)values($1,$2,$3,$4,'note','Note','text',$5,$6,'Owner','accepted')",
+    [company, connection, c.thread, "c".repeat(64), Date.now(), owner],
+  );
+  assert.equal(
+    await value(
+      "select first_human_at is null v from sv_sla_episodes where company_id=$1 and thread_id=$2",
+      [company, c.thread],
+    ),
+    true,
+  );
+  await db.query(
+    "insert into sv_wa_messages(company_id,connection_id,conversation_id,client_id,fingerprint,direction,body,message_type,provider_at,author_id,author_name,state)values($1,$2,$3,$4,$5,'outgoing','Human','text',$6,$7,'Owner','accepted')",
+    [
+      company,
+      connection,
+      c.thread,
+      randomUUID(),
+      "d".repeat(64),
+      Date.now(),
+      owner,
+    ],
+  );
+  assert.equal(
+    await value(
+      "select first_human_at is not null and human_actor=$3 v from sv_sla_episodes where company_id=$1 and thread_id=$2",
+      [company, c.thread, owner],
+    ),
+    true,
+  );
+  await incoming(c.thread);
+  assert.equal(
+    await value(
+      "select count(*)v from sv_sla_episodes where company_id=$1 and thread_id=$2",
+      [company, c.thread],
+    ),
+    2,
+  );
+  assert.equal(
+    await value(
+      "select (policy->>'responseMinutes')::integer v from sv_sla_episodes where company_id=$1 and thread_id=$2 order by started_at desc limit 1",
+      [company, c.thread],
+    ),
+    90,
+  );
+  const r = await rpc<{
+    metrics: { pending: number };
+    queue: unknown[];
+    coverageFrom: string;
+  }>("sv_supervision_read", [
+    company,
+    owner,
+    "main",
+    null,
+    null,
+    "2026-01-01",
+    "2026-12-31",
+  ]);
+  assert.ok(r.metrics.pending > 0);
+  assert.ok(r.coverageFrom);
+  assert.ok(r.queue.length);
+  const restricted = await rpc<{
+    queue: unknown[];
+    metrics: { pending: number };
+  }>("sv_supervision_read", [
+    company,
+    agent,
+    "other",
+    null,
+    null,
+    "2026-01-01",
+    "2026-12-31",
+  ]);
+  assert.equal(restricted.metrics.pending, 0);
+  assert.equal(restricted.queue.length, 0);
+  await assert.rejects(
+    rpc("sv_supervision_read", [
+      company,
+      agent,
+      "main",
+      null,
+      null,
+      "2026-01-01",
+      "2026-12-31",
+    ]),
+    /brand_scope/,
+  );
+});

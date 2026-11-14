@@ -45,7 +45,10 @@ export function workspaceLocation(
   )
     section = "settings";
   else if (relative === "/crm/customers") section = "customers";
-  else if (relative === "/crm/operations") section = "operations";
+  else if (
+    ["/crm/operations", "/crm/supervision", "/crm/reports"].includes(relative)
+  )
+    section = "operations";
   else if (relative === "/crm/messaging") section = "broadcasts";
   else if (relative === "/crm/journeys") section = "flows";
   else if (relative === "/crm/ai" || relative === "/copilot") section = "ai";

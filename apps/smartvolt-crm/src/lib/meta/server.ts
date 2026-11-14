@@ -50,7 +50,7 @@ export const metaAction = z.discriminatedUnion("action", [
       clientId: uuid,
       revision: z.number().int().min(0),
       body: bodySchema,
-      editorToken: uuid.optional(),
+      editorToken: uuid,
     })
     .strict(),
   z.object({ action: z.enum(["resolve", "reopen"]), threadId: uuid }).strict(),

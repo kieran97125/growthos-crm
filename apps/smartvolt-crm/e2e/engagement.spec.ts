@@ -212,7 +212,9 @@ async function compose(page: Page) {
   await expect(dialog.locator(".eng-audience strong")).toContainText("3");
   await dialog.getByRole("button", { name: "下一步" }).click();
   await dialog.getByLabel("推播名稱").fill("November members");
-  await dialog.getByLabel("WhatsApp 官方模板").selectOption("90001");
+  await dialog
+    .getByLabel("官方模板", { exact: true })
+    .selectOption("a".repeat(64));
   await dialog.getByLabel("內容欄位 1").fill("{{name}}");
   await dialog.getByRole("button", { name: "下一步" }).click();
   return dialog;

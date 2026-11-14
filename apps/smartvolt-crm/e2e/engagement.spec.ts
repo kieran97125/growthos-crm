@@ -215,8 +215,8 @@ async function compose(page: Page) {
   await dialog.getByRole("button", { name: "下一步" }).click();
   await dialog.getByLabel("推播名稱").fill("November members");
   await dialog
-    .getByRole("combobox", { name: "官方模板", exact: true })
-    .selectOption("a".repeat(64));
+    .getByRole("combobox", { name: "WhatsApp 官方模板", exact: true })
+    .selectOption({ label: "synthetic_offer · en" });
   await dialog.getByLabel("內容欄位 1").fill("{{name}}");
   await dialog.getByRole("button", { name: "下一步" }).click();
   return dialog;

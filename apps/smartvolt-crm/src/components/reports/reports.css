@@ -1,0 +1,86 @@
+.report-metrics {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+.report-metrics strong {
+  font-size: clamp(24px, 2.4vw, 36px);
+}
+.report-panel {
+  margin: 22px 0;
+  padding: 22px;
+  border: 1px solid #dce5f0;
+  border-radius: 18px;
+  background: #fff;
+  min-width: 0;
+}
+.report-panel h2 {
+  font-size: 17px;
+  margin: 0 0 18px;
+  color: #203953;
+}
+.report-table {
+  overflow: auto;
+  max-width: 100%;
+}
+.report-panel table,
+.eng-details table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 13px;
+  text-align: left;
+}
+.report-panel th,
+.report-panel td,
+.eng-details th,
+.eng-details td {
+  padding: 12px 10px;
+  border-bottom: 1px solid #e4eaf3;
+  vertical-align: top;
+}
+.report-panel thead,
+.eng-details thead {
+  background: #f1f5fb;
+  color: #435672;
+}
+.report-panel caption {
+  padding: 8px;
+  text-align: left;
+  color: #506480;
+}
+.report-panel details {
+  margin-top: 12px;
+}
+.report-chart {
+  width: 100%;
+  height: 280px;
+  min-width: 0;
+}
+.report-panel input {
+  min-width: 160px;
+}
+.report-panel fieldset {
+  border: 0;
+  margin: 10px 0;
+  padding: 0;
+}
+.report-panel code,
+.eng-details code {
+  overflow-wrap: anywhere;
+  font-size: 11px;
+}
+@media (max-width: 900px) {
+  .report-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .report-panel {
+    padding: 15px;
+  }
+  .report-metrics article:last-child {
+    grid-column: 1/-1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .report-chart * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

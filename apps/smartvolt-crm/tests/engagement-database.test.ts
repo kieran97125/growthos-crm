@@ -1253,3 +1253,60 @@ test("own-site handoff preserves source IDs, excludes tests and does not overwri
   ]);
   assert.equal(denied.rows.length, 0);
 });
+
+test("reports use the complete scoped source before pagination and hide POS money from CRM-only managers", async () => {
+  const c = await customer(),
+    booking = randomUUID(),
+    at = new Date(Date.now() + 86400000).toISOString();
+  await db.query(
+    "insert into sv_booking_requests(company_id,id,customer_id,brand_id,provider,thread_id,service,desired_at,guests,status)values($1,$2,$3,'main','whatsapp',$4,'Verified service',$5,1,'confirmed')",
+    [company, booking, c.id, c.thread, at],
+  );
+  const read = (actor: string, brand: string | null = null) =>
+    rpc<{
+      metrics: {
+        inquiries: number;
+        confirmed: number;
+        receiptsCents: number | null;
+      };
+      campaigns: unknown[];
+      hasPos: boolean;
+    }>("sv_reports_read", [
+      company,
+      actor,
+      "2026-11-01",
+      "2026-12-01",
+      new Date().toISOString(),
+      brand,
+      "period",
+      null,
+      null,
+    ]);
+  const r = await read(owner);
+  assert.ok(r.metrics.inquiries > 10);
+  assert.ok(r.metrics.confirmed > 0);
+  assert.equal(r.hasPos, true);
+  assert.equal(r.metrics.receiptsCents, 0);
+  const scoped = await read(agent, "other");
+  assert.equal(scoped.metrics.inquiries, 0);
+  assert.equal(scoped.metrics.receiptsCents, null);
+  await db.query(
+    "update sv_memberships set brand_ids=array['main']where company_id=$1 and user_id=$2",
+    [company, agent],
+  );
+  const crm = await read(agent, "main");
+  assert.equal(crm.hasPos, false);
+  assert.ok(crm.metrics.confirmed > 0);
+  assert.equal(crm.metrics.receiptsCents, null);
+  await db.query(
+    "update sv_memberships set brand_ids=array['other']where company_id=$1 and user_id=$2",
+    [company, agent],
+  );
+  await assert.rejects(
+    db.query(
+      "update sv_business_outcomes set occurred_at=now()where company_id=$1",
+      [company],
+    ),
+    /permission denied|immutable/,
+  );
+});

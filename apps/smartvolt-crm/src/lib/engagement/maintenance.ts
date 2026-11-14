@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { database } from "@/lib/saas/database";
 import { checked } from "./runtime";
+import { dispatchFeedback } from "@/lib/feedback/runtime";
 import { dispatchNotifications } from "@/lib/notifications/runtime";
 import { wakeDelivery } from "./scheduler";
 export function validCronAuthorization(value: string | null) {
@@ -41,6 +42,7 @@ export async function maintenance() {
         );
         await dispatchNotifications(company, actor);
       }
+      if (Date.now() < deadline) await dispatchFeedback(company);
       completed++;
     } catch {
       failed++;

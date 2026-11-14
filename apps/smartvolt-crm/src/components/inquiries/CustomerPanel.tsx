@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { CTagHint } from "@/components/copilot/CopilotProvider";
+import MeasurementPreferences from "@/components/feedback/MeasurementPreferences";
 import ContactPreferences from "@/components/engagement/ContactPreferences";
 import Link from "next/link";
 import {
@@ -364,6 +365,12 @@ export default function CustomerPanel({
               <span key={t}>{t}</span>
             ))}
           </div>
+          <MeasurementPreferences
+            companyId={companyId}
+            customerId={c.id}
+            brandIds={c.brandIds ?? []}
+            canEdit={canEdit}
+          />
           <ContactPreferences
             key={c.id}
             companyId={companyId}

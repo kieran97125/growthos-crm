@@ -60,6 +60,14 @@ export default async function CompanySettings({
       {access.products.includes("crm") && (
         <section className="sv-settings-section">
           <h2>通訊渠道設定</h2>
+          {canManage(access.actor.role) && (
+            <Link
+              className="sv-secondary"
+              href={`/company/${companyId}/settings/meta-feedback`}
+            >
+              Meta 成效回傳 →
+            </Link>
+          )}
           <p>
             日常覆客統一喺收件匣處理；喺呢度管理授權、接駁及個別渠道收發記錄。
           </p>

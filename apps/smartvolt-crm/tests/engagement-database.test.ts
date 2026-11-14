@@ -1557,3 +1557,24 @@ test("first-record revisions reject another writer's stale empty-form submission
     "First saved name",
   );
 });
+
+test("company stop switch cancels pending automation, blocks new campaigns and retains cancellation after resume", async () => {
+  const c = await customer();
+  await consent(c.id);
+  const data = campaign(c.id);
+  await action("campaign", data);
+  const id = await job(data.id),
+    revision = Number(
+      await value(
+        "select revision v from sv_delivery_policies where company_id=$1",
+        [company],
+      ),
+    );
+  await policy({ executionPaused: true, revision });
+  assert.equal((await state(id)).state, "cancelled");
+  assert.equal((await state(id)).reason, "execution_paused");
+  assert.equal((await rpc("sv_delivery_claim", [company, id])).dispatch, false);
+  await assert.rejects(action("campaign", campaign(c.id)), /execution_paused/);
+  await policy({ executionPaused: false, revision: revision + 1 });
+  assert.equal((await state(id)).state, "cancelled");
+});

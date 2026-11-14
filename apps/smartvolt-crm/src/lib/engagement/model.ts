@@ -106,6 +106,7 @@ export const engagementAction = z.discriminatedUnion("action", [
       ...command,
       action: z.literal("policy"),
       marketingEnabled: z.boolean(),
+      executionPaused: z.boolean().default(false),
       quietStart: z.number().int().min(0).max(23),
       quietEnd: z.number().int().min(0).max(23),
       frequencyHours: z.number().int().min(1).max(720),
@@ -141,6 +142,7 @@ export const stateNames: Record<DeliveryState, string> = {
 };
 export const reasonNames: Record<string, string> = {
   source_details_missing: "預約資料未齊，已略過提醒",
+  execution_paused: "公司已暫停自動排程",
   human_takeover: "真人已接手，已停止自動訊息",
   authority_changed: "同事權限已更改",
   customer_changed: "客戶連結已更改",
@@ -210,6 +212,7 @@ export type EngagementPage = {
   nextCampaign: string | null;
   policy: {
     marketing_enabled: boolean;
+    automations_paused?: boolean;
     quiet_start: number;
     quiet_end: number;
     frequency_hours: number;

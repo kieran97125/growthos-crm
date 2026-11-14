@@ -28,6 +28,7 @@ const css = [
   "ai/ai.css",
   "operations/operations.css",
   "translation/translation.css",
+  "engagement/engagement.css",
 ]
   .map((f) => readFileSync("src/components/" + f, "utf8"))
   .join("\n");
@@ -43,6 +44,7 @@ test.beforeAll(async () => {
       write: false,
       platform: "browser",
       format: "iife",
+      loader: { ".css": "empty" },
       jsx: "automatic",
       define: {
         "process.env": JSON.stringify({

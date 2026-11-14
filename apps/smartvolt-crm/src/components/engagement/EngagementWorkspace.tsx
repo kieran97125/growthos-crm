@@ -832,6 +832,11 @@ function CampaignBuilder({
                 :00；每位客人每 {data.policy.frequency_hours}{" "}
                 小時最多一則同類訊息。
               </p>
+              {data.policy.automations_paused && (
+                <p className="eng-alert">
+                  公司已暫停自動客戶訊息；請由公司管理員恢復發送設定。
+                </p>
+              )}
               {purpose === "marketing" && !data.policy.marketing_enabled && (
                 <p className="eng-alert">
                   公司尚未開啟營銷發送。請先於發送設定開啟，再安排推播。
@@ -885,6 +890,7 @@ function CampaignBuilder({
             className="eng-primary"
             disabled={
               busy ||
+              data.policy.automations_paused ||
               (purpose === "marketing" && !data.policy.marketing_enabled)
             }
           >
@@ -914,6 +920,7 @@ function PolicyForm({
       commandId: crypto.randomUUID(),
       revision: p.revision,
       marketingEnabled: f.get("marketing") === "on",
+      executionPaused: f.has("paused"),
       quietStart: Number(f.get("quietStart")),
       quietEnd: Number(f.get("quietEnd")),
       frequencyHours: Number(f.get("frequency")),
@@ -925,6 +932,17 @@ function PolicyForm({
     <form className="eng-policy" key={p.revision} onSubmit={submit}>
       <h3>發送節奏</h3>
       <fieldset disabled={busy || !data.canManageCompany}>
+        <label className="eng-check">
+          <input
+            type="checkbox"
+            name="paused"
+            defaultChecked={p.automations_paused ?? false}
+          />
+          暫停所有自動客戶訊息
+        </label>
+        <p className="eng-hint">
+          暫停會取消尚未提交嘅推播及旅程步驟。重新開啟後，已取消步驟會保留紀錄。
+        </p>
         <label className="eng-check">
           <input
             type="checkbox"

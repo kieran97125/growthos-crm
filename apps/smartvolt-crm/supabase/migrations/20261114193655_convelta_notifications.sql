@@ -41,7 +41,7 @@ create function public.sv_notification_action(p_company uuid,p_actor uuid,p_comm
  elsif p_kind in('done','snooze')then
   update public.sv_notifications set state=case when p_kind='done'then 'done'else state end,snoozed_until=case when p_kind='snooze'then(p_data->>'until')::timestamptz else snoozed_until end,revision=revision+1 where company_id=p_company and user_id=p_actor and id=(p_data->>'id')::uuid and revision=(p_data->>'revision')::bigint and smartvolt_private.member_brand_allowed(p_company,p_actor,brand_id);if not found then raise exception 'revision_conflict';end if;
  elsif p_kind='device'then
-  if p_data->>'endpoint'!~'^https://(fcm.googleapis.com|updates.push.services.mozilla.com|web.push.apple.com)/'then raise exception 'invalid_push_endpoint';end if;
+  if p_data->>'endpoint'!~'^https://(fcm[.]googleapis[.]com|updates[.]push[.]services[.]mozilla[.]com|web[.]push[.]apple[.]com)/'then raise exception 'invalid_push_endpoint';end if;
   if exists(select 1 from public.sv_push_devices where endpoint=p_data->>'endpoint'and(company_id,user_id)<>(p_company,p_actor)and active)then raise exception 'device_owner_changed';end if;
   if(select count(*)from public.sv_push_devices where company_id=p_company and user_id=p_actor and active)>=10 and not exists(select 1 from public.sv_push_devices where company_id=p_company and user_id=p_actor and endpoint=p_data->>'endpoint')then raise exception 'device_limit';end if;
   insert into public.sv_push_devices(company_id,user_id,endpoint,p256dh,auth,label)values(p_company,p_actor,p_data->>'endpoint',p_data->>'p256dh',p_data->>'auth',p_data->>'label')on conflict(company_id,user_id,endpoint)do update set active=true,p256dh=excluded.p256dh,auth=excluded.auth,label=excluded.label;

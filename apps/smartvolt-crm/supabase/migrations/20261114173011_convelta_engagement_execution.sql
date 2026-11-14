@@ -3,7 +3,7 @@
 -- An outbox claim, not a workflow retry, authorizes the single external attempt.
 create table public.sv_delivery_policies(
  company_id uuid primary key references public.sv_companies(id),
- marketing_enabled boolean not null default false,quiet_start integer not null default 21 check(quiet_start between 0 and 23),
+ marketing_enabled boolean not null default false,automations_paused boolean not null default false,quiet_start integer not null default 21 check(quiet_start between 0 and 23),
  quiet_end integer not null default 9 check(quiet_end between 0 and 23),frequency_hours integer not null default 72 check(frequency_hours between 1 and 720),
  daily_limit integer not null default 200 check(daily_limit between 1 and 10000),minute_limit integer not null default 10 check(minute_limit between 1 and 100),revision bigint not null default 0
 );
@@ -107,9 +107,11 @@ begin
  insert into public.sv_delivery_policies(company_id)values(p_company)on conflict do nothing;
  perform 1 from public.sv_delivery_policies where company_id=p_company for update;
  if p_kind='policy'then
-  update public.sv_delivery_policies set marketing_enabled=(p_data->>'marketingEnabled')::boolean,quiet_start=(p_data->>'quietStart')::integer,
+  update public.sv_delivery_policies set marketing_enabled=(p_data->>'marketingEnabled')::boolean,automations_paused=coalesce((p_data->>'executionPaused')::boolean,false),quiet_start=(p_data->>'quietStart')::integer,
   quiet_end=(p_data->>'quietEnd')::integer,frequency_hours=(p_data->>'frequencyHours')::integer,daily_limit=(p_data->>'dailyLimit')::integer,minute_limit=(p_data->>'minuteLimit')::integer,revision=revision+1
-  where company_id=p_company and revision=(p_data->>'revision')::bigint;if not found then raise exception 'revision_conflict';end if;r='{"saved":true}';
+  where company_id=p_company and revision=(p_data->>'revision')::bigint;if not found then raise exception 'revision_conflict';end if;
+  if coalesce((p_data->>'executionPaused')::boolean,false)then update public.sv_delivery_jobs set state='cancelled',reason='execution_paused',updated_at=statement_timestamp()where company_id=p_company and state='scheduled'and origin<>'manual';end if;
+  r='{"saved":true}';
  elsif p_kind='preference'then
   if length(btrim(p_data->>'source'))not between 1 and 500 then raise exception 'evidence_required';end if;
   perform pg_advisory_xact_lock(hashtextextended('delivery-contact:'||p_company::text||':'||(p_data->>'customerId'),0));
@@ -122,6 +124,7 @@ begin
   if not(p_data->>'allowed')::boolean then update public.sv_delivery_jobs set state='cancelled',reason='consent_withdrawn',updated_at=now()where company_id=p_company and customer_id=p_data->>'customerId'and brand_id=brand and channel=p_data->>'channel'and purpose=p_data->>'purpose'and state='scheduled';end if;
   r='{"saved":true}';
  elsif p_kind in('campaign','manual')then
+  if p_kind='campaign'and(select automations_paused from public.sv_delivery_policies where company_id=p_company)then raise exception 'execution_paused';end if;
   ident=(p_data->>'id')::uuid;v_provider=p_data->>'provider';conn=(p_data->>'connectionId')::uuid;
   if v_provider='whatsapp'then select 'whatsapp'into v_channel from public.sv_wa_connections where company_id=p_company and id=conn and brand_id=brand and state<>'disabled';
   elsif v_provider='meta'then select cn.channel into v_channel from public.sv_meta_connections cn where company_id=p_company and id=conn and brand_id=brand and enabled;end if;
@@ -175,6 +178,7 @@ begin
  if why is null and not exists(select 1 from public.sv_customer_threads where company_id=p_company and customer_id=j.customer_id and brand_id=j.brand_id and provider=j.provider and thread_id=j.thread_id)then why='customer_changed';end if;
  if why is null and j.origin='campaign'and not exists(select 1 from public.sv_campaigns where company_id=p_company and id=j.source_id and status='scheduled')then why='campaign_cancelled';end if;
  if why is null and j.origin='journey'then why=smartvolt_private.journey_admit(j);end if;
+ if why is null and j.origin<>'manual'and p.automations_paused then why='execution_paused';end if;
  if why is null and(j.purpose='marketing'and not p.marketing_enabled)then why='marketing_disabled';end if;
  if why is null and not exists(select 1 from public.sv_contact_preferences where company_id=p_company and customer_id=j.customer_id and brand_id=j.brand_id and channel=j.channel and purpose=j.purpose and allowed)then why='consent_missing';end if;
  if why is null and j.provider='whatsapp'and(wc.id is null or cv.id is null or cv.connection_id<>wc.id or wc.brand_id<>j.brand_id or wc.state<>'active'or wc.webhook_verified_at is null)then why='connection_not_ready';end if;

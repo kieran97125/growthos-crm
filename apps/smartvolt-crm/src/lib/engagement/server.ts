@@ -22,7 +22,9 @@ export function engagementFailure(
       "資料已更新，請重新讀取核對。原有請求紀錄會保留。",
       409,
     );
-  if (/invalid|missing|required|not_ready/.test(e.message ?? ""))
+  if (
+    /invalid|missing|required|not_ready|execution_paused/.test(e.message ?? "")
+  )
     throw new AccessError("資料未齊或渠道未就緒，請核對設定。", 400);
   throw new AccessError("暫時未能完成操作，請稍後核對同一請求。", 503);
 }

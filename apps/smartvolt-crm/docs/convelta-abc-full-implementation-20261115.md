@@ -106,3 +106,9 @@ Before B3 is final: extend the currently name-only merge fields with actual sour
 - Administrative records created by a first write now start at revision 1; an empty form's expected revision 0 cannot overwrite another newly saved record. Added serialization for absent settings/cost rows where needed and a regression proving stale consent/branch forms fail without changing the first writer's data.
 - Changed brand/page loaders to avoid displaying the previous view as the new view; an acknowledged save followed by a failed refresh remains reported as saved. Adjusted shared forms and compact mobile navigation.
 - Local focused source/provider/background suite: 35 passed. Native CI for cd7ee3 passed roster-qualified final slot and competing editor takeover; its main job passed unit/database, Workflow integration, build, production paint, operations and knowledge checks and is running browser acceptance. Latest revision/loading changes require the next exact-source CI pass.
+
+### Browser harness and company messaging stop switch
+
+- cd7ee3 native PostgreSQL tests passed, including actual competing editor and roster/capacity races. Hosted verify passed unit/database, actual Workflow, build, paint, operations and knowledge interactions, then found a fixture build configuration gap: the newly imported template CSS was not handled by the older inbox/translation esbuild fixtures. Corrected loaders and injected the actual styles; production build was unaffected. Full browser rerun pending.
+- Added a company stop switch for automated customer messages: cancellation is recorded for pending campaign/journey work, new campaigns are blocked while stopped, send admission rechecks it and restarting does not silently revive cancelled jobs. Explicit human replies remain separately authorized.
+- Source still candidate; no production DDL/runtime change or external send. Runtime secret creation remains blocked by the earlier automatic review rejection.

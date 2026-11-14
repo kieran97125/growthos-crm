@@ -1,3 +1,4 @@
+import { runBounded } from "./bounded";
 import { timingSafeEqual } from "node:crypto";
 import { database } from "@/lib/saas/database";
 import { checked } from "./runtime";
@@ -19,35 +20,45 @@ export async function maintenance() {
   let completed = 0,
     failed = 0;
   const deadline = Date.now() + 220000;
-  for (const company of companies) {
-    if (Date.now() > deadline) break;
-    try {
-      const caught = await db.rpc("sv_journey_catchup", { p_company: company });
-      checked(caught.error);
-      await wakeDelivery(company);
-      checked((await db.rpc("sv_sales_catchup", { p_company: company })).error);
-      const members = await db.rpc("sv_notification_members", {
-        p_company: company,
-      });
-      checked(members.error);
-      for (const actor of members.data as string[]) {
-        if (Date.now() > deadline) break;
-        checked(
-          (
-            await db.rpc("sv_notification_sync", {
-              p_company: company,
-              p_actor: actor,
-            })
-          ).error,
-        );
-        await dispatchNotifications(company, actor);
-      }
-      if (Date.now() < deadline) await dispatchFeedback(company);
-      completed++;
-    } catch {
-      failed++;
-      console.warn("company_maintenance_pending", { company });
-    }
+  for (let at = 0; at < companies.length; at += 2) {
+    if (Date.now() > deadline - 80000) break;
+    const batch = companies.slice(at, at + 2);
+    await Promise.all(
+      batch.map(async (company) => {
+        try {
+          checked(
+            (await db.rpc("sv_journey_catchup", { p_company: company })).error,
+          );
+          await wakeDelivery(company);
+          checked(
+            (await db.rpc("sv_sales_catchup", { p_company: company })).error,
+          );
+          const members = await db.rpc("sv_notification_members", {
+            p_company: company,
+          });
+          checked(members.error);
+          await runBounded(members.data as string[], 5, async (actor) => {
+            checked(
+              (
+                await db.rpc("sv_notification_sync", {
+                  p_company: company,
+                  p_actor: actor,
+                })
+              ).error,
+            );
+            await dispatchNotifications(company, actor);
+          });
+          await dispatchFeedback(company);
+          completed++;
+        } catch {
+          failed++;
+          console.warn("company_maintenance_pending", { company });
+        }
+      }),
+    );
+    checked(
+      (await db.rpc("sv_execution_ack", { p_company: batch.at(-1)! })).error,
+    );
   }
   return { checked: companies.length, completed, failed };
 }

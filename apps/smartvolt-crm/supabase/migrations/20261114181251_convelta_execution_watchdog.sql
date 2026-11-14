@@ -11,7 +11,8 @@ declare cursor uuid;ids uuid[];begin
  select after_company into cursor from public.sv_execution_checkpoint where name='maintenance'for update;
  select array_agg(id order by id)into ids from(select c.id from public.sv_companies c where c.status='active'and(cursor is null or c.id>cursor)order by c.id limit 50)q;
  if ids is null then update public.sv_execution_checkpoint set after_company=null,updated_at=now()where name='maintenance';return '[]';end if;
- update public.sv_execution_checkpoint set after_company=case when cardinality(ids)<50 then null else ids[cardinality(ids)]end,updated_at=now()where name='maintenance';return to_jsonb(ids);end;$$;
+ return to_jsonb(ids);end;$$;
+create function public.sv_execution_ack(p_company uuid)returns void language sql security invoker set search_path=''as $$update public.sv_execution_checkpoint set after_company=p_company,updated_at=statement_timestamp()where name='maintenance'$$;
 create function public.sv_journey_catchup(p_company uuid)returns integer language plpgsql security invoker set search_path=''as $$
 declare cursor public.sv_journey_scan_state;r record;n integer:=0;seen integer:=0;last_key text;begin
  insert into public.sv_journey_scan_state(company_id)values(p_company)on conflict do nothing;
@@ -44,5 +45,5 @@ create function smartvolt_private.journey_delivery_status()returns trigger langu
 create trigger sv_journey_delivery_status after update of state on public.sv_delivery_jobs for each row execute function smartvolt_private.journey_delivery_status();
 do $$declare t text;f record;begin
  foreach t in array array['sv_execution_checkpoint','sv_journey_scan_state']loop execute format('alter table public.%I enable row level security',t);execute format('revoke all on public.%I from public,anon,authenticated,service_role',t);execute format('grant select,insert,update on public.%I to service_role',t);end loop;
- for f in select oid::regprocedure signature from pg_proc where pronamespace in('public'::regnamespace,'smartvolt_private'::regnamespace)and proname in('sv_execution_tenants','sv_journey_catchup','journey_delivery_status')loop execute format('revoke all on function %s from public,anon,authenticated',f.signature);execute format('grant execute on function %s to service_role',f.signature);end loop;
+ for f in select oid::regprocedure signature from pg_proc where pronamespace in('public'::regnamespace,'smartvolt_private'::regnamespace)and proname in('sv_execution_tenants','sv_execution_ack','sv_journey_catchup','journey_delivery_status')loop execute format('revoke all on function %s from public,anon,authenticated',f.signature);execute format('grant execute on function %s to service_role',f.signature);end loop;
 end;$$;

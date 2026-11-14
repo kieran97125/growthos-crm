@@ -136,7 +136,6 @@ export default function ReportsWorkspace({
             defaultValue={new Date(Date.parse(query.asOf) + 8 * 3600000)
               .toISOString()
               .slice(0, 16)}
-            max={new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 16)}
           />
         </label>
         <button className="eng-primary">

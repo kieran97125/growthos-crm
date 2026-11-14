@@ -1,3 +1,4 @@
+import { runBounded } from "@/lib/engagement/bounded";
 import { database } from "@/lib/saas/database";
 import { readMasterKey, decryptCredentials } from "@/lib/whatsapp/crypto";
 import { checked } from "@/lib/engagement/runtime";
@@ -18,7 +19,7 @@ export async function dispatchFeedback(company: string) {
     .order("id")
     .limit(10);
   checked(jobs.error);
-  for (const j of jobs.data ?? []) {
+  await runBounded(jobs.data ?? [], 5, async (j) => {
     const r = await db
       .from("sv_feedback_settings")
       .select("dataset_id,mode,test_code,encrypted_credentials,revision")
@@ -37,7 +38,7 @@ export async function dispatchFeedback(company: string) {
       ).token as string;
       if (!token) throw Error();
     } catch {
-      continue;
+      return;
     }
     const a = await db.rpc("sv_feedback_claim", {
       p_company: company,
@@ -45,7 +46,7 @@ export async function dispatchFeedback(company: string) {
       p_revision: setting.revision,
     });
     checked(a.error);
-    if (!a.data.dispatch) continue;
+    if (!a.data.dispatch) return;
     let result;
     try {
       const event = buildFeedbackEvent(company, a.data as AdmittedFeedback);
@@ -73,5 +74,5 @@ export async function dispatchFeedback(company: string) {
         })
       ).error,
     );
-  }
+  });
 }

@@ -299,6 +299,69 @@ async function main() {
     ),
     "cancelled",
   );
+  // Roster constraints participate in the same serialized final capacity slot.
+  const branch = randomUUID();
+  const roster = (kind: string, data: object) =>
+    sql(
+      `select sv_roster_action(${quote(company)},${quote(owner)},${quote(randomUUID())},${quote(kind)},${quote(JSON.stringify(data))}::jsonb);`,
+    );
+  await roster("branch", {
+    id: branch,
+    name: "Native branch",
+    active: true,
+    revision: 0,
+  });
+  for (const user of [owner, agent])
+    await roster("member", {
+      userId: user,
+      branchIds: user === owner ? [branch] : [],
+      skills: user === owner ? ["English"] : [],
+      timeZone: "Asia/Hong_Kong",
+      rosterEnabled: false,
+      weekly: [],
+      leavePeriods: [],
+      revision: 0,
+    });
+  await sql(
+    `update sv_meta_threads set status='resolved'where company_id=${quote(company)};update sv_agent_routing set paused=false,presence='online',seen_at=now(),capacity=1 where company_id=${quote(company)};`,
+  );
+  await settings(1);
+  const routed = await Promise.all(Array.from({ length: 8 }, () => inquiry()));
+  for (const id of routed)
+    await roster("requirement", {
+      provider: "meta",
+      threadId: id,
+      branchId: branch,
+      skills: ["English"],
+      revision: 0,
+    });
+  const routeResults = await Promise.all(
+    routed.map((id) =>
+      json<{ saved: boolean; ownerId?: string }>(call(id, randomUUID())),
+    ),
+  );
+  assert.equal(routeResults.filter((r) => r.saved).length, 1);
+  assert.equal(routeResults.find((r) => r.saved)?.ownerId, owner);
+  // A native race between two members admits exactly one editor window.
+  const editorThread = await inquiry(),
+    tokens = [randomUUID(), randomUUID()],
+    actors = [owner, agent];
+  const editor = (who: number, mode: string, revision: number | null = null) =>
+    json<{ held: boolean; revision: number }>(
+      `select sv_editor_action(${quote(company)},${quote(actors[who])},'meta',${quote(editorThread)},${quote(tokens[who])},${quote(mode)},${revision ?? "null"});`,
+    );
+  const edits = await Promise.all([editor(0, "acquire"), editor(1, "acquire")]);
+  assert.equal(edits.filter((r) => r.held).length, 1);
+  const old = edits.findIndex((r) => r.held),
+    next = 1 - old;
+  assert.equal(
+    (await editor(next, "takeover", edits[old].revision)).held,
+    true,
+  );
+  assert.equal((await editor(old, "read")).held, false);
+  console.log(
+    "Native PostgreSQL: roster-scoped final slot and competing editor takeover passed.",
+  );
   console.log(
     "Native PostgreSQL: one external-attempt admission, unknown replay, concurrent shared quota and consent cancellation passed.",
   );

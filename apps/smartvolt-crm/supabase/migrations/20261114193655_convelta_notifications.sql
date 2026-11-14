@@ -19,6 +19,7 @@ create function smartvolt_private.notification_candidates(p_company uuid,p_actor
 $$;
 create function public.sv_notification_sync(p_company uuid,p_actor uuid)returns void language plpgsql security invoker set search_path=''as $$begin
  perform public.sv_authorize(p_company,p_actor,'crm');
+ update public.sv_push_attempts set state='unknown',reason='worker_interrupted'where company_id=p_company and user_id=p_actor and state='dispatching'and created_at<statement_timestamp()-interval '2 minutes';
  insert into public.sv_notification_preferences(company_id,user_id)values(p_company,p_actor)on conflict do nothing;
  insert into public.sv_notifications(company_id,user_id,source_key,brand_id,kind,title,href)
  select p_company,p_actor,c.source_key,c.brand_id,c.kind,c.title,c.href from smartvolt_private.notification_candidates(p_company,p_actor)c where not exists(select 1 from public.sv_notifications n where n.company_id=p_company and n.user_id=p_actor and n.source_key=c.source_key)and coalesce((select(data->>c.kind)::boolean from public.sv_notification_preferences where company_id=p_company and user_id=p_actor),true)order by c.source_key limit 200 on conflict do nothing;

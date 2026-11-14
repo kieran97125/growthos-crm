@@ -94,3 +94,9 @@ Before B3 is final: extend the currently name-only merge fields with actual sour
 - 33 focused database/provider tests passed including partial/full payment/refund separation, scoped report money, complete totals across pages, measurement consent, stable feedback IDs and unknown-send fencing. Earlier full local suite passed 327 cases before these last additions. Latest full rerun still required.
 - Added post-response delivery wake only after verified provider ingestion or an authorized successful inbox/workspace mutation, so new source events can wake the durable outbox immediately. The separately authenticated watchdog remains the recovery path; its new runtime secret is still blocked by the explicit automatic review rejection.
 - Further acceptance/hardening still required: background maintenance duration/fairness, native editor/roster concurrency, report cohort/source edge cases, A1 operational diagnostic clarity and full browser fixes. No production migration/deployment or external recipient send has occurred.
+
+### Recovery and concurrency hardening
+
+- Added bounded background pools: admitted peers finish even if another receipt fails. Notification and Meta provider work no longer serializes all network timeouts. Maintenance processes bounded company pairs and only acknowledges the last actually processed batch; unfinished tenants are not skipped when a time budget expires.
+- Added native PostgreSQL races for roster-qualified final capacity and competing editor/takeover. Added source-money, whole-page totals and current measurement-consent feedback cases; focused 33-case source/provider suite passed before the pool addition.
+- Corrected a React purity lint finding in the new report cutoff control; server-side future-cutoff validation remains authoritative. Type/lint and latest focused pool suite rerun are in progress. Full browser and native CI remain required before release.

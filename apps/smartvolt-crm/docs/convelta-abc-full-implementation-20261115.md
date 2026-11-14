@@ -155,3 +155,9 @@ Before B3 is final: extend the currently name-only merge fields with actual sour
 - The wizard now cancels navigation's default activation, gives navigation/retry/submit distinct keys, makes the final submit type explicit and rejects form submit before step three. The same browser tests now require the time-review heading and zero POST commands before an explicit final action. This is a runtime fix, not a weakened test. CI runs the six campaign cases first and the other 120 once afterward for quicker useful failure evidence.
 - Fixed the watchdog's last-company boundary: it now wraps to active companies in the same tick instead of wasting every second tick for a single-company installation. An additional installed migration preserves acknowledgement fencing. All 34 focused engagement/database cases pass, including unacknowledged retry identity and immediate cursor wrap. This changes no customer or business record.
 - Thirteen hosted migrations now match source SQL bytes; source filenames aligned to actual versions. Latest app release is still A2 pending the corrected exact-source acceptance.
+
+### Campaign intent accepted; mobile border-box correction
+
+- Run 192 passed the actual HKT schedule, zero-submit-before-review, single-command lost-response reconciliation, full recipient pagination, viewer restrictions and accessibility. The runtime submit defect is fixed.
+- Its only remaining campaign failure measured the mobile dialog at 398px in a 390px viewport. Corrected the dialog and its descendants to border-box sizing so padding is included in the declared responsive width. The geometry assertion and Escape test remain unchanged.
+- Hosted unit/database count is now 341 with the cursor-wrap regression; native PostgreSQL, two Workflow cases, build and four production paint cases pass. Remaining browser flows in this run were correctly skipped after the focused geometry failure; they still require the corrected-source full run.

@@ -323,6 +323,7 @@
   line-height: 1.8;
 }
 .eng-dialog {
+  box-sizing: border-box;
   width: min(720px, calc(100vw - 32px));
   max-height: calc(100dvh - 40px);
   overflow: auto;
@@ -332,6 +333,9 @@
   color: #243854;
   box-shadow: 0 20px 80px #19305d35;
   background: #fff;
+}
+.eng-dialog * {
+  box-sizing: border-box;
 }
 .eng-dialog::backdrop {
   background: #11213c66;

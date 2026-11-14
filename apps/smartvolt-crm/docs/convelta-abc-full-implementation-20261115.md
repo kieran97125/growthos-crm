@@ -126,3 +126,16 @@ Before B3 is final: extend the currently name-only merge fields with actual sour
 - Two tests exercise the real schedule SDK parser and partial-failure result. These tests are not proof of HTTP authentication: the platform's private function target is the required boundary.
 - Cancelled run 187 artifacts exposed three stale implicit-label selectors, supervisor link contrast and real report-filter horizontal overflow. Updated accessible-role selectors, darkened the link, made report filters wrap with readable stacked labels, and isolated cost status text from its expandable evidence form.
 - Local typecheck/lint and two schedule-handler cases passed. No candidate hosted migration/deployment or external recipient send yet. Full browser acceptance remains required for this checkpoint.
+
+### C observations while the workbench is closed
+
+- Completed the remaining B4 background-observation path: the private maintenance worker reuses C's existing deterministic observations and source facts from fresh, currently authorized, per-brand snapshots. Up to five brands rotate per user scan; no AI model, customer send or fabricated metric is invoked.
+- Persisted observations retain source facts, checked time, current scope, stable notification identity and the existing C feedback/quiet rules. Source changes expire obsolete observations; out-of-order workers cannot restore an older snapshot, including after a newer empty snapshot. Notifications remain generic on external devices. Users can independently disable observations, snooze or complete each reminder.
+- Added a server-only observation ledger/cursor and evidence in the reminder centre. Browser/raw-table permissions remain denied. Optional observation failure still lets actual follow-up reminders synchronize and dispatch, while the background execution reports the failed company for reconciliation.
+- 44 local Copilot/database tests passed, including source retention, same-source dedupe, quiet-key suppression, revoked brand scope, empty-snapshot fencing and unchanged AI-request count. Private schedule preview `dpl_5ZDTkc7q8s2wVa7CwxArZkVUhL99` at d4c5e6a built READY; this proves deployment configuration acceptance, not yet production invocation or public inaccessibility.
+
+### Full acceptance run 189 findings
+
+- Hosted d4c5e6a passes native PostgreSQL races, typecheck/lint, unit/database, real Workflow, production build, four paint checks and the dedicated original operations/FAQ/translation flows. Its full suite completed: 115 passed, 11 failed. All twelve new ABC workspace cases passed, including mobile geometry and accessibility.
+- Three campaign failures were the remaining implicit-label template selector, now changed to the accessible combobox role. The eight older WA/Meta fixture failures came from missing editor-lease interception and non-UUID synthetic thread IDs after strict lease admission was added. Fixtures now model the actual editor schema independently, retaining the original send, draft and unknown-result assertions; production validation was not weakened.
+- Latest full local regression passes 340 tests. No candidate production migration or release yet. New source/fixture changes require the final hosted acceptance run.

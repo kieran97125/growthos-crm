@@ -3,6 +3,7 @@ import { MockLanguageModelV4 } from "ai/test";
 import { zodSchema } from "ai";
 import assert from "node:assert/strict";
 import { observations, factsFor } from "../src/lib/copilot/observations";
+import { backgroundObservations } from "../src/lib/notifications/observations";
 import {
   snapshotSchema,
   outputSchema,
@@ -51,6 +52,34 @@ const snapshot: Snapshot = snapshotSchema.parse({
   channels: { connected: 0 },
   lastBroadcastAt: null,
   broadcastCoverage: "unavailable",
+});
+test("background C rules reuse scoped facts and quiet feedback with stable source identity", () => {
+  const rows = backgroundObservations(snapshot, []);
+  assert.equal(rows.length, 3);
+  assert.deepEqual(rows, backgroundObservations(snapshot, []));
+  assert.ok(rows.every((r) => r.facts.length > 0 && r.key.length <= 120));
+  assert.ok(
+    rows.every(
+      (r) => !JSON.stringify(r.facts).includes(snapshot.customer!.lastMessage),
+    ),
+  );
+  assert.equal(
+    backgroundObservations(snapshot, [
+      {
+        signal_key: "quiet",
+        family: "quiet",
+        subject: "company",
+        status: "snoozed",
+        until: new Date(Date.now() + 3600000).toISOString(),
+      },
+    ]).length,
+    0,
+  );
+  const changed = backgroundObservations({ ...snapshot, dormant: 21 }, []);
+  assert.notEqual(
+    rows.find((r) => r.family === "reactivation")!.key,
+    changed.find((r) => r.family === "reactivation")!.key,
+  );
 });
 test("C's provider-facing structured output requires every declared field", async () => {
   const schema = await zodSchema(outputSchema).jsonSchema;

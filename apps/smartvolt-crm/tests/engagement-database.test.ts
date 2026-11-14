@@ -1578,3 +1578,108 @@ test("company stop switch cancels pending automation, blocks new campaigns and r
   await policy({ executionPaused: false, revision: revision + 1 });
   assert.equal((await state(id)).state, "cancelled");
 });
+
+test("background C observations retain sources, dedupe, quiet feedback and current brand scope without AI", async () => {
+  const before = await value<number>(
+    "select count(*)::integer v from sv_ai_requests where company_id=$1",
+    [company],
+  );
+  const checked = new Date().toISOString();
+  const observation = {
+    key: "reactivation:synthetic-background",
+    feedbackKey: "reactivation:live-c-key",
+    family: "reactivation",
+    subject: "company",
+    title: "Synthetic sourced observation",
+    detail: "Only current scoped records",
+    evidence: ["Synthetic source count: 2"],
+    facts: [
+      {
+        id: "dormant",
+        label: "Source",
+        value: "2",
+        source: "Synthetic formal records",
+      },
+    ],
+  };
+  const context = await rpc<{ brands: string[] }>(
+    "sv_copilot_background_context",
+    [company, agent],
+  );
+  assert.deepEqual(context.brands, ["other"]);
+  await assert.rejects(
+    rpc("sv_copilot_background_record", [
+      company,
+      agent,
+      "main",
+      checked,
+      JSON.stringify([observation]),
+    ]),
+    /brand_scope/,
+  );
+  const record = (rows: unknown[], at = checked) =>
+    rpc("sv_copilot_background_record", [
+      company,
+      owner,
+      "main",
+      at,
+      JSON.stringify(rows),
+    ]);
+  await record([observation]);
+  await record([observation]);
+  assert.equal(
+    await value(
+      "select count(*)::integer v from sv_notifications where company_id=$1 and user_id=$2 and source_key=$3",
+      [company, owner, "observation:main:" + observation.key],
+    ),
+    1,
+  );
+  const page = await rpc<{ rows: { kind: string; evidence: unknown }[] }>(
+    "sv_notification_read",
+    [company, owner],
+  );
+  assert.ok(
+    page.rows.some(
+      (n) =>
+        n.kind === "observation" &&
+        JSON.stringify(n.evidence).includes("Synthetic formal records"),
+    ),
+  );
+  await db.query(
+    "insert into sv_copilot_feedback(company_id,actor_id,signal_key,family,subject,status,until)values($1,$2,$3,'other','other','snoozed',now()+interval '1 hour')",
+    [company, owner, observation.feedbackKey],
+  );
+  assert.equal(
+    await value(
+      "select count(*)::integer v from smartvolt_private.notification_candidates($1,$2)where kind='observation'",
+      [company, owner],
+    ),
+    0,
+  );
+  await db.query(
+    "update sv_copilot_feedback set until=now()-interval '1 second'where company_id=$1 and actor_id=$2 and signal_key=$3",
+    [company, owner, observation.feedbackKey],
+  );
+  const newer = new Date(Date.now() + 1000).toISOString();
+  await record([], newer);
+  await record([observation]);
+  assert.equal(
+    await value(
+      "select count(*)::integer v from sv_copilot_background where company_id=$1 and user_id=$2 and active",
+      [company, owner],
+    ),
+    0,
+    "an older worker cannot revive an observation removed by a newer empty snapshot",
+  );
+  await assert.rejects(
+    record([observation], new Date(Date.now() - 180000).toISOString()),
+    /stale_observation/,
+  );
+  assert.equal(
+    await value(
+      "select count(*)::integer v from sv_ai_requests where company_id=$1",
+      [company],
+    ),
+    before,
+  );
+});

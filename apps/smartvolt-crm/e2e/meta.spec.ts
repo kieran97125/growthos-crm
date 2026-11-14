@@ -4,6 +4,7 @@ import { build } from "esbuild";
 import { readFileSync } from "node:fs";
 import { BRAND_CSS } from "../src/lib/brand";
 import type { ThreadActivity } from "../src/lib/meta/operations";
+import { createEditorFixture } from "./support/editor";
 
 // A browser-only harness for the real controller, with synthetic tenant data.
 // No production route, provider request, test credential or Auth exception.
@@ -38,6 +39,10 @@ test.beforeAll(async () => {
 });
 async function mount(page: Page) {
   await page.route(
+    "**/api/companies/isolated-presentation/editor",
+    createEditorFixture(),
+  );
+  await page.route(
     "**/__meta_fixture__",
     (r) =>
       r.fulfill({
@@ -58,7 +63,7 @@ async function mount(page: Page) {
 function fixture(expired = false) {
   const now = Date.now();
   const thread = {
-    id: "fixture-thread",
+    id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
     connection_id: "fixture-connection",
     peer_id: "20000001",
     revision: 1,

@@ -196,7 +196,7 @@ async function fixture(
   await page.route("**/__engagement-fixture", (r) =>
     r.fulfill({
       contentType: "text/html",
-      body: `<!doctype html><html lang="zh-HK"><head><title>Customer engagement fixture</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;background:#f8faff;font-family:Arial,sans-serif}${styles}</style></head><body><div id="fixture"></div><script>window.__COMPANY__=${JSON.stringify(company)};window.__ENG__=${JSON.stringify(data)};</script><script>${bundle.replace(/<\/script/gi, "<\\/script")}</script></body></html>`,
+      body: `<!doctype html><html lang="zh-HK"><head><meta charset="utf-8"><title>Customer engagement fixture</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;background:#f8faff;font-family:Arial,sans-serif}${styles}</style></head><body><div id="fixture"></div><script>window.__COMPANY__=${JSON.stringify(company)};window.__ENG__=${JSON.stringify(data)};</script><script>${bundle.replace(/<\/script/gi, "<\\/script")}</script></body></html>`,
     }),
   );
   await page.goto("/__engagement-fixture");
@@ -215,7 +215,7 @@ async function compose(page: Page) {
   await dialog.getByRole("button", { name: "下一步" }).click();
   await dialog.getByLabel("推播名稱").fill("November members");
   await dialog
-    .getByLabel("官方模板", { exact: true })
+    .getByRole("combobox", { name: "官方模板", exact: true })
     .selectOption("a".repeat(64));
   await dialog.getByLabel("內容欄位 1").fill("{{name}}");
   await dialog.getByRole("button", { name: "下一步" }).click();

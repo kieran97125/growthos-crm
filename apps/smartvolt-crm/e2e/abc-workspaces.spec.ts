@@ -150,11 +150,24 @@ const seed: Record<string, unknown> = {
     rows: [
       {
         id: uid,
-        kind: "followup",
-        title: "預約前核對時間 · synthetic",
-        href: `/company/${company}/crm?provider=whatsapp&thread=${eid}`,
+        kind: "observation",
+        title: "有停滯查詢可以研究 · synthetic",
+        href: `/company/${company}/crm/reports`,
         revision: 0,
         created_at: now,
+        evidence: {
+          detail: "由正式紀錄整理，未等於可推播對象。",
+          evidence: ["Synthetic source count: 2"],
+          checkedAt: now,
+          facts: [
+            {
+              id: "dormant",
+              label: "正式來源",
+              value: "2",
+              source: "Synthetic scoped records",
+            },
+          ],
+        },
       },
     ],
     devices: [],
@@ -326,7 +339,7 @@ async function mount(
   await page.route("**/__abc-fixture", (r) =>
     r.fulfill({
       contentType: "text/html",
-      body: `<!doctype html><html lang="zh-HK"><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Convelta workspace fixture</title><style>body{margin:0;font-family:Arial,sans-serif;background:#f8faff;color:#233b56}button,input,select,textarea{font:inherit}${css}</style></head><body><div id="fixture"></div><script>window.__COMPANY__=${JSON.stringify(company)};window.__DATA__=${JSON.stringify(data)};</script><script>${bundles.get(kind)!.replace(/<\/script/gi, "<\\/script")}</script></body></html>`,
+      body: `<!doctype html><html lang="zh-HK"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Convelta workspace fixture</title><style>body{margin:0;font-family:Arial,sans-serif;background:#f8faff;color:#233b56}button,input,select,textarea{font:inherit}${css}</style></head><body><div id="fixture"></div><script>window.__COMPANY__=${JSON.stringify(company)};window.__DATA__=${JSON.stringify(data)};</script><script>${bundles.get(kind)!.replace(/<\/script/gi, "<\\/script")}</script></body></html>`,
     }),
   );
   if (mobile) await page.setViewportSize({ width: 390, height: 844 });
@@ -372,6 +385,10 @@ test("notification lost response retries one command and finishes the reminder",
   page,
 }) => {
   const f = await mount(page, "notifications", { lost: true });
+  await page.getByText("觀察來源", { exact: true }).click();
+  await expect(page.locator(".eng-step-details")).toContainText(
+    "Synthetic scoped records",
+  );
   await page.getByRole("button", { name: "完成提醒" }).click();
   await expect(
     page.getByRole("button", { name: "核對同一請求" }),

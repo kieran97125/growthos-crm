@@ -3,6 +3,7 @@ import { database } from "@/lib/saas/database";
 import { checked } from "./runtime";
 import { dispatchFeedback } from "@/lib/feedback/runtime";
 import { dispatchNotifications } from "@/lib/notifications/runtime";
+import { syncBackgroundObservations } from "@/lib/notifications/observations";
 import { wakeDelivery } from "./scheduler";
 export async function maintenance() {
   const db = database(),
@@ -30,6 +31,12 @@ export async function maintenance() {
           });
           checked(members.error);
           await runBounded(members.data as string[], 5, async (actor) => {
+            let observationError: unknown;
+            try {
+              await syncBackgroundObservations(company, actor);
+            } catch (error) {
+              observationError = error;
+            }
             checked(
               (
                 await db.rpc("sv_notification_sync", {
@@ -39,6 +46,7 @@ export async function maintenance() {
               ).error,
             );
             await dispatchNotifications(company, actor);
+            if (observationError) throw observationError;
           });
           await dispatchFeedback(company);
           completed++;

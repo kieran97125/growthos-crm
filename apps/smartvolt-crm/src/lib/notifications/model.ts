@@ -4,6 +4,7 @@ export const notificationPreferences = z
     assignment: z.boolean(),
     followup: z.boolean(),
     sla: z.boolean(),
+    observation: z.boolean().optional(),
     push: z.boolean(),
     quietStart: z.number().int().min(0).max(23),
     quietEnd: z.number().int().min(0).max(23),
@@ -83,6 +84,12 @@ export type NotificationPage = {
     href: string;
     revision: number;
     created_at: string;
+    evidence?: {
+      detail: string;
+      evidence: string[];
+      checkedAt: string;
+      facts: { id: string; label: string; value: string; source: string }[];
+    } | null;
   }[];
   devices: { id: string; label: string; active: boolean; created_at: string }[];
 };

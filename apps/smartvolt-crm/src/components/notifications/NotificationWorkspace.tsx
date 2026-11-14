@@ -134,6 +134,31 @@ export default function NotificationWorkspace({
                 })}
               </p>
               <Link href={n.href}>開啟跟進 →</Link>
+              {n.evidence && (
+                <details className="eng-step-details">
+                  <summary>觀察來源</summary>
+                  <p>{n.evidence.detail}</p>
+                  <ul>
+                    {n.evidence.evidence.map((e) => (
+                      <li key={e}>{e}</li>
+                    ))}
+                  </ul>
+                  <p>
+                    核對時間：
+                    {new Date(n.evidence.checkedAt).toLocaleString("zh-HK", {
+                      timeZone: "Asia/Hong_Kong",
+                    })}
+                    （香港）
+                  </p>
+                  {n.evidence.facts.map((f) => (
+                    <p key={f.id}>
+                      <strong>{f.label}</strong>：{f.value}
+                      <br />
+                      {f.source}
+                    </p>
+                  ))}
+                </details>
+              )}
             </div>
             <div className="eng-actions">
               <button
@@ -200,6 +225,7 @@ export default function NotificationWorkspace({
                 assignment: f.has("assignment"),
                 followup: f.has("followup"),
                 sla: f.has("sla"),
+                observation: f.has("observation"),
                 push: f.has("push"),
                 quietStart: Number(f.get("quietStart")),
                 quietEnd: Number(f.get("quietEnd")),
@@ -213,6 +239,7 @@ export default function NotificationWorkspace({
                 ["assignment", "新客／對話分派"],
                 ["followup", "到期跟進"],
                 ["sla", "超過真人回覆目標"],
+                ["observation", "C 根據正式紀錄整理嘅觀察"],
                 ["push", "離開工作台後接收裝置推播"],
               ] as const
             ).map(([k, t]) => (
@@ -220,7 +247,11 @@ export default function NotificationWorkspace({
                 <input
                   type="checkbox"
                   name={k}
-                  defaultChecked={data.preferences.data[k]}
+                  defaultChecked={
+                    k === "observation"
+                      ? data.preferences.data[k] !== false
+                      : data.preferences.data[k]
+                  }
                   disabled={k === "push" && !data.pushConfigured}
                 />
                 {t}

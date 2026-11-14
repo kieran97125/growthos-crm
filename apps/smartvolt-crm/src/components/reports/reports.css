@@ -20,6 +20,7 @@
 .report-filters select {
   width: 100%;
   max-width: 100%;
+  box-sizing: border-box;
 }
 .report-metrics strong {
   font-size: clamp(24px, 2.4vw, 36px);
@@ -102,5 +103,12 @@
   .report-chart * {
     animation: none !important;
     transition: none !important;
+  }
+}
+@media (max-width: 640px) {
+  .report-filters {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    padding: 16px;
   }
 }

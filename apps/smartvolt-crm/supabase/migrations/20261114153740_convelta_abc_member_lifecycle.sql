@@ -50,7 +50,11 @@ begin perform public.sv_authorize(p_company,p_actor,p_product,false,false,p_bran
 create function public.sv_thread_scope(p_company uuid,p_actor uuid,p_provider text,p_thread uuid)returns void language plpgsql security invoker set search_path=''as $$
 declare brand text;begin
  perform public.sv_authorize(p_company,p_actor,'crm');
- select brand_id into strict brand from public.sv_customer_threads where company_id=p_company and provider=p_provider and thread_id=p_thread;
+ select brand_id into brand from public.sv_customer_threads where company_id=p_company and provider=p_provider and thread_id=p_thread;
+ if brand is null then
+  if p_provider='whatsapp'then raise exception 'conversation_missing';end if;
+  raise exception 'query returned no rows'using errcode='P0002';
+ end if;
  perform public.sv_member_scope(p_company,p_actor,brand,'crm');
 end;$$;
 create function public.sv_customer_scope(p_company uuid,p_actor uuid,p_customer text,p_all boolean default false)returns void language plpgsql security invoker set search_path=''as $$

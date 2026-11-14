@@ -251,16 +251,10 @@ export async function readCopilot(
         p_product: context.product,
       }),
       context.product === "crm"
-        ? scopeBrands(
-            a,
-            a.db
-              .from("sv_copilot_briefs")
-              .select("id,title,status,revision,plan,created_at")
-              .eq("company_id", companyId)
-              .eq("actor_id", a.user.id),
-          )
-            .order("created_at", { ascending: false })
-            .limit(50)
+        ? a.db.rpc("sv_copilot_briefs_list", {
+            p_company: companyId,
+            p_actor: a.user.id,
+          })
         : Promise.resolve({ data: [], error: null }),
       a.db
         .from("sv_ai_settings")

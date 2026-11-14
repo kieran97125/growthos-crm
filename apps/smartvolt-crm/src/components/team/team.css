@@ -86,7 +86,7 @@
 }
 .team-member span:not(.team-avatar) {
   font-size: 13px;
-  color: #687d86;
+  color: #516974;
 }
 .team-avatar {
   width: 44px;
@@ -130,7 +130,7 @@
 .team-invitations span,
 .team-hint {
   font-size: 13px;
-  color: #667d88;
+  color: #526a76;
   line-height: 1.7;
 }
 .team-history {
@@ -147,7 +147,7 @@
   line-height: 2.4;
 }
 .team-history li span {
-  color: #71838b;
+  color: #526a76;
 }
 .team-note {
   padding: 14px 18px;

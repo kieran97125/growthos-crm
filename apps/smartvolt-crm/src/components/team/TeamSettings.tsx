@@ -1,6 +1,6 @@
 "use client";
 import useSWR from "swr";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MailPlus, ShieldCheck, Users, X, LoaderCircle } from "lucide-react";
 import type { TeamAction, TeamPage, TeamMember } from "@/lib/team/model";
 import "./team.css";
@@ -44,6 +44,14 @@ export default function TeamSettings({ initial }: { initial: TeamPage }) {
     [frozen, setFrozen] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null),
     pending = useRef<TeamAction | null>(null);
+  useEffect(() => {
+    if (isOpen && !dialog.current?.open) {
+      dialog.current?.showModal();
+      dialog.current
+        ?.querySelector<HTMLInputElement>('input[name="name"]')
+        ?.focus();
+    }
+  }, [isOpen, formKey]);
   function open(member: TeamMember | null) {
     setEditing(member);
     setFormKey((k) => k + 1);
@@ -52,7 +60,6 @@ export default function TeamSettings({ initial }: { initial: TeamPage }) {
     pending.current = null;
     setFrozen(false);
     setIsOpen(true);
-    dialog.current?.showModal();
   }
   async function send(command: TeamAction) {
     if (busy) return;

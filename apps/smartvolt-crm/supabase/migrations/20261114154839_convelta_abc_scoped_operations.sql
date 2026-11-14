@@ -1,8 +1,38 @@
 -- Current stored brand/product grants, before paging, aggregation, replay or mutation.
+-- A model answer may combine products and brands. Its request's display brand alone
+-- cannot prove the scope of the evidence used. Keep the actual scope separately.
+create table public.sv_copilot_evidence_scopes(
+ company_id uuid not null,request_id uuid not null,brand_ids text[]not null,product_ids text[]not null,
+ created_at timestamptz not null default now(),primary key(company_id,request_id),
+ foreign key(company_id,request_id)references public.sv_ai_requests(company_id,request_id)
+);
+alter table public.sv_copilot_evidence_scopes enable row level security;
+revoke all on public.sv_copilot_evidence_scopes from public,anon,authenticated;
+grant select,insert on public.sv_copilot_evidence_scopes to service_role;
+create trigger sv_copilot_evidence_scopes_immutable before update or delete on public.sv_copilot_evidence_scopes for each row execute function smartvolt_private.wa_reject_rewrite();
+create trigger sv_copilot_evidence_scopes_no_truncate before truncate on public.sv_copilot_evidence_scopes for each statement execute function smartvolt_private.wa_reject_rewrite();
+create function smartvolt_private.copilot_capture_scope()returns trigger language plpgsql security invoker set search_path=''as $$begin
+ if new.source='copilot'then
+  insert into public.sv_copilot_evidence_scopes(company_id,request_id,brand_ids,product_ids)
+  select new.company_id,new.request_id,
+   array(select b->>'id'from public.sv_workspaces w,jsonb_array_elements(w.payload#>'{scope,brands}')b where w.company_id=new.company_id and smartvolt_private.member_brand_allowed(new.company_id,new.actor_id,b->>'id')),
+   array(select p from unnest(array['crm','pos'])p where smartvolt_private.member_has_product(new.company_id,new.actor_id,p));
+ end if;return new;
+end;$$;
+create trigger sv_copilot_capture_scope after insert on public.sv_ai_requests for each row execute function smartvolt_private.copilot_capture_scope();
+create function smartvolt_private.copilot_receipt_allowed(p_company uuid,p_actor uuid,p_request uuid)returns boolean language sql stable security invoker set search_path=''as $$
+ select case when exists(select 1 from public.sv_copilot_evidence_scopes where company_id=p_company and request_id=p_request)then
+  not exists(select 1 from public.sv_copilot_evidence_scopes s,unnest(s.brand_ids)b where s.company_id=p_company and s.request_id=p_request and not smartvolt_private.member_brand_allowed(p_company,p_actor,b))
+  and not exists(select 1 from public.sv_copilot_evidence_scopes s,unnest(s.product_ids)p where s.company_id=p_company and s.request_id=p_request and not smartvolt_private.member_has_product(p_company,p_actor,p))
+ else
+  -- Old answers have no scope evidence. Never guess that a display brand excluded other evidence.
+  exists(select 1 from public.sv_memberships where company_id=p_company and user_id=p_actor and status='active'and brand_ids is null and product_ids is null)
+  and smartvolt_private.member_has_product(p_company,p_actor,'crm')and smartvolt_private.member_has_product(p_company,p_actor,'pos')end
+$$;
 create function smartvolt_private.copilot_thread_allowed(p_company uuid,p_actor uuid,p_thread uuid)returns boolean language sql stable security invoker set search_path=''as $$
  select exists(select 1 from public.sv_copilot_threads t where t.company_id=p_company and t.id=p_thread and t.actor_id=p_actor)
  and not exists(select 1 from public.sv_ai_requests r where r.company_id=p_company and r.source='copilot'and r.source_id=p_thread::text
- and(not smartvolt_private.member_has_product(p_company,p_actor,r.product)or not smartvolt_private.member_brand_allowed(p_company,p_actor,r.brand_id)))
+ and(not smartvolt_private.member_has_product(p_company,p_actor,r.product)or not smartvolt_private.member_brand_allowed(p_company,p_actor,r.brand_id)or not smartvolt_private.copilot_receipt_allowed(p_company,p_actor,r.request_id)))
 $$;
 -- Return retained data that this member may not modify. Compare old/new under the document lock.
 create function smartvolt_private.protected_workspace(p_company uuid,p_actor uuid,p jsonb)returns jsonb language plpgsql stable security invoker set search_path=''as $$
@@ -42,8 +72,14 @@ begin
 end;$$;
 create function public.sv_copilot_thread_list(p_company uuid,p_actor uuid,p_product text)returns jsonb language plpgsql security invoker set search_path=''as $$declare r jsonb;begin
  perform public.sv_copilot_authorize(p_company,p_actor,p_product);
- select coalesce(jsonb_agg(to_jsonb(t)),'[]'::jsonb)into r from(select id,title,created_at,updated_at from public.sv_copilot_threads where company_id=p_company and actor_id=p_actor and product=p_product and smartvolt_private.copilot_thread_allowed(p_company,p_actor,id)order by updated_at desc,id limit 30)t;return r;
+ select coalesce(jsonb_agg(to_jsonb(t)),'[]'::jsonb)into r from(select id,title,product,created_at,updated_at from public.sv_copilot_threads where company_id=p_company and actor_id=p_actor and product=p_product and smartvolt_private.copilot_thread_allowed(p_company,p_actor,id)order by updated_at desc,id limit 30)t;return r;
 end;$$;
+create function public.sv_copilot_briefs_list(p_company uuid,p_actor uuid)returns jsonb language plpgsql security invoker set search_path=''as $$declare r jsonb;begin
+ perform public.sv_copilot_authorize(p_company,p_actor,'crm');
+ select coalesce(jsonb_agg(to_jsonb(t)),'[]'::jsonb)into r from(select id,title,status,revision,plan,created_at from public.sv_copilot_briefs where company_id=p_company and actor_id=p_actor and smartvolt_private.member_brand_allowed(p_company,p_actor,brand_id)and smartvolt_private.copilot_receipt_allowed(p_company,p_actor,request_id)order by created_at desc,id desc limit 50)t;return r;
+end;$$;
+revoke all on function smartvolt_private.copilot_capture_scope(),smartvolt_private.copilot_receipt_allowed(uuid,uuid,uuid),public.sv_copilot_briefs_list(uuid,uuid)from public,anon,authenticated;
+grant execute on function smartvolt_private.copilot_capture_scope(),smartvolt_private.copilot_receipt_allowed(uuid,uuid,uuid),public.sv_copilot_briefs_list(uuid,uuid)to service_role;
 create function public.sv_copilot_thread_read(p_company uuid,p_actor uuid,p_product text,p_thread uuid)returns jsonb language plpgsql security invoker set search_path=''as $$declare r jsonb;begin
  perform public.sv_copilot_authorize(p_company,p_actor,p_product);
  if not smartvolt_private.copilot_thread_allowed(p_company,p_actor,p_thread)or not exists(select 1 from public.sv_copilot_threads where company_id=p_company and id=p_thread and product=p_product)then raise exception 'brand_scope';end if;
@@ -227,7 +263,7 @@ begin
  or jsonb_typeof(p_data->'priority')<>'string' or jsonb_typeof(p_data->'status')<>'string'
  or jsonb_typeof(p_data->'assignee_id') not in ('string','null') or jsonb_typeof(p_data->'follow_up_at') not in ('string','null')
  then raise exception 'meta_operations_invalid';end if;
- assignee=(p_data->>'assignee_id')::uuid;if assignee is not null and(not smartvolt_private.member_has_product(p_company,assignee,'crm')or not smartvolt_private.member_brand_allowed(p_company,assignee,(select brand_id from public.sv_customer_threads where company_id=p_company and thread_id=p_thread and provider='meta')))then raise exception 'customer_assignee_invalid';end if;
+ assignee=(p_data->>'assignee_id')::uuid;if assignee is not null and(not smartvolt_private.member_has_product(p_company,assignee,'crm')or not smartvolt_private.member_brand_allowed(p_company,assignee,(select brand_id from public.sv_customer_threads where company_id=p_company and thread_id=p_thread and provider='meta')))then raise exception 'meta_assignee_invalid';end if;
  -- Lock memberships before the thread, consistently with access authorization.
  -- A removed/view-only assignee must be explicitly reassigned or cleared.
  if assignee is not null then
@@ -275,7 +311,7 @@ begin
  or jsonb_typeof(p_data->'priority')<>'string' or jsonb_typeof(p_data->'status')<>'string'
  or jsonb_typeof(p_data->'assignee_id') not in ('string','null') or jsonb_typeof(p_data->'follow_up_at') not in ('string','null')
  then raise exception 'meta_operations_invalid';end if;
- assignee=(p_data->>'assignee_id')::uuid;if assignee is not null and(not smartvolt_private.member_has_product(p_company,assignee,'crm')or not smartvolt_private.member_brand_allowed(p_company,assignee,(select brand_id from public.sv_customer_threads where company_id=p_company and thread_id=p_thread and provider='whatsapp')))then raise exception 'customer_assignee_invalid';end if;
+ assignee=(p_data->>'assignee_id')::uuid;if assignee is not null and(not smartvolt_private.member_has_product(p_company,assignee,'crm')or not smartvolt_private.member_brand_allowed(p_company,assignee,(select brand_id from public.sv_customer_threads where company_id=p_company and thread_id=p_thread and provider='whatsapp')))then raise exception 'meta_assignee_invalid';end if;
  -- Lock memberships before the thread, consistently with access authorization.
  -- A removed/view-only assignee must be explicitly reassigned or cleared.
  if assignee is not null then
@@ -400,7 +436,7 @@ returns jsonb language plpgsql security invoker set search_path='' as $$
 declare settings public.sv_ai_settings;doc public.sv_workspaces;r public.sv_ai_requests;t public.sv_meta_threads;day_start timestamptz;
 begin
  perform public.sv_ai_authorize(p_company,p_actor);
- perform public.sv_member_scope(p_company,p_actor,p_brand,'crm');
+ if not smartvolt_private.member_has_product(p_company,p_actor,'crm')then raise exception 'ai_product_required';end if;if not smartvolt_private.member_brand_allowed(p_company,p_actor,p_brand)then raise exception 'ai_brand_scope';end if;
  select * into settings from public.sv_ai_settings where company_id=p_company for update;
  if not found or not settings.enabled then raise exception 'ai_disabled';end if;
  select * into strict doc from public.sv_workspaces where company_id=p_company for share;
@@ -437,7 +473,7 @@ language plpgsql security invoker set search_path='' as $$
 declare s public.sv_ai_settings;r public.sv_ai_requests;body text;context jsonb;day_start timestamptz;
 begin
  perform public.sv_ai_authorize(p_company,p_actor);
- perform public.sv_member_scope(p_company,p_actor,p_data->>'brandId','crm');
+ if not smartvolt_private.member_has_product(p_company,p_actor,'crm')then raise exception 'ai_product_required';end if;if not smartvolt_private.member_brand_allowed(p_company,p_actor,p_data->>'brandId')then raise exception 'ai_brand_scope';end if;
  select * into s from public.sv_ai_settings where company_id=p_company for update;
  if not found or not s.enabled then raise exception 'ai_disabled';end if;
  if p_request is null or p_model is null or length(p_model)not between 3 and 150 or p_hash is null or p_hash!~'^[a-f0-9]{64}$'
@@ -476,14 +512,13 @@ end;$$;
 create or replace function public.sv_website_access(p_company uuid,p_actor uuid,p_brand text)returns void
 language plpgsql security invoker set search_path='' as $$
 begin
- perform public.sv_member_scope(p_company,p_actor,p_brand,'crm');
  perform 1 from public.sv_memberships m join public.sv_companies c on c.id=m.company_id
  where m.company_id=p_company and m.user_id=p_actor and m.status='active'and m.role in('owner','manager')and c.status='active'for share of m,c;
  if not found then raise exception 'website_access_denied';end if;
  perform 1 from public.sv_company_products where company_id=p_company for share;
  if not exists(select 1 from public.sv_company_products where company_id=p_company and product='crm'and status='active'and starts_at<=statement_timestamp()and(ends_at is null or ends_at>statement_timestamp()))then raise exception 'website_product_required';end if;
  if not exists(select 1 from public.sv_workspaces w cross join lateral jsonb_array_elements(w.payload#>'{scope,brands}')b where w.company_id=p_company and b->>'id'=p_brand)then raise exception 'website_brand_scope';end if;
-end;$$;
+if not smartvolt_private.member_has_product(p_company,p_actor,'crm')then raise exception 'website_product_required';end if;if not smartvolt_private.member_brand_allowed(p_company,p_actor,p_brand)then raise exception 'website_brand_scope';end if;end;$$;
 
 create or replace function public.sv_customer_list(p_company uuid,p_actor uuid,p_brand text default null,p_search text default '',p_after text default null)returns jsonb language plpgsql security invoker set search_path='' as $$
 declare result jsonb;begin
@@ -1090,7 +1125,7 @@ declare r public.sv_ai_requests;s public.sv_ai_settings;d public.sv_workspaces;e
 begin
  select * into strict r from public.sv_ai_requests where company_id=p_company and request_id=p_request and source='copilot'and actor_id=p_actor for update;
  perform public.sv_copilot_authorize(p_company,p_actor,r.product,true);
- perform public.sv_member_scope(p_company,p_actor,r.brand_id,r.product);if r.status<>'running'then return jsonb_build_object('status',r.status,'result',r.result,'error_code',r.error_code);end if;
+ perform public.sv_member_scope(p_company,p_actor,r.brand_id,r.product);if not smartvolt_private.copilot_receipt_allowed(p_company,p_actor,r.request_id)then raise exception 'brand_scope';end if;if r.status<>'running'then return jsonb_build_object('status',r.status,'result',r.result,'error_code',r.error_code);end if;
  select * into s from public.sv_ai_settings where company_id=p_company for share;
  select * into strict d from public.sv_workspaces where company_id=p_company for share;
  if not coalesce(s.enabled,false)then err='disabled';elsif d.revision<>r.workspace_revision then err='context_changed';end if;
@@ -1151,7 +1186,7 @@ language plpgsql security invoker set search_path='' as $$declare result jsonb;b
   select t.title,m.role,left(m.body,1800)body,m.created_at from public.sv_copilot_messages m join public.sv_copilot_threads t on t.company_id=m.company_id and t.id=m.thread_id
   where t.company_id=p_company and t.actor_id=p_actor and t.product=p_product and smartvolt_private.copilot_thread_allowed(p_company,p_actor,t.id)and strpos(lower(m.body),lower(p_query))>0 order by m.created_at desc,m.id limit 8
  )q),'[]'::jsonb),'tasks',coalesce((select jsonb_agg(to_jsonb(q))from(
-  select b.title,b.status,b.plan,b.updated_at from public.sv_copilot_briefs b where p_product='crm'and b.company_id=p_company and b.actor_id=p_actor and smartvolt_private.member_brand_allowed(p_company,p_actor,b.brand_id)and strpos(lower(b.title||' '||b.plan::text),lower(p_query))>0 order by b.updated_at desc,b.id limit 5
+  select b.title,b.status,b.plan,b.updated_at from public.sv_copilot_briefs b where p_product='crm'and b.company_id=p_company and b.actor_id=p_actor and smartvolt_private.member_brand_allowed(p_company,p_actor,b.brand_id)and smartvolt_private.copilot_receipt_allowed(p_company,p_actor,b.request_id)and strpos(lower(b.title||' '||b.plan::text),lower(p_query))>0 order by b.updated_at desc,b.id limit 5
  )q),'[]'::jsonb))into result;return result;
 end;$$;
 
@@ -1179,7 +1214,7 @@ begin
  elsif kind='save-brief'then
   if p_product<>'crm'then raise exception 'copilot_product_required';end if;
   select * into strict r from public.sv_ai_requests where company_id=p_company and actor_id=p_actor and request_id=(p_data#>>'{client,requestId}')::uuid and source='copilot'and status='completed';
-  perform public.sv_member_scope(p_company,p_actor,r.brand_id,'crm');if r.result->'campaign'is null or r.result->'campaign'='null'::jsonb then raise exception 'copilot_invalid';end if;
+  perform public.sv_member_scope(p_company,p_actor,r.brand_id,'crm');if not smartvolt_private.copilot_receipt_allowed(p_company,p_actor,r.request_id)then raise exception 'brand_scope';end if;if r.result->'campaign'is null or r.result->'campaign'='null'::jsonb then raise exception 'copilot_invalid';end if;
   insert into public.sv_copilot_briefs(company_id,id,actor_id,thread_id,request_id,brand_id,title,plan)
    values(p_company,p_command,p_actor,r.source_id::uuid,r.request_id,r.brand_id,r.result#>>'{campaign,title}',r.result->'campaign')on conflict(company_id,actor_id,request_id)do nothing;
   select * into strict b from public.sv_copilot_briefs where company_id=p_company and actor_id=p_actor and request_id=r.request_id;
@@ -1187,7 +1222,7 @@ begin
  elsif kind='brief-status'then
   if p_product<>'crm'or p_data#>>'{client,status}'not in('draft','ready','complete','cancelled')then raise exception 'copilot_invalid';end if;
   select * into strict b from public.sv_copilot_briefs where company_id=p_company and actor_id=p_actor and id=(p_data#>>'{client,id}')::uuid for update;
-  perform public.sv_member_scope(p_company,p_actor,b.brand_id,'crm');if b.revision<>(p_data#>>'{client,revision}')::bigint then raise exception 'copilot_context_changed';end if;
+  perform public.sv_member_scope(p_company,p_actor,b.brand_id,'crm');if not smartvolt_private.copilot_receipt_allowed(p_company,p_actor,b.request_id)then raise exception 'brand_scope';end if;if b.revision<>(p_data#>>'{client,revision}')::bigint then raise exception 'copilot_context_changed';end if;
   update public.sv_copilot_briefs set status=p_data#>>'{client,status}',revision=revision+1,updated_at=now()where company_id=p_company and id=b.id;
   v=jsonb_build_object('saved',true,'id',b.id);
  elsif kind='configure'then

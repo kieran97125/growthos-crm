@@ -485,6 +485,71 @@ test("revoking a product affects existing conversations and cached C receipts im
   ]);
   assert.equal(list.length, 0);
 });
+test("C evidence scopes protect combined product/brand facts even when the display brand remains allowed", async () => {
+  async function grant(brandIds: string[] | null, productIds: string[]) {
+    const revision = await val<number>(
+      "select access_revision v from sv_memberships where company_id=$1 and user_id=$2",
+      [company, agent],
+    );
+    await action("member", {
+      userId: agent,
+      revision,
+      name: "Scoped colleague",
+      role: "agent",
+      brandIds,
+      productIds,
+      status: "active",
+    });
+  }
+  async function receipt() {
+    const request = randomUUID(),
+      thread = randomUUID();
+    await db.query(
+      "insert into sv_copilot_threads(company_id,id,actor_id,product,title)values($1,$2,$3,'crm','Combined evidence')",
+      [company, thread, agent],
+    );
+    await db.query(
+      "insert into sv_ai_requests(company_id,request_id,actor_id,brand_id,source,source_id,workspace_revision,model,request_hash,product,feature,status,result)values($1,$2,$3,'main','copilot',$4,0,'synthetic/model',$5,'crm','copilot','completed','{}')",
+      [company, request, agent, thread, "b".repeat(64)],
+    );
+    return request;
+  }
+  await grant(null, ["crm", "pos"]);
+  const combined = await receipt();
+  assert.equal(
+    await call("smartvolt_private.copilot_receipt_allowed", [
+      company,
+      agent,
+      combined,
+    ]),
+    true,
+  );
+  await grant(null, ["crm"]);
+  await assert.rejects(
+    call("sv_copilot_receipt", [company, agent, "crm", combined]),
+    /brand_scope/,
+  );
+  const crmOnly = await receipt();
+  await call("sv_copilot_receipt", [company, agent, "crm", crmOnly]);
+  await grant(["main"], ["crm", "pos"]);
+  // 'main' is still allowed, but the original answer also saw the other brand.
+  await assert.rejects(
+    call("sv_copilot_receipt", [company, agent, "crm", combined]),
+    /brand_scope/,
+  );
+  const current = await receipt();
+  await call("sv_copilot_receipt", [company, agent, "crm", current]);
+  assert.equal(
+    (
+      await call<{ title: string }[]>("sv_copilot_thread_list", [
+        company,
+        agent,
+        "crm",
+      ])
+    ).filter((t) => t.title === "Combined evidence").length,
+    1,
+  );
+});
 test("invitation and audit tables/RPCs remain inaccessible to browser roles; evidence cannot be rewritten", async () => {
   for (const role of ["anon", "authenticated"]) {
     await db.exec(`set role ${role}`);

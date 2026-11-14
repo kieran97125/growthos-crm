@@ -16,6 +16,7 @@ export default function InviteAcceptance() {
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   useEffect(() => {
+    if (credentials.current) return;
     const url = new URL(window.location.href),
       hash = new URLSearchParams(url.hash.slice(1));
     credentials.current = {

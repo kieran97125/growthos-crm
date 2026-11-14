@@ -29,7 +29,7 @@ function edit(name, replacements) {
     if (found === 0) throw Error(`${name}: missing anchor ${from}`);
     sql =
       typeof from === "string"
-        ? sql.replaceAll(from, to)
+        ? sql.replaceAll(from, () => to)
         : sql.replace(from, to);
   }
   output.push(sql);
@@ -40,6 +40,8 @@ const thread = (provider, id) =>
   `perform public.sv_thread_scope(p_company,p_actor,${provider},${id});`;
 const guardAfterAuth = (name, auth, guard) =>
   edit(name, [[auth, `${auth}\n ${guard}`]]);
+const featureGuard = (prefix, brand) =>
+  `if not smartvolt_private.member_has_product(p_company,p_actor,'crm')then raise exception '${prefix}_product_required';end if;if not smartvolt_private.member_brand_allowed(p_company,p_actor,${brand})then raise exception '${prefix}_brand_scope';end if;`;
 edit("sv_meta_authorize", [
   [
     "return r;",
@@ -134,14 +136,16 @@ guardAfterAuth(
 guardAfterAuth(
   "sv_ai_claim",
   "perform public.sv_ai_authorize(p_company,p_actor);",
-  check("p_brand"),
+  featureGuard("ai", "p_brand"),
 );
 guardAfterAuth(
   "sv_translation_claim",
   "perform public.sv_ai_authorize(p_company,p_actor);",
-  check("p_data->>'brandId'"),
+  featureGuard("ai", "p_data->>'brandId'"),
 );
-edit("sv_website_access", [["begin", `begin\n ${check("p_brand")}`]]);
+edit("sv_website_access", [
+  ["end;$$;", `${featureGuard("website", "p_brand")}end;$$;`],
+]);
 edit("sv_customer_list", [
   [
     "c.company_id=p_company and(p_after",
@@ -303,7 +307,7 @@ for (const name of ["sv_meta_manage_thread", "sv_wa_manage_thread"]) {
     marker +
       "if assignee is not null and(not smartvolt_private.member_has_product(p_company,assignee,'crm')or not smartvolt_private.member_brand_allowed(p_company,assignee,(select brand_id from public.sv_customer_threads where company_id=p_company and thread_id=p_thread and provider='" +
       (name === "sv_wa_manage_thread" ? "whatsapp" : "meta") +
-      "')))then raise exception 'customer_assignee_invalid';end if;",
+      "')))then raise exception 'meta_assignee_invalid';end if;",
   );
 }
 for (const name of [
@@ -314,7 +318,11 @@ for (const name of [
   edit(name, [
     [
       "if r.status<>'running'",
-      check("r.brand_id", "r.product") + "if r.status<>'running'",
+      check("r.brand_id", "r.product") +
+        (name === "sv_copilot_finish"
+          ? "if not smartvolt_private.copilot_receipt_allowed(p_company,p_actor,r.request_id)then raise exception 'brand_scope';end if;"
+          : "") +
+        "if r.status<>'running'",
     ],
   ]);
 // Current authority is rechecked before exposing prior model output or replaying a tool.
@@ -336,12 +344,18 @@ edit("sv_copilot_memory", [
   ],
   [
     "b.actor_id=p_actor and strpos",
-    "b.actor_id=p_actor and smartvolt_private.member_brand_allowed(p_company,p_actor,b.brand_id)and strpos",
+    "b.actor_id=p_actor and smartvolt_private.member_brand_allowed(p_company,p_actor,b.brand_id)and smartvolt_private.copilot_receipt_allowed(p_company,p_actor,b.request_id)and strpos",
   ],
 ]);
 edit("sv_copilot_action", [
-  ["if b.revision<>", `${check("b.brand_id")}if b.revision<>`],
-  ["if r.result->'campaign'", `${check("r.brand_id")}if r.result->'campaign'`],
+  [
+    "if b.revision<>",
+    `${check("b.brand_id")}if not smartvolt_private.copilot_receipt_allowed(p_company,p_actor,b.request_id)then raise exception 'brand_scope';end if;if b.revision<>`,
+  ],
+  [
+    "if r.result->'campaign'",
+    `${check("r.brand_id")}if not smartvolt_private.copilot_receipt_allowed(p_company,p_actor,r.request_id)then raise exception 'brand_scope';end if;if r.result->'campaign'`,
+  ],
 ]);
 const header = readFileSync(
   new URL("./abc-scope-header.sql", import.meta.url),

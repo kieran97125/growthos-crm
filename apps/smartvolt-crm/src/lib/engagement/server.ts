@@ -178,3 +178,15 @@ export async function actEngagement(company: string, input: unknown) {
   }
   return r.data;
 }
+
+export async function manualTemplateContext(company: string, thread: string) {
+  const a = await access(company);
+  z.uuid().parse(thread);
+  const r = await a.db.rpc("sv_manual_template_context", {
+    p_company: company,
+    p_actor: a.user.id,
+    p_thread: thread,
+  });
+  engagementFailure(r.error);
+  return { ...r.data, canSync: ["owner", "manager"].includes(a.actor.role) };
+}

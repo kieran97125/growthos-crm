@@ -63,3 +63,11 @@ Before B3 is final: extend the currently name-only merge fields with actual sour
 - Added supervisor desk, office-hours editor and Operations entry. All public human-send routes now require a valid per-window editor token, including the older WhatsApp and Meta pages. Takeover retains drafts and does not authorize retrying an unresolved send.
 - Local typecheck and lint passed; 21 engagement/editor/SLA database tests passed. Hosted checkpoint 110e720 passed unit/database, durable Workflow, native Postgres, build, paint, original operations/knowledge/translation interactions; full browser found 3 stale template selectors and 1 real small-text contrast violation. Both have been corrected; rerun pending.
 - Candidate only, no new production migration/deployment or external message sent. Runtime key creation remains blocked by automatic approval review; no retry or alternate credential disclosure performed.
+
+### Continuation: real template reply, source fields and roster routing
+
+- Added a service-template dialog inside the unified inbox. It resolves the exact selected thread/connection/customer; an approved UTILITY template, current service consent and the current editor lease are required. Command retries preserve the same request.
+- Template inventories now load for the selected connection. Source-bound journey fields include actual appointment date/time/service and brand; interpolation is literal and single-pass. Missing facts skip with a reason; service/time changes retire obsolete reminders.
+- Added fixed branch IDs, skills, weekly shift windows, leave periods and per-inquiry routing requirements. The existing serialized capacity admission now checks these facts. Existing owners remain retained. Added team routing settings and inquiry requirements controls.
+- 23 local engagement/editor/SLA/source/roster DB tests passed; local typecheck/lint passed after correcting a JSX fragment. Full UI/native concurrency acceptance for the new roster work remains pending.
+- A5 and B4 migration filenames reserved, still empty at this checkpoint. A5 source schema inspected read-only, with no enquiry content read. No runtime credential writes or live migration/deployment.

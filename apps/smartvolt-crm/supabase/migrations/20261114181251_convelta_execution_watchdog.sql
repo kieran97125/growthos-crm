@@ -19,14 +19,14 @@ declare cursor public.sv_journey_scan_state;r record;n integer:=0;seen integer:=
  if not cursor.backfill_complete then
   for r in select *from(
    select 'pos-appointment:'||p.id source_key,encode(sha256(convert_to(jsonb_build_array(p.contact_id,p.brand_id,p.starts_at,p.ends_at,p.status)::text,'UTF8')),'hex')version,
-   p.contact_id customer,p.brand_id brand,to_timestamp(p.starts_at::double precision/1000)anchor,null::text provider,null::uuid thread,'pos'product
+   p.contact_id customer,p.brand_id brand,to_timestamp(p.starts_at::double precision/1000)anchor,null::text provider,null::uuid thread,'pos'product,jsonb_build_object('date',to_char(to_timestamp(p.starts_at::double precision/1000)at time zone 'Asia/Hong_Kong','YYYY-MM-DD'),'time',to_char(to_timestamp(p.starts_at::double precision/1000)at time zone 'Asia/Hong_Kong','HH24:MI'),'service',(select x->>'name'from public.sv_workspaces w,jsonb_array_elements(w.payload#>'{pos,services}')x where w.company_id=p_company and x->>'id'=p.service_id and x->>'brandId'=p.brand_id))context
    from public.sv_pos_appointments p where p.company_id=p_company and p.status='confirmed'and p.starts_at>extract(epoch from now())*1000
-   union all select 'crm-booking:'||p.id,encode(sha256(convert_to(jsonb_build_array(p.customer_id,p.brand_id,p.desired_at,p.status,p.pos_appointment_id)::text,'UTF8')),'hex'),p.customer_id,p.brand_id,p.desired_at,p.provider,p.thread_id,'crm'
+   union all select 'crm-booking:'||p.id,encode(sha256(convert_to(jsonb_build_array(p.customer_id,p.brand_id,p.desired_at,p.status,p.pos_appointment_id)::text,'UTF8')),'hex'),p.customer_id,p.brand_id,p.desired_at,p.provider,p.thread_id,'crm',jsonb_build_object('service',p.service,'date',to_char(p.desired_at at time zone 'Asia/Hong_Kong','YYYY-MM-DD'),'time',to_char(p.desired_at at time zone 'Asia/Hong_Kong','HH24:MI'))
    from public.sv_booking_requests p where p.company_id=p_company and p.status='confirmed'and p.pos_appointment_id is null and p.desired_at>now())q
    where source_key>cursor.after_booking order by source_key limit 100 loop
    last_key=r.source_key;seen=seen+1;
    if exists(select 1 from public.sv_customer_brands where company_id=p_company and customer_id=r.customer and brand_id=r.brand)then
-    perform smartvolt_private.journey_source(p_company,r.source_key,r.version,r.customer,r.brand,'appointment',r.anchor,true,r.provider,r.thread,r.product);
+    perform smartvolt_private.journey_source(p_company,r.source_key,r.version,r.customer,r.brand,'appointment',r.anchor,true,r.provider,r.thread,r.product,r.context);
    end if;
   end loop;
   update public.sv_journey_scan_state set after_booking=coalesce(last_key,after_booking),backfill_complete=seen<100 where company_id=p_company;

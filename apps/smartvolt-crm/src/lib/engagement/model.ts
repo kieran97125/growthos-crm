@@ -40,10 +40,16 @@ export const definitionSchema = z
     if (d.kind === "template" && (!d.name || !d.locale || !d.fingerprint))
       c.addIssue({ code: "custom", message: "請選擇正式模板。" });
     if (
-      (d.kind === "text" && /{{(?!name}})/.test(d.body)) ||
-      d.values.some((v) => /{{(?!name}})/.test(v.value))
+      (d.kind === "text" &&
+        /{{(?!(?:name|brand|date|time|service)}})/.test(d.body)) ||
+      d.values.some((v) =>
+        /{{(?!(?:name|brand|date|time|service)}})/.test(v.value),
+      )
     )
-      c.addIssue({ code: "custom", message: "只支援客戶姓名變數。" });
+      c.addIssue({
+        code: "custom",
+        message: "可用姓名、品牌、預約日期、時間及服務變數。",
+      });
     if (
       new Set(d.values.map((v) => v.component + ":" + v.key)).size !==
       d.values.length
@@ -78,6 +84,7 @@ export const engagementAction = z.discriminatedUnion("action", [
       action: z.literal("manual"),
       ...campaign,
       editorToken: z.uuid(),
+      threadId: z.uuid(),
     })
     .strict(),
   z.object({ ...command, action: z.literal("cancel"), id: z.uuid() }).strict(),
@@ -133,6 +140,7 @@ export const stateNames: Record<DeliveryState, string> = {
   cancelled: "已取消",
 };
 export const reasonNames: Record<string, string> = {
+  source_details_missing: "預約資料未齊，已略過提醒",
   human_takeover: "真人已接手，已停止自動訊息",
   authority_changed: "同事權限已更改",
   customer_changed: "客戶連結已更改",

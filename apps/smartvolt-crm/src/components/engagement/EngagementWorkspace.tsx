@@ -968,7 +968,7 @@ function PolicyForm({
             />
           </label>
           <label>
-            公司每日發送上限
+            每日排程訊息上限
             <input
               type="number"
               name="daily"

@@ -88,6 +88,15 @@ export default async function CompanySettings({
       {members && (
         <section className="sv-settings-section">
           <h2>團隊權限</h2>
+          {access.products.includes("crm") &&
+            access.memberScope.brandIds === null && (
+              <Link
+                className="sv-secondary"
+                href={`/company/${companyId}/settings/routing`}
+              >
+                分店、專長與值班設定 →
+              </Link>
+            )}
           <p>邀請同事加入，管理角色、品牌及產品權限。</p>
           <Link
             className="sv-secondary"

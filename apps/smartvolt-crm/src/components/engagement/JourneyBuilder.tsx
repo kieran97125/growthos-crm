@@ -69,6 +69,9 @@ export default function JourneyBuilder({
       <fieldset disabled={busy || frozen} className="eng-form-fields">
         <p className="eng-hint">
           {recipeDescriptions[recipe]} 每次只使用仍然有效嘅客戶及預約資料。
+          {
+            "可用 {{name}} 姓名、{{brand}} 品牌；預約／到店流程亦可用 {{date}} 日期、{{time}} 香港時間、{{service}} 服務。"
+          }
         </p>
         <label>
           流程名稱

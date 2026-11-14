@@ -28,6 +28,8 @@ import { BrandMark } from "@/components/BrandMark";
 import ThreadOperationsPanel, {
   type OperationDraft,
 } from "@/components/meta/ThreadOperations";
+import ManualTemplateReply from "@/components/engagement/ManualTemplateReply";
+import RoutingRequirement from "@/components/operations/RoutingRequirement";
 import InquiryOperations from "@/components/operations/InquiryOperations";
 import { useReplyLease } from "@/components/operations/useReplyLease";
 import { inboxQueues } from "@/lib/meta/operations";
@@ -856,6 +858,17 @@ export default function UnifiedInbox({
                 />
               )}
               <div className="iq-compose-footer">
+                {!note && selected?.provider === "whatsapp" && (
+                  <ManualTemplateReply
+                    key={key}
+                    companyId={companyId}
+                    threadId={selected.id}
+                    disabled={!canEdit || locked || !!unresolved}
+                    acquire={replyLease.acquire}
+                    touch={replyLease.touch}
+                    onSent={() => refresh()}
+                  />
+                )}
                 <small>
                   {!canEdit
                     ? "你目前只有檢視權限"
@@ -864,7 +877,7 @@ export default function UnifiedInbox({
                       : unresolved
                         ? "上一則結果待核對，請先重新讀取回執"
                         : !openWindow
-                          ? "服務視窗已過；可記錄內部備註"
+                          ? "服務視窗已過；WhatsApp 可用服務模板回覆"
                           : "使用此對話原本渠道回覆"}
                 </small>
                 <button
@@ -983,17 +996,26 @@ export default function UnifiedInbox({
                     mutate("inbox", { ...c, provider: detail.thread.provider })
                   }
                   assistant={
-                    <InquiryOperations
-                      key={key}
-                      companyId={companyId}
-                      actorId={overview.actorId}
-                      thread={detail.thread}
-                      disabled={!canEdit || locked}
-                      onInsert={(text) => {
-                        setDrafts((old) => ({ ...old, [key]: text }));
-                        setMobile("chat");
-                      }}
-                    />
+                    <>
+                      <RoutingRequirement
+                        key={key}
+                        companyId={companyId}
+                        provider={detail.thread.provider}
+                        threadId={detail.thread.id}
+                        canEdit={canEdit}
+                      />
+                      <InquiryOperations
+                        key={key}
+                        companyId={companyId}
+                        actorId={overview.actorId}
+                        thread={detail.thread}
+                        disabled={!canEdit || locked}
+                        onInsert={(text) => {
+                          setDrafts((old) => ({ ...old, [key]: text }));
+                          setMobile("chat");
+                        }}
+                      />
+                    </>
                   }
                 />
               </>

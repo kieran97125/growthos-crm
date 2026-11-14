@@ -12,7 +12,7 @@ create table public.sv_journey_versions(
 );
 create table public.sv_journey_sources(
  company_id uuid not null,source_key text not null,source_version text not null,customer_id text not null,brand_id text not null,
- recipe text not null,anchor_at timestamptz not null,active boolean not null,provider text,thread_id uuid,product text not null check(product in('crm','pos')),
+ recipe text not null,anchor_at timestamptz not null,active boolean not null,provider text,thread_id uuid,product text not null check(product in('crm','pos')),context jsonb not null default '{}',
  created_at timestamptz not null default now(),primary key(company_id,source_key),foreign key(company_id,customer_id,brand_id)references public.sv_customer_brands(company_id,customer_id,brand_id)
 );
 create index sv_journey_sources_pending on public.sv_journey_sources(company_id,recipe,brand_id,anchor_at)where active;
@@ -28,7 +28,7 @@ create function smartvolt_private.journey_stop(p_company uuid,p_run uuid,p_reaso
  update public.sv_delivery_jobs set state='cancelled',reason=p_reason,updated_at=now()where company_id=p_company and origin='journey'and source_id=p_run and state='scheduled';
  update public.sv_journey_runs set status='stopped',reason=p_reason where company_id=p_company and id=p_run and status='active';end;$$;
 create function smartvolt_private.journey_enroll(p_company uuid,p_key text,p_journey uuid default null)returns integer language plpgsql security invoker set search_path=''as $$
-declare s public.sv_journey_sources;j public.sv_journeys;v public.sv_journey_versions;t record;run_id uuid;step jsonb;position integer;stamp timestamptz;name text;n integer:=0;begin
+declare s public.sv_journey_sources;j public.sv_journeys;v public.sv_journey_versions;t record;run_id uuid;step jsonb;position integer;stamp timestamptz;name text;ctx jsonb;rendered jsonb;n integer:=0;begin
  select * into s from public.sv_journey_sources where company_id=p_company and source_key=p_key;if not found or not s.active then return 0;end if;
  select c.name into strict name from public.sv_customers c where c.company_id=p_company and c.id=s.customer_id;
  for j in select *from public.sv_journeys where company_id=p_company and brand_id=s.brand_id and recipe=s.recipe and enabled and(p_journey is null or id=p_journey)loop
@@ -40,18 +40,20 @@ declare s public.sv_journey_sources;j public.sv_journeys;v public.sv_journey_ver
   if not exists(select 1 from jsonb_array_elements(v.steps)sx where(case when s.recipe='appointment'then s.anchor_at-make_interval(mins=>(sx->>'delayMinutes')::integer)else s.anchor_at+make_interval(mins=>(sx->>'delayMinutes')::integer)end)>statement_timestamp())then continue;end if;
   insert into public.sv_journey_runs(company_id,journey_id,version,source_key,source_version,customer_id,brand_id,provider,thread_id)values(p_company,j.id,j.published_version,s.source_key,s.source_version,s.customer_id,s.brand_id,j.provider,t.thread_id)on conflict do nothing returning id into run_id;
   if run_id is null then continue;end if;position=0;
+  ctx=s.context||jsonb_build_object('brand',(select b->>'name'from public.sv_workspaces w,jsonb_array_elements(w.payload#>'{scope,brands}')b where w.company_id=p_company and b->>'id'=s.brand_id));
   for step in select value from jsonb_array_elements(v.steps)loop
    position=position+1;stamp=case when s.recipe='appointment'then s.anchor_at-make_interval(mins=>(step->>'delayMinutes')::integer)else s.anchor_at+make_interval(mins=>(step->>'delayMinutes')::integer)end;if stamp<=statement_timestamp()then continue;end if;
-   insert into public.sv_delivery_jobs(company_id,brand_id,customer_id,provider,channel,connection_id,thread_id,purpose,origin,source_id,source_key,actor_id,payload,due_at)
-   values(p_company,s.brand_id,s.customer_id,j.provider,t.channel,j.connection_id,t.thread_id,j.purpose,'journey',run_id,'journey:'||run_id||':'||position,j.created_by,smartvolt_private.delivery_render(step->'definition',name),stamp);n=n+1;
+   rendered=smartvolt_private.delivery_render(step->'definition',name,ctx);
+   insert into public.sv_delivery_jobs(company_id,brand_id,customer_id,provider,channel,connection_id,thread_id,purpose,origin,source_id,source_key,actor_id,payload,due_at,state,reason)
+   values(p_company,s.brand_id,s.customer_id,j.provider,t.channel,j.connection_id,t.thread_id,j.purpose,'journey',run_id,'journey:'||run_id||':'||position,j.created_by,coalesce(rendered,step->'definition'),stamp,case when rendered is null then 'skipped'else 'scheduled'end,case when rendered is null then 'source_details_missing'end);n=n+1;
   end loop;
  end loop;return n;end;$$;
-create function smartvolt_private.journey_source(p_company uuid,p_key text,p_version text,p_customer text,p_brand text,p_recipe text,p_anchor timestamptz,p_active boolean,p_provider text default null,p_thread uuid default null,p_product text default 'crm')returns void
+create function smartvolt_private.journey_source(p_company uuid,p_key text,p_version text,p_customer text,p_brand text,p_recipe text,p_anchor timestamptz,p_active boolean,p_provider text default null,p_thread uuid default null,p_product text default 'crm',p_context jsonb default '{}')returns void
 language plpgsql security invoker set search_path=''as $$declare old public.sv_journey_sources;r record;begin
- select * into old from public.sv_journey_sources where company_id=p_company and source_key=p_key;if found and(old.source_version,old.active)=(p_version,p_active)then return;end if;
+ select * into old from public.sv_journey_sources where company_id=p_company and source_key=p_key;if found and(old.source_version,old.active,old.context)=(p_version,p_active,p_context)then return;end if;
  for r in select id from public.sv_journey_runs where company_id=p_company and source_key=p_key and status='active'order by id loop perform smartvolt_private.journey_stop(p_company,r.id,'source_changed');end loop;
- insert into public.sv_journey_sources(company_id,source_key,source_version,customer_id,brand_id,recipe,anchor_at,active,provider,thread_id,product)values(p_company,p_key,p_version,p_customer,p_brand,p_recipe,p_anchor,p_active,p_provider,p_thread,p_product)
- on conflict(company_id,source_key)do update set source_version=excluded.source_version,customer_id=excluded.customer_id,brand_id=excluded.brand_id,anchor_at=excluded.anchor_at,active=excluded.active;
+ insert into public.sv_journey_sources(company_id,source_key,source_version,customer_id,brand_id,recipe,anchor_at,active,provider,thread_id,product,context)values(p_company,p_key,p_version,p_customer,p_brand,p_recipe,p_anchor,p_active,p_provider,p_thread,p_product,p_context)
+ on conflict(company_id,source_key)do update set source_version=excluded.source_version,customer_id=excluded.customer_id,brand_id=excluded.brand_id,anchor_at=excluded.anchor_at,active=excluded.active,context=excluded.context;
  if p_active then perform smartvolt_private.journey_enroll(p_company,p_key);end if;end;$$;
 create function smartvolt_private.journey_message()returns trigger language plpgsql security invoker set search_path=''as $$
 declare v_provider text;thread uuid;link public.sv_customer_threads;r record;incoming boolean;automated boolean;stamp timestamptz;begin
@@ -70,17 +72,20 @@ create trigger sv_journey_wa_message after insert on public.sv_wa_messages for e
 create trigger sv_journey_meta_message after insert on public.sv_meta_messages for each row execute function smartvolt_private.journey_message();
 
 create function smartvolt_private.journey_booking()returns trigger language plpgsql security invoker set search_path=''as $$
-declare key text;version text;customer text;brand text;anchor timestamptz;active boolean;product text;provider text;thread uuid;status text;r record;begin
+declare key text;version text;customer text;brand text;anchor timestamptz;active boolean;product text;provider text;thread uuid;status text;service text;ctx jsonb;r record;begin
  if tg_table_name='sv_pos_appointments'then
   key='pos-appointment:'||new.id;customer=new.contact_id;brand=new.brand_id;anchor=to_timestamp(new.starts_at::double precision/1000);active=new.status='confirmed';product='pos';status=new.status;
-  version=encode(sha256(convert_to(jsonb_build_array(new.contact_id,new.brand_id,new.starts_at,new.ends_at,new.status)::text,'UTF8')),'hex');
+  select x->>'name'into service from public.sv_workspaces w,jsonb_array_elements(w.payload#>'{pos,services}')x where w.company_id=new.company_id and x->>'id'=new.service_id and x->>'brandId'=new.brand_id;
+  version=encode(sha256(convert_to(jsonb_build_array(new.contact_id,new.brand_id,new.starts_at,new.ends_at,new.status,new.service_id,service)::text,'UTF8')),'hex');
  else
   key='crm-booking:'||new.id;customer=new.customer_id;brand=new.brand_id;anchor=new.desired_at;active=new.status='confirmed'and new.pos_appointment_id is null;product='crm';provider=new.provider;thread=new.thread_id;status=new.status;
-  version=encode(sha256(convert_to(jsonb_build_array(new.customer_id,new.brand_id,new.desired_at,new.status,new.pos_appointment_id)::text,'UTF8')),'hex');
+  service=new.service;
+  version=encode(sha256(convert_to(jsonb_build_array(new.customer_id,new.brand_id,new.desired_at,new.status,new.pos_appointment_id,service)::text,'UTF8')),'hex');
  end if;
  if not exists(select 1 from public.sv_customer_brands where company_id=new.company_id and customer_id=customer and brand_id=brand)then return new;end if;
- perform smartvolt_private.journey_source(new.company_id,key,version,customer,brand,'appointment',anchor,active,provider,thread,product);
- if tg_table_name='sv_pos_appointments'then perform smartvolt_private.journey_source(new.company_id,'completed:'||key,version,customer,brand,'completed',statement_timestamp(),status='completed',null,null,'pos');end if;
+ ctx=jsonb_build_object('service',service,'date',to_char(anchor at time zone 'Asia/Hong_Kong','YYYY-MM-DD'),'time',to_char(anchor at time zone 'Asia/Hong_Kong','HH24:MI'));
+ perform smartvolt_private.journey_source(new.company_id,key,version,customer,brand,'appointment',anchor,active,provider,thread,product,ctx);
+ if tg_table_name='sv_pos_appointments'then perform smartvolt_private.journey_source(new.company_id,'completed:'||key,version,customer,brand,'completed',statement_timestamp(),status='completed',null,null,'pos',ctx);end if;
  if status in('confirmed','linked','completed','checked_in')then
   for r in select run.id from public.sv_journey_runs run join public.sv_journeys j on j.company_id=run.company_id and j.id=run.journey_id where run.company_id=new.company_id and run.customer_id=customer and run.brand_id=brand and run.status='active'and j.recipe='unanswered'order by run.id loop perform smartvolt_private.journey_stop(new.company_id,r.id,'customer_booked');end loop;
  end if;return new;end;$$;

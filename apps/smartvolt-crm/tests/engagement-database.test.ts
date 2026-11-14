@@ -723,6 +723,7 @@ test("a utility template outside the text window requires the exact current edit
     definition,
     purpose: "service",
     editorToken: token,
+    threadId: c.thread,
   });
   await action("manual", data);
   const id = await job(data.id);
@@ -879,6 +880,174 @@ test("supervision measures actual accepted human replies, ignores notes, and fre
       null,
       "2026-01-01",
       "2026-12-31",
+    ]),
+    /brand_scope/,
+  );
+});
+
+test("literal merge fields use actual source facts once and missing facts never invent a reminder", async () => {
+  const p = {
+    kind: "text",
+    body: "{{name}} · {{date}} {{time}} · {{service}} · {{brand}}",
+    values: [],
+  };
+  const context = {
+    date: "2026-12-02",
+    time: "14:30",
+    service: "Verified service",
+    brand: "Main",
+  };
+  assert.equal(
+    (
+      await rpc<{ body: string }>("smartvolt_private.delivery_render", [
+        JSON.stringify(p),
+        "{{service}}",
+        JSON.stringify(context),
+      ])
+    ).body,
+    "{{service}} · 2026-12-02 14:30 · Verified service · Main",
+  );
+  assert.equal(
+    await rpc("smartvolt_private.delivery_render", [
+      JSON.stringify(p),
+      "Customer",
+      "{}",
+    ]),
+    null,
+  );
+  const c = await customer(),
+    r = recipe("appointment", { steps: [{ delayMinutes: 60, definition: p }] });
+  await publish(r);
+  const booking = randomUUID(),
+    at = new Date(Date.now() + 3 * 86400000).toISOString();
+  await db.query(
+    "insert into sv_booking_requests(company_id,id,customer_id,brand_id,provider,thread_id,service,desired_at,guests,status)values($1,$2,$3,'main','whatsapp',$4,'Real service',$5,1,'confirmed')",
+    [company, booking, c.id, c.thread, at],
+  );
+  const source = await value<{ context: { service: string } }>(
+    "select to_jsonb(s)v from sv_journey_sources s where company_id=$1 and source_key=$2",
+    [company, "crm-booking:" + booking],
+  );
+  assert.equal(source.context.service, "Real service");
+  await db.query(
+    "update sv_booking_requests set service='Changed service',revision=revision+1 where company_id=$1 and id=$2",
+    [company, booking],
+  );
+  assert.ok(
+    (
+      await value<string>(
+        "select payload->>'body'v from sv_delivery_jobs j join sv_journey_runs r on r.company_id=j.company_id and r.id=j.source_id where j.company_id=$1 and r.journey_id=$2 and r.source_key=$3 and j.state='scheduled'",
+        [company, r.id, "crm-booking:" + booking],
+      )
+    ).includes("Changed service"),
+  );
+  assert.ok(Number(await rpc("sv_journey_catchup", [company])) >= 0);
+});
+test("roster applies stable branch, skills, actual shift and leave independently of capacity", async () => {
+  const c = await customer(),
+    branch = randomUUID();
+  const act = (kind: string, data: object) =>
+    rpc("sv_roster_action", [
+      company,
+      owner,
+      randomUUID(),
+      kind,
+      JSON.stringify(data),
+    ]);
+  await act("branch", {
+    id: branch,
+    name: "Test branch",
+    active: true,
+    revision: 0,
+  });
+  await act("requirement", {
+    provider: "whatsapp",
+    threadId: c.thread,
+    branchId: branch,
+    skills: ["English"],
+    revision: 0,
+  });
+  assert.equal(
+    await rpc("smartvolt_private.roster_eligible", [
+      company,
+      owner,
+      "whatsapp",
+      c.thread,
+      "2026-11-16T10:00:00+08:00",
+    ]),
+    false,
+  );
+  const profile = {
+    userId: owner,
+    branchIds: [branch],
+    skills: ["English"],
+    timeZone: "Asia/Hong_Kong",
+    rosterEnabled: true,
+    weekly: [{ day: 1, start: 540, end: 1080 }],
+    leavePeriods: [],
+    revision: 0,
+  };
+  await act("member", profile);
+  assert.equal(
+    await rpc("smartvolt_private.roster_eligible", [
+      company,
+      owner,
+      "whatsapp",
+      c.thread,
+      "2026-11-16T10:00:00+08:00",
+    ]),
+    true,
+  );
+  assert.equal(
+    await rpc("smartvolt_private.roster_eligible", [
+      company,
+      owner,
+      "whatsapp",
+      c.thread,
+      "2026-11-16T19:00:00+08:00",
+    ]),
+    false,
+  );
+  await act("member", {
+    ...profile,
+    leavePeriods: [
+      { from: "2026-11-16T09:00:00+08:00", to: "2026-11-16T12:00:00+08:00" },
+    ],
+    revision: 0,
+  });
+  assert.equal(
+    await rpc("smartvolt_private.roster_eligible", [
+      company,
+      owner,
+      "whatsapp",
+      c.thread,
+      "2026-11-16T10:00:00+08:00",
+    ]),
+    false,
+  );
+  const scoped = await rpc<{ branches: unknown[] }>("sv_roster_read", [
+    company,
+    owner,
+    null,
+    null,
+  ]);
+  assert.equal(scoped.branches.length, 1);
+  await assert.rejects(
+    rpc("sv_roster_read", [company, agent, null, null]),
+    /access_denied/,
+  );
+  await assert.rejects(
+    rpc("sv_roster_action", [
+      company,
+      agent,
+      randomUUID(),
+      "branch",
+      JSON.stringify({
+        id: randomUUID(),
+        name: "Denied",
+        active: true,
+        revision: 0,
+      }),
     ]),
     /brand_scope/,
   );

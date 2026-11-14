@@ -1,4 +1,6 @@
 "use client";
+import useSWR from "swr";
+import { engagementFetcher } from "./fetcher";
 import { useState } from "react";
 import { RefreshCw } from "lucide-react";
 import type { EngagementPage, MessageDefinition } from "@/lib/engagement/model";
@@ -23,7 +25,16 @@ export default function MessageFields({
   const [inventories, setInventories] = useState(initialTemplates),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
-  const inventory = inventories.find((i) => i.connection_id === connection.id),
+  const { data: cached } = useSWR<EngagementPage>(
+    connection.provider === "whatsapp"
+      ? `/api/companies/${companyId}/engagement?connection=${connection.id}`
+      : null,
+    engagementFetcher,
+    { revalidateOnFocus: false },
+  );
+  const inventory = [...inventories, ...(cached?.templates ?? [])].find(
+      (i) => i.connection_id === connection.id,
+    ),
     templates =
       inventory?.templates.filter(
         (t) =>

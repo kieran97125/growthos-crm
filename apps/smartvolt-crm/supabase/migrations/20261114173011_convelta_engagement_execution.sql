@@ -66,21 +66,33 @@ returns table(customer_id text,customer_name text,thread_id uuid,channel text,la
  and smartvolt_private.member_has_product(p_company,p_actor,'crm')and smartvolt_private.member_brand_allowed(p_company,p_actor,i.brand_id)
  and((p_provider='whatsapp'and exists(select 1 from public.sv_wa_conversations t where t.company_id=p_company and t.id=i.thread_id and t.connection_id=p_connection))
  or(p_provider='meta'and exists(select 1 from public.sv_meta_threads t where t.company_id=p_company and t.id=i.thread_id and t.connection_id=p_connection)))
+ and(coalesce(p_filter->>'thread','')=''or i.thread_id::text=p_filter->>'thread')
  and(coalesce(p_filter->>'tag','')=''or c.tags ? (p_filter->>'tag'))
  and(coalesce(p_filter->>'stage','')=''or exists(select 1 from public.sv_customer_lifecycle l where l.company_id=p_company and l.customer_id=c.id and l.brand_id=p_brand and l.stage_id=p_filter->>'stage'))
  and(coalesce(p_filter->>'customer','')=''or c.id=p_filter->>'customer')
  order by i.customer_id,i.last_inbound_at desc nulls last,i.thread_id
 $$;
-create function smartvolt_private.delivery_render(p_definition jsonb,p_name text)returns jsonb language plpgsql immutable security invoker set search_path=''as $$
-declare result jsonb:=p_definition;vals jsonb;begin
- result=jsonb_set(result,'{body}',to_jsonb(replace(coalesce(result->>'body',''),'{{name}}',p_name)));
- select coalesce(jsonb_agg(jsonb_set(v,'{value}',to_jsonb(replace(v->>'value','{{name}}',p_name)))),'[]')into vals from jsonb_array_elements(coalesce(result->'values','[]'))v;
- return jsonb_set(result,'{values}',vals);end;$$;
+create function smartvolt_private.delivery_text(p_text text,p_context jsonb)returns text language plpgsql immutable security invoker set search_path=''as $$
+declare rest text:=p_text;result text:='';m text[];at integer;begin
+ loop
+  m=regexp_match(rest,'{{([^{}]+)}}');if m is null then return result||rest;end if;
+  if nullif(p_context->>m[1],'')is null then return null;end if;
+  at=strpos(rest,'{{'||m[1]||'}}');result=result||substr(rest,1,at-1)||(p_context->>m[1]);rest=substr(rest,at+length(m[1])+4);
+ end loop;end;$$;
+create function smartvolt_private.delivery_render(p_definition jsonb,p_name text,p_context jsonb default '{}')returns jsonb language plpgsql immutable security invoker set search_path=''as $$
+declare result jsonb:=p_definition;vals jsonb:='[]';v jsonb;body text;field text;ctx jsonb:=p_context||jsonb_build_object('name',p_name);begin
+ body=smartvolt_private.delivery_text(coalesce(result->>'body',''),ctx);if body is null then return null;end if;
+ for v in select value from jsonb_array_elements(coalesce(result->'values','[]'))loop
+  field=smartvolt_private.delivery_text(v->>'value',ctx);if field is null then return null;end if;
+  vals=vals||jsonb_build_array(jsonb_set(v,'{value}',to_jsonb(field)));
+ end loop;
+ return jsonb_set(jsonb_set(result,'{body}',to_jsonb(body)),'{values}',vals);end;$$;
 
 create function public.sv_engagement_action(p_company uuid,p_actor uuid,p_command uuid,p_kind text,p_data jsonb,p_request jsonb default null)returns jsonb
 language plpgsql security invoker set search_path=''as $$
 declare r jsonb;brand text:=p_data->>'brandId';c public.sv_campaigns;counted bigint;v_channel text;v_provider text;conn uuid;ident uuid;
 begin
+ p_request=coalesce(p_request,p_data);
  perform public.sv_authorize(p_company,p_actor,'crm',true,p_kind not in('preference','manual'),brand);
  if p_kind='policy'and exists(select 1 from public.sv_memberships where company_id=p_company and user_id=p_actor and brand_ids is not null)then raise exception 'brand_scope';end if;
  if p_kind='preference'then
@@ -114,6 +126,11 @@ begin
   if v_provider='whatsapp'then select 'whatsapp'into v_channel from public.sv_wa_connections where company_id=p_company and id=conn and brand_id=brand and state<>'disabled';
   elsif v_provider='meta'then select cn.channel into v_channel from public.sv_meta_connections cn where company_id=p_company and id=conn and brand_id=brand and enabled;end if;
   if v_channel is null then raise exception 'connection_not_ready';end if;
+  if p_kind='manual'then
+   if p_data->>'threadId'is null then raise exception 'thread_required';end if;
+   p_data=jsonb_set(p_data,'{audience}',(p_data->'audience')||jsonb_build_object('thread',p_data->>'threadId'));
+  end if;
+  if p_data#>>'{definition,kind}'='text'and p_data#>>'{definition,body}'~'{{(date|time|service)}}'or exists(select 1 from jsonb_array_elements(p_data#>'{definition,values}')v where v->>'value'~'{{(date|time|service)}}')then raise exception 'source_details_required';end if;
   if p_kind='manual'and(p_data->>'purpose'<>'service'or p_data#>>'{definition,kind}'<>'template'or v_provider<>'whatsapp'or coalesce(p_data#>>'{audience,customer}','')='')then raise exception 'invalid_manual';end if;
   if not isfinite((p_data->>'dueAt')::timestamptz)or(p_data->>'dueAt')::timestamptz<now()-interval '5 minutes'or(p_data->>'dueAt')::timestamptz>now()+interval '366 days'then raise exception 'invalid_schedule';end if;
   select count(*)into counted from smartvolt_private.delivery_audience(p_company,p_actor,brand,v_provider,conn,p_data->'audience');
@@ -122,7 +139,7 @@ begin
   values(p_company,ident,brand,conn,v_provider,v_channel,p_data->>'name',p_data->>'purpose',p_data->'definition',p_data->'audience',(p_data->>'dueAt')::timestamptz,p_actor);
   insert into public.sv_delivery_jobs(company_id,brand_id,customer_id,provider,channel,connection_id,thread_id,purpose,origin,source_id,source_key,actor_id,payload,due_at,editor_token)
   select p_company,brand,a.customer_id,v_provider,v_channel,conn,a.thread_id,p_data->>'purpose',case when p_kind='manual'then 'manual'else 'campaign'end,ident,'campaign:'||ident||':'||a.customer_id,p_actor,
-  smartvolt_private.delivery_render(p_data->'definition',a.customer_name),(p_data->>'dueAt')::timestamptz,case when p_kind='manual'then(p_data->>'editorToken')::uuid end from smartvolt_private.delivery_audience(p_company,p_actor,brand,v_provider,conn,p_data->'audience')a;
+  smartvolt_private.delivery_render(p_data->'definition',a.customer_name,jsonb_build_object('brand',(select b->>'name'from public.sv_workspaces w,jsonb_array_elements(w.payload#>'{scope,brands}')b where w.company_id=p_company and b->>'id'=brand))),(p_data->>'dueAt')::timestamptz,case when p_kind='manual'then(p_data->>'editorToken')::uuid end from smartvolt_private.delivery_audience(p_company,p_actor,brand,v_provider,conn,p_data->'audience')a;
   r=jsonb_build_object('saved',true,'id',ident,'recipients',counted);
  elsif p_kind='cancel'then
   update public.sv_campaigns set status='cancelled'where company_id=p_company and id=c.id;
@@ -226,7 +243,7 @@ declare r jsonb;brand text:=p_query->>'brand';campaign uuid:=(p_query->>'campaig
  exists(select 1 from public.sv_meta_messages m join public.sv_meta_threads t on t.id=m.thread_id and t.company_id=m.company_id where m.company_id=p_company and t.connection_id=c.id and m.direction='outbound'and m.state in('accepted','sent','delivered','read')),
  exists(select 1 from public.sv_meta_messages m join public.sv_meta_threads t on t.id=m.thread_id and t.company_id=m.company_id where m.company_id=p_company and t.connection_id=c.id and m.direction='outbound'and m.state in('delivered','read'))
  from public.sv_meta_connections c where c.company_id=p_company and smartvolt_private.member_brand_allowed(p_company,p_actor,c.brand_id))q),'[]'),
- 'templates',coalesce((select jsonb_agg(jsonb_build_object('connection_id',i.connection_id,'checked_at',i.checked_at,'templates',i.templates))from public.sv_wa_template_inventory i join public.sv_wa_connections c on c.company_id=i.company_id and c.id=i.connection_id where i.company_id=p_company and smartvolt_private.member_brand_allowed(p_company,p_actor,c.brand_id)),'[]'),
+ 'templates',coalesce((select jsonb_agg(jsonb_build_object('connection_id',i.connection_id,'checked_at',i.checked_at,'templates',i.templates))from public.sv_wa_template_inventory i join public.sv_wa_connections c on c.company_id=i.company_id and c.id=i.connection_id where i.company_id=p_company and i.connection_id::text=p_query->>'connection'and smartvolt_private.member_brand_allowed(p_company,p_actor,c.brand_id)),'[]'),
  'campaigns',coalesce((select jsonb_agg(q order by q.created_at desc,q.id desc)from(select c.id,c.name,c.brand_id,c.channel,c.purpose,c.status,c.due_at,c.created_at,
  (select count(*)from public.sv_delivery_jobs j where j.company_id=p_company and j.source_id=c.id)total,
  coalesce((select jsonb_object_agg(x.state,x.n)from(select j.state,count(*)n from public.sv_delivery_jobs j where j.company_id=p_company and j.source_id=c.id group by j.state)x),'{}')counts
@@ -319,7 +336,18 @@ do $$declare t text;f record;begin
  end loop;
  revoke update on public.sv_preference_events,public.sv_delivery_events from service_role;
  revoke all on sequence public.sv_delivery_events_seq_seq from public,anon,authenticated;grant usage,select on sequence public.sv_delivery_events_seq_seq to service_role;
- for f in select oid::regprocedure signature from pg_proc where pronamespace in('public'::regnamespace,'smartvolt_private'::regnamespace)and proname in('delivery_event','delivery_audience','delivery_render','delivery_optout','delivery_optout_message','delivery_editor_admit','sv_engagement_action','sv_engagement_receipt','sv_engagement_read','sv_templates_store','sv_templates_invalidate','sv_delivery_claim','sv_delivery_finish','delivery_receipt','sv_delivery_scheduler')loop
+ for f in select oid::regprocedure signature from pg_proc where pronamespace in('public'::regnamespace,'smartvolt_private'::regnamespace)and proname in('delivery_event','delivery_audience','delivery_render','delivery_text','delivery_optout','delivery_optout_message','delivery_editor_admit','sv_engagement_action','sv_engagement_receipt','sv_engagement_read','sv_templates_store','sv_templates_invalidate','sv_delivery_claim','sv_delivery_finish','delivery_receipt','sv_delivery_scheduler')loop
   execute format('revoke all on function %s from public,anon,authenticated',f.signature);execute format('grant execute on function %s to service_role',f.signature);
  end loop;
 end;$$;
+
+create function public.sv_manual_template_context(p_company uuid,p_actor uuid,p_thread uuid)returns jsonb language plpgsql security invoker set search_path=''as $$
+declare c public.sv_wa_conversations;link public.sv_customer_threads;begin
+ perform public.sv_thread_scope(p_company,p_actor,'whatsapp',p_thread);perform public.sv_authorize(p_company,p_actor,'crm',true);
+ select *into strict c from public.sv_wa_conversations where company_id=p_company and id=p_thread;
+ select *into strict link from public.sv_customer_threads where company_id=p_company and provider='whatsapp'and thread_id=p_thread;
+ return jsonb_build_object('customerId',link.customer_id,'brandId',link.brand_id,'connection',jsonb_build_object('id',c.connection_id,'brand_id',link.brand_id,'provider','whatsapp','channel','whatsapp','label','WhatsApp','ready',true,'inbound',true,'accepted',false,'delivered',false),
+ 'serviceAllowed',exists(select 1 from public.sv_contact_preferences where company_id=p_company and customer_id=link.customer_id and brand_id=link.brand_id and channel='whatsapp'and purpose='service'and allowed),
+ 'templates',coalesce((select jsonb_agg(jsonb_build_object('connection_id',connection_id,'templates',templates,'checked_at',checked_at))from public.sv_wa_template_inventory where company_id=p_company and connection_id=c.connection_id),'[]'));
+end;$$;
+revoke all on function public.sv_manual_template_context(uuid,uuid,uuid)from public,anon,authenticated;grant execute on function public.sv_manual_template_context(uuid,uuid,uuid)to service_role;

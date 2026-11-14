@@ -1,3 +1,4 @@
+import { requireThreadScope, scopeBrands } from "@/lib/saas/scope-server";
 import "server-only";
 import { createHmac, hkdfSync, randomUUID, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
@@ -137,6 +138,7 @@ export async function readMeta(
   const a = await access(companyId);
   if (threadId) {
     uuid.parse(threadId);
+    await requireThreadScope(a, "meta", threadId);
     const thread = await a.db
       .from("sv_meta_threads")
       .select(
@@ -194,10 +196,10 @@ export async function readMeta(
       hasMore: rows.length > 60,
     };
   }
-  const connections = await a.db
+  const connections = await scopeBrands(a, a.db
     .from("sv_meta_connections")
     .select(connectionFields)
-    .eq("company_id", companyId)
+    .eq("company_id", companyId))
     .order("created_at");
   check(connections.error);
   const filter = inboxQuerySchema.parse(filters);
@@ -254,7 +256,7 @@ export async function readMeta(
     .eq("company_id", companyId)
     .single();
   check(scope.error);
-  const brands = scopeSchema.parse(scope.data?.payload?.scope).brands;
+  const brands = scopeSchema.parse(scope.data?.payload?.scope).brands.filter(b => a.memberScope.brandIds === null || a.memberScope.brandIds.includes(b.id));
   const origin = process.env.SMARTVOLT_APP_URL
     ? new URL(process.env.SMARTVOLT_APP_URL).origin
     : null;

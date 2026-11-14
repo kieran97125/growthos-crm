@@ -102,7 +102,7 @@ begin
   if m.role='owner'or v_id=p_actor then raise exception 'owner_protected';end if;
   if m.access_revision<>(p_data->>'revision')::bigint then raise exception 'revision_conflict';end if;
   if p_data->>'status'not in('active','suspended','removed')then raise exception 'team_member_invalid';end if;
-  if p_data->>'status'='active'and m.status<>'active'and(select count(*)from public.sv_memberships where company_id=p_company and status='active')>=seats then raise exception 'seat_limit';end if;
+  if p_data->>'status'='active'and m.status<>'active'and(select count(*)from public.sv_memberships where company_id=p_company and status='active')+(select count(*)from public.sv_staff_invitations where company_id=p_company and status='invited'and expires_at>now())>=seats then raise exception 'seat_limit';end if;
   update public.sv_memberships set role=v_role,status=p_data->>'status',display_name=btrim(p_data->>'name'),brand_ids=v_brand_ids,product_ids=v_products,access_revision=access_revision+1,access_updated_at=clock_timestamp()where company_id=p_company and user_id=v_id;
   perform smartvolt_private.team_projection(p_company);result=jsonb_build_object('saved',true);
  elsif p_action='revoke'then
@@ -124,6 +124,8 @@ declare inv public.sv_staff_invitations;m public.sv_memberships;seats integer;be
  select *into strict inv from public.sv_staff_invitations where company_id=inv.company_id and id=p_invitation for update;
  if inv.status='accepted'and inv.accepted_by=p_actor then return inv.company_id;end if;
  if inv.status<>'invited'or inv.expires_at<=now()then raise exception 'invitation_expired';end if;
+ perform 1 from public.sv_memberships where company_id=inv.company_id and user_id=inv.invited_by and status='active'and role='owner'for share;
+ if not found then raise exception 'invitation_context_changed';end if;
  select *into m from public.sv_memberships where company_id=inv.company_id and user_id=p_actor for update;
  if m.role='owner'then raise exception 'owner_protected';end if;
  if m.user_id is not null and m.access_updated_at>inv.created_at then raise exception 'invitation_context_changed';end if;

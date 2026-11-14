@@ -1,3 +1,4 @@
+import { requireThreadScope, scopeBrands } from "@/lib/saas/scope-server";
 import "server-only";
 import { randomBytes, randomUUID } from "node:crypto";
 import { z } from "zod";
@@ -243,7 +244,7 @@ async function brandsFor(
   const scope = scopeSchema.safeParse(payload?.scope);
   if (!scope.success || scope.data.companyId !== access.company.id)
     throw new AccessError("公司品牌設定未完成。", 503);
-  return scope.data.brands.map(({ id, name }) => ({ id, name }));
+  return scope.data.brands.filter(b => access.memberScope.brandIds === null || access.memberScope.brandIds.includes(b.id)).map(({ id, name }) => ({ id, name }));
 }
 export async function listConnections(
   companyId: string,
@@ -251,10 +252,10 @@ export async function listConnections(
   const access = await crmAccess(companyId);
   const [brands, result] = await Promise.all([
     brandsFor(access),
-    access.db
+    scopeBrands(access, access.db
       .from("sv_wa_connections")
       .select(connectionFields)
-      .eq("company_id", companyId)
+      .eq("company_id", companyId))
       .order("created_at"),
   ]);
   queryFailure(result.error);
@@ -356,6 +357,7 @@ export async function listInbox(
     .order("seq", { referencedTable: "sv_wa_messages", ascending: false })
     .limit(1, { referencedTable: "sv_wa_messages" })
     .limit(limit + 1);
+  query = scopeBrands(access, query);
   const rawCursor = params.get("cursor");
   if (rawCursor) {
     const cursor = decodeCursor(rawCursor);
@@ -387,6 +389,7 @@ async function readConversation(
   conversationId: string,
 ): Promise<WaConversationSummary> {
   uuid.parse(conversationId);
+  await requireThreadScope(access, "whatsapp", conversationId);
   const result = await access.db
     .from("sv_wa_conversations")
     .select(conversationFields)

@@ -94,3 +94,12 @@ Product Learning Sync checked（4–6）：fresh protocol/index/main checkpoint 
 Product Learning Sync checked：fresh canonical protocol/index/main checkpoint及相關entry已讀；existing reviewed proposal [#88](https://github.com/kieran97125/leadhub-source-os/pull/88) 更新至 `0064ca3`，未宣稱已合併canonical checkpoint。
 
 只讀草稿freshness migration已安裝：`20261115111809_convelta_completed_draft_freshness`，來源MD5 `b9051bf5d08721d7ff1899675a35b952`。23項記憶／套用驗證、17項分眾、17項語音focused驗收通過；新增5項草稿套用瀏覽器場景待雲端驗收。
+
+
+## 停用分眾驗收修正（2026-11-15 HKT）
+
+`2d2e15f` 的 CI43708597728 已完成434項單元／資料庫、2項Workflow、正式建置、4項首屏及nativePostgreSQL。推播8項互動中7通過、1失敗：測試仍預期舊版「請重新選擇」，而畫面已明確指示「請返回第一步重新選擇」。因此該次後續教練／4–6／原流程瀏覽器驗收被跳過，不能計作完整通過。
+
+已將該測試改為按警告語義與問題文字定位，保留禁用發送、零提交及重選提示檢查，並在同一案例驗證返回第一步、停用名單不會自動換成全客群、明確重選後草稿名稱與變數保留，以及最後提交不夾帶舊分眾。沒有移除斷言、跳過案例、放寬等待時間或修改原本已存在的發送保護。現有專業測試工具足夠，沒有新增依賴。
+
+本機該檔ESLint／TypeScript與diff檢查通過，8項browser case可列出；完整雲端結果待本次提交。已安裝roadmap SQL來源MD5不變，檔名對齊正式平台20261115112412。Product Learning Sync checked：重新讀canonical protocol/index/checkpoint，以及07-26broadcast boundary、07-17regression、07-29readiness；沿用既有中立契約與review proposal#88，未移入客戶資料。

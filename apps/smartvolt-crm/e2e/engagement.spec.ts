@@ -405,11 +405,43 @@ test("a segment disabled after preview cannot be submitted from the final schedu
     .toBe(true);
   f.setSavedSegmentEnabled(false);
   await page.clock.fastForward(16000);
-  await expect(
-    dialog.getByText("所選分眾目前不可用，請重新選擇。", { exact: true }),
-  ).toBeVisible();
+  const unavailable = dialog
+    .getByRole("alert")
+    .filter({ hasText: "所選分眾目前不可用" });
+  await expect(unavailable).toBeVisible();
+  await expect(unavailable).toContainText("重新選擇");
   await expect(
     dialog.getByRole("button", { name: "安排發送", exact: true }),
   ).toBeDisabled();
   expect(f.commands).toHaveLength(0);
+
+  // Recover by an explicit audience choice; invalidating the old segment must
+  // not silently broaden the recipients or erase the teammate's message.
+  await dialog.getByRole("button", { name: "上一步", exact: true }).click();
+  await expect(dialog.getByLabel("推播名稱")).toHaveValue("November members");
+  await expect(dialog.getByLabel("內容欄位 1")).toHaveValue("{{name}}");
+  await dialog.getByRole("button", { name: "上一步", exact: true }).click();
+  const segment = dialog.getByLabel("推播自動分眾", { exact: true });
+  await expect(segment).toHaveValue(f.savedSegmentId);
+  await expect(
+    segment.locator(`option[value="${f.savedSegmentId}"]`),
+  ).toBeDisabled();
+  expect(f.commands).toHaveLength(0);
+  await segment.selectOption("");
+  await expect(unavailable).toHaveCount(0);
+  await expect(dialog.locator(".eng-audience strong")).toContainText("3");
+  await dialog.getByRole("button", { name: "下一步", exact: true }).click();
+  await dialog.getByRole("button", { name: "下一步", exact: true }).click();
+  await expect(
+    dialog.getByRole("button", { name: "安排發送", exact: true }),
+  ).toBeEnabled();
+  expect(f.commands).toHaveLength(0);
+  await dialog.getByRole("button", { name: "安排發送", exact: true }).click();
+  await expect(dialog).not.toBeVisible();
+  const campaign = f.commands.find((c) => c.action === "campaign");
+  expect(campaign?.action).toBe("campaign");
+  if (campaign?.action === "campaign") {
+    expect(campaign.audience).not.toHaveProperty("segmentId");
+    expect(campaign.definition.values[0].value).toBe("{{name}}");
+  }
 });

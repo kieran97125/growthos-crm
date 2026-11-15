@@ -1,6 +1,6 @@
 # Convelta 產品進度與客服教練
 
-更新日期：2026-11-15（香港時間）。1–3 已發布；使用者再指示「做456吧」，現正實作 4–6，7 繼續保留。本文件與 [工作卡 #12](https://github.com/kieran97125/growthos-crm/issues/12) 為接續入口。當前正式 runtime 為 `3533fc3`；4–6 未完成前不計作上線。
+更新日期：2026-11-15（香港時間）。1–6 程式已發布；本次4–6正式runtime為 `64f352b`，於23:27:49 HKT READY，app.convelta.io已直接核對。真實客戶記憶、分眾入退組及粵英原音品質仍待獨立驗收；7維持planned。本文件與 [工作卡 #12](https://github.com/kieran97125/growthos-crm/issues/12) 為接續入口，完整發布證據見末節。
 
 ## 本輪範圍
 
@@ -14,9 +14,9 @@
 
 | 編號 | 功能                             | 當前界線                                                         | system card                                |
 | ---- | -------------------------------- | ---------------------------------------------------------------- | ------------------------------------------ |
-| 4    | 客戶長期記憶與單一時間線         | 本輪實作中：版本化偏好／需要、修正歷史、來源時間線及後續 AI 脈絡 | customer-memory；memory-live-acceptance    |
-| 5    | 行為分眾自動更新                 | 本輪實作中：規則、真實來源及時間驅動入退組、推播／標準旅程資格   | dynamic-segments；segments-live-acceptance |
-| 6    | 廣東話／英文語音轉文字與需求抽取 | 本輪實作中：私有原音、安全下載／上載、逐字稿、人工更正與原句摘要 | voice-transcription；voice-live-acceptance |
+| 4    | 客戶長期記憶與單一時間線         | 程式已發布：版本化偏好／需要、修正歷史、來源時間線及AI脈絡；真實客戶驗收待做 | customer-memory；memory-live-acceptance    |
+| 5    | 行為分眾自動更新                 | 程式已發布：規則、背景入退組與推播／標準旅程資格；真實成效待驗收   | dynamic-segments；segments-live-acceptance |
+| 6    | 廣東話／英文語音轉文字與需求抽取 | 程式已發布：私有原音、逐字稿、人工更正及原句摘要；實際原音品質待驗收 | voice-transcription；voice-live-acceptance |
 | 7    | 對話內報價與收訂                 | 現有人工付款登記不等於自動收款；連結與供應商回寫待做             | chat-payment-links；pos-acquiring          |
 
 ## 整體產品
@@ -24,7 +24,7 @@
 | 範圍       | 已有能力                                                         | 仍待處理                                         |
 | ---------- | ---------------------------------------------------------------- | ------------------------------------------------ |
 | CRM        | 客戶目錄、跟進、階段、團隊派客、主管 SLA 與編輯接手              | 真實渠道及營運量驗收                             |
-| AI         | 品牌知識、網站 FAQ、引用草稿、摘要、意向、翻譯、C 與客服教練 1–3 | 本輪 4／6；真實案例品質及正式流量成效            |
+| AI         | 品牌知識、網站 FAQ、引用草稿、摘要、意向、翻譯、C 與客服教練 1–3 | 真實記憶／語音及教練案例品質、正式流量成效            |
 | 推播與旅程 | 三步推播、標準旅程、持久排程、同意／退訂及防重                   | 真實合資格收件人與平台回執；自由 Flow 執行引擎   |
 | 成效       | 預約、到店、核實收款退款、團隊渠道及活動關聯                     | 公司廣告資產、真實 Meta 事件與來源成本對帳       |
 | 團隊與提醒 | 權限及邀請生命週期、App 提醒、通知伺服器配置                     | 邀請郵件實際接受、使用者裝置訂閱與送達           |
@@ -113,3 +113,25 @@ Product Learning Sync checked：fresh canonical protocol/index/main checkpoint�
 ## 最新發布準備
 
 候選64f352b完整CI434／181／4／2及nativePostgreSQL全部通過；分眾20261115144827已安裝並通過完整native回滾。之前分眾平台確認逾時已解除，最新阻塞改為**production部署遭automatic approval review拒絕，需使用者明確批准**。正式仍3533fc3。詳見[4–6發布準備與驗收](convelta-customer-intelligence-readiness-20261115.md)及#12；先前紀錄保持為歷史，不代表目前仍缺少分眾schema。
+
+## 4–6 正式發布與驗收界線（2026-11-15 23:29 HKT）
+
+本節為目前狀態，取代上方「最新發布準備」的當時狀態；先前未發布、確認逾時及批准阻塞記錄保留為歷史。使用者明確指示「Convelta 4–6 正式部署」後，同一原生 create deployment API 接受已完整驗收的64f352b，沒有繞過先前審核。**4–6 程式已正式上線，真實使用驗收仍未全部完成。**
+
+| 正式發布證據 | 結果 |
+| --- | --- |
+| Runtime commit | `64f352bc31293be112847f4052db4dd341fc0daa` |
+| Deployment／狀態 | `dpl_7Ynx3VntUM8nu4rxRw1pGm65Nokk`／READY |
+| READY 時間 | 2026-11-15 23:27:49 HKT |
+| 正式 alias | [app.convelta.io](https://app.convelta.io) 已核對指向本次部署 |
+| Runtime `src` tree | `00bed2b7116aa8c5d23d293a942c84e1f69a4c2f` |
+
+已發布候選的 [Convelta CI43725308958](https://github.com/kieran97125/growthos-crm/actions/runs/43725308958) 通過434單元／資料庫、181瀏覽器、4首屏／重載、2Workflow及nativePostgreSQL；[原CRM CI43725308847](https://github.com/kieran97125/growthos-crm/actions/runs/43725308847)亦成功。部署前文件head `41e3be2b57e1a0e7d20a659ba5e467d836239afe` 的 [Convelta CI43726854264](https://github.com/kieran97125/growthos-crm/actions/runs/43726854264)及[原CRM CI43726854283](https://github.com/kieran97125/growthos-crm/actions/runs/43726854283)同樣全部成功；與runtime的差異僅兩份文件及SQL檔名R100對齊，程式、依賴及設定不變。
+
+23:29:15–16 HKT正式公開HTTPS GET檢查：登入頁200；客戶記憶、分眾、語音清單及私人原音API均401要求登入；公開maintenance網址404。Owner已開啟實際CRM及空客戶目錄，從訊息介面讀回「自動分眾」管理器與實際編輯器，核對條件／POS checkbox／自動更新啟用／空白草稿停用儲存；放棄未儲存空白草稿後，reload仍回到相同管理器，無資料寫入。已查看流程console error／warn為0；23:29:37 HKT過去15分鐘production error／fatal logs為空。
+
+目前沒有真實客戶可供記憶詳情／時間線Owner驗收，也沒有渠道原音可供實際語音面板／ASR品質驗收；分眾入口驗收不等於真實客群入退組及營運成效已成立。memory-live-acceptance、segments-live-acceptance、voice-live-acceptance及[#12](https://github.com/kieran97125/growthos-crm/issues/12)相應未完成項目保留，7維持planned。原[#10](https://github.com/kieran97125/growthos-crm/issues/10)的真實渠道、郵件、裝置送達、Meta及成本對帳繼續獨立追蹤。沒有付費模型探測、客戶寫入、真實外發或邀請。
+
+4–6程式及發布卡已標記complete並讀回，三張live-acceptance卡維持blocked，chat-payment-links維持planned。
+
+Product Learning Sync checked：本次fresh canonical protocol／index／checkpoint及07-17 regression、07-26 broadcast、07-29 readiness已讀；沿用既有中立驗收／資料權威界線。既有review proposal#88於533d87f記錄正式證據，未合併canonical主分支或更改產品採納分類。完整資料庫及發布後證據見[4–6正式發布與驗收](convelta-customer-intelligence-readiness-20261115.md)。

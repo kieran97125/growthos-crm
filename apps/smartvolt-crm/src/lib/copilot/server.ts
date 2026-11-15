@@ -224,11 +224,23 @@ async function messagesFor(
   product: string,
 ) {
   if (!threadId) return [];
+  const id = z.uuid().parse(threadId);
+  // The browser reserves a UUID before the first question. A draft task has
+  // no persisted history yet; only retained threads need the strict history
+  // permission check below. Never hide lookup failures as an empty history.
+  const existing = await a.db
+    .from("sv_copilot_threads")
+    .select("id")
+    .eq("company_id", a.company.id)
+    .eq("id", id)
+    .maybeSingle();
+  checked(existing.error);
+  if (!existing.data) return [];
   const r = await a.db.rpc("sv_copilot_thread_read", {
     p_company: a.company.id,
     p_actor: a.user.id,
     p_product: product,
-    p_thread: z.uuid().parse(threadId),
+    p_thread: id,
   });
   checked(r.error);
   return (r.data ?? []) as Message[];

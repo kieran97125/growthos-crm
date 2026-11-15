@@ -125,6 +125,13 @@ export const articleSchema = z.object({
   status: z.enum(["approved", "draft"]),
   validUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   revision: z.number().int().min(1),
+  coaching: z
+    .object({
+      analysisId: z.uuid(),
+      index: z.number().int().nonnegative(),
+      kind: z.enum(["answer", "pattern"]),
+    })
+    .optional(),
   website: z
     .object({
       importId: z.uuid(),

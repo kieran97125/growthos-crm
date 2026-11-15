@@ -23,7 +23,9 @@ import {
   Settings2,
   Store,
   ChevronRight,
+  Sparkles,
 } from "lucide-react";
+import CoachPanel from "@/components/coaching/CoachPanel";
 import { BrandMark } from "@/components/BrandMark";
 import ThreadOperationsPanel, {
   type OperationDraft,
@@ -125,6 +127,7 @@ export default function UnifiedInbox({
     [note, setNote] = useState(false),
     [mobile, setMobile] = useState(initialThread ? "chat" : "list"),
     [aside, setAside] = useState("customer"),
+    [coachOpen, setCoachOpen] = useState(false),
     [operationCache, setOperationCache] = useState<
       Record<string, OperationDraft | undefined>
     >({}),
@@ -1004,6 +1007,33 @@ export default function UnifiedInbox({
                         threadId={detail.thread.id}
                         canEdit={canEdit}
                       />
+                      <details
+                        className="coach-inline-disclosure"
+                        onToggle={(event) =>
+                          setCoachOpen(event.currentTarget.open)
+                        }
+                      >
+                        <summary>
+                          <Sparkles size={14} aria-hidden="true" />
+                          AI 客服教練
+                        </summary>
+                        {coachOpen && (
+                          <CoachPanel
+                            companyId={companyId}
+                            brandId={detail.thread.brand_id}
+                            source={detail.thread.provider}
+                            sourceId={detail.thread.id}
+                            sourceRevision={detail.thread.revision}
+                            disabled={!canEdit || locked}
+                            currentDraft={draft}
+                            onInsert={(text) => {
+                              setDrafts((old) => ({ ...old, [key]: text }));
+                              setNote(false);
+                              setMobile("chat");
+                            }}
+                          />
+                        )}
+                      </details>
                       <InquiryOperations
                         key={key}
                         companyId={companyId}

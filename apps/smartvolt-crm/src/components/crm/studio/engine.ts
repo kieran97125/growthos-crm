@@ -106,6 +106,7 @@ export function suggestReply(input: {
       (a) =>
         a.brandId === input.brandId &&
         a.status === "approved" &&
+        a.coaching?.kind !== "pattern" &&
         a.validUntil >= today &&
         a.keywords.some((k) =>
           input.message.toLowerCase().includes(k.toLowerCase()),

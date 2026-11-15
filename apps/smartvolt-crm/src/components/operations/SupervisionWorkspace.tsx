@@ -11,6 +11,7 @@ import type {
 } from "@/lib/operations/supervision";
 import { engagementFetcher } from "@/components/engagement/fetcher";
 import OfficePolicyForm from "./OfficePolicyForm";
+import CoachingOverview from "@/components/coaching/CoachingOverview";
 import "../engagement/engagement.css";
 import "./supervision.css";
 const date = formatHongKongDateTime;
@@ -22,6 +23,7 @@ export default function SupervisionWorkspace({
   initial: SupervisionPage;
 }) {
   const [brand, setBrand] = useState(""),
+    [coachingBrand, setCoachingBrand] = useState(initial.brands[0]?.id ?? ""),
     [cursor, setCursor] = useState(""),
     [from, setFrom] = useState(initial.period.from),
     [to, setTo] = useState(initial.period.to),
@@ -111,6 +113,11 @@ export default function SupervisionWorkspace({
       </main>
     );
   const m = data.metrics;
+  const qualityBrand =
+    brand ||
+    (data.brands.some((item) => item.id === coachingBrand)
+      ? coachingBrand
+      : data.brands[0]?.id);
   return (
     <main className="eng-work">
       <header className="eng-header">
@@ -339,6 +346,30 @@ export default function SupervisionWorkspace({
           </p>
         </div>
       </details>
+      {qualityBrand && (
+        <div className="coach-supervision">
+          {!brand && (
+            <label>
+              質檢品牌
+              <select
+                value={qualityBrand}
+                onChange={(event) => setCoachingBrand(event.target.value)}
+              >
+                {data.brands.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          <CoachingOverview
+            key={qualityBrand}
+            companyId={companyId}
+            brandId={qualityBrand}
+          />
+        </div>
+      )}
       <dialog
         ref={dialog}
         className="eng-dialog"

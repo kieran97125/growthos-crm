@@ -20,7 +20,11 @@ export const assistantRequest = z.object({
   businessHours: z.boolean(),
   assist: z.boolean().optional(),
 });
-export type AssistantInput = z.infer<typeof assistantRequest>;
+// Only the company server supplies learned style guidance. It is deliberately
+// absent from assistantRequest so client requests cannot add trusted guidance.
+export type AssistantInput = z.infer<typeof assistantRequest> & {
+  styleGuidance?: string[];
+};
 export const answerSchema = z.object({
   intent: z.enum(["faq", "booking", "handoff"]),
   action: z.enum(["reply", "handoff"]),
@@ -45,6 +49,7 @@ export function validateAnswer(
       (a) =>
         a.brandId === input.brandId &&
         a.status === "approved" &&
+        a.coaching?.kind !== "pattern" &&
         a.validUntil >= today,
     );
   const sources = output.sourceIds.map((id) =>

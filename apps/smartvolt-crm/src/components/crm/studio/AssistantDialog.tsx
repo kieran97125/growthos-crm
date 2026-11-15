@@ -9,6 +9,8 @@ import type { BrandId } from "./model";
 import type { LiveAnswer } from "@/lib/demo/ai-contract";
 import { AIConnectButton } from "@/lib/demo/AIConnection";
 import { useAssistant } from "@/lib/demo/useAssistant";
+import { useIdentity } from "@/lib/saas/CompanyProvider";
+import CoachPanel from "@/components/coaching/CoachPanel";
 export function AssistantDialog({
   studio,
   contact,
@@ -18,6 +20,7 @@ export function AssistantDialog({
   onInsert,
   onFollowUp,
   onClose,
+  currentDraft,
 }: {
   studio: StudioController;
   contact: Contact;
@@ -27,7 +30,10 @@ export function AssistantDialog({
   onInsert: (text: string) => void;
   onFollowUp: () => void;
   onClose: () => void;
+  currentDraft?: string;
 }) {
+  const identity = useIdentity();
+  const [coachOpen, setCoachOpen] = useState(false);
   const [result, setResult] = useState<LiveAnswer | null>(null),
     ai = useAssistant();
   const last = [...messages].reverse().find((m) => m.kind === "incoming"),
@@ -79,8 +85,7 @@ export function AssistantDialog({
         </div>
         <div className="ai-copilot-info">
           <p>
-            AI
-            會讀取呢段對話同品牌知識庫，唔包括內部備註。建議由你修改後傳送。
+            AI 會讀取呢段對話同品牌知識庫，唔包括內部備註。建議由你修改後傳送。
           </p>
           <AIConnectButton />
         </div>
@@ -125,6 +130,28 @@ export function AssistantDialog({
             timeStyle: "short",
           }).format(now)}
         </small>
+        {identity.connected && (
+          <details
+            className="coach-inline-disclosure"
+            onToggle={(event) => setCoachOpen(event.currentTarget.open)}
+          >
+            <summary>
+              <Sparkles size={14} aria-hidden="true" />
+              AI 客服教練
+            </summary>
+            {coachOpen && (
+              <CoachPanel
+                companyId={identity.scope.companyId}
+                brandId={conversation.brandId}
+                source="conversation"
+                sourceId={conversation.id}
+                currentDraft={currentDraft}
+                disabled={identity.actor.role === "viewer"}
+                onInsert={onInsert}
+              />
+            )}
+          </details>
+        )}
       </div>
     </Modal>
   );

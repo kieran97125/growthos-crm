@@ -108,3 +108,8 @@ Product Learning Sync checked：fresh canonical protocol/index/main checkpoint�
 第二次雲端 CI43721216943：434單元／資料庫、2Workflow、4首屏、8推播、20教練／AI及nativePostgreSQL通過；4–6互動33項中31通過。餘下兩項分眾fixture使用fastForward模擬休眠並合併計時器，與SWR去重清理的順序不符，未發出預期新GET。已改用runFor按原31秒／16秒順序推進，先驗證實際新讀取及停用狀態，再保留原有入退組、停用提示、禁用按鈕及零提交斷言；沒有人工觸發刷新或放寬期限。旅程fixture補回正式.eng-work容器。完整重跑待本次head。
 
 正式分眾migration於本輪再次由原工具提交，平台確認仍逾時；獨立查核migration及schema均未安裝。未繞過確認，正式App仍3533fc3，不能在資料庫缺少必要RPC時發布4–6。已安裝其他四項SQL來源不變。
+
+
+## 最新發布準備
+
+候選64f352b完整CI434／181／4／2及nativePostgreSQL全部通過；分眾20261115144827已安裝並通過完整native回滾。之前分眾平台確認逾時已解除，最新阻塞改為**production部署遭automatic approval review拒絕，需使用者明確批准**。正式仍3533fc3。詳見[4–6發布準備與驗收](convelta-customer-intelligence-readiness-20261115.md)及#12；先前紀錄保持為歷史，不代表目前仍缺少分眾schema。

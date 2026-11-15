@@ -11,7 +11,8 @@ import { createEditorFixture } from "./support/editor";
 let bundle = "";
 const css =
   readFileSync("src/components/meta/meta.css", "utf8") +
-  readFileSync("src/components/translation/translation.css", "utf8");
+  readFileSync("src/components/translation/translation.css", "utf8") +
+  readFileSync("src/components/voice/voice.css", "utf8");
 test.beforeAll(async () => {
   const built = await build({
     stdin: {
@@ -26,6 +27,8 @@ test.beforeAll(async () => {
     platform: "browser",
     format: "iife",
     jsx: "automatic",
+    // The fixture injects these real component styles into its HTML above.
+    loader: { ".css": "empty" },
     // Next normally replaces these client constants at build time. This harness
     // bundles the real component outside Next, so provide that browser boundary.
     define: {

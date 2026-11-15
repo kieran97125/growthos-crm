@@ -864,7 +864,7 @@
     padding-bottom: max(
       14px,
       env(safe-area-inset-bottom),
-      var(--cc-composer-clearance, 0px)
+      calc(var(--cc-composer-clearance, 0px) + 16px)
     );
   }
   .wc-composer-foot {

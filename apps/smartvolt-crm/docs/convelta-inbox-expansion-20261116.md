@@ -59,8 +59,14 @@ Flow保留原有三套標準旅程；新畫布發布後既有執行繼續使用�
 
 可重現的hosted檢查腳本：[回滾功能驗收](acceptance/convelta-inbox-expansion-hosted-verify-20261116.sql)、[唯讀來源／RLS／grants／私人bucket核對](acceptance/convelta-inbox-expansion-hosted-readback-20261116.sql)。目前只完成本機驗證，待其餘schema完成後才能在hosted執行；不能將腳本準備好當作正式資料庫已通過。
 
+工具只顯示最後一個SELECT結果時，使用[單一結果回滾驗收](acceptance/convelta-inbox-expansion-hosted-safe-result-20261116.sql)：匿名DO的例外子交易回滾全部合成資料，再於同一結果傳回五項PASS／FAIL及公司／Auth合成行數；本機成功及兩種注入失敗均核實不保留合成行。這仍是循序功能驗收，native並行證據由CI獨立提供。
+
+CI分組核對223個default browser情境：原有181個及本輪42個；新42個為Flow5、實際收件匣整合14、附件9、社交留言11及widget3。4個首屏另計。新功能獨立job及原有remaining job共用分組守衛，驗證檔案存在、無重複／遺漏；未知新spec預設保留在原job。各job保留15分鐘、單案例45秒及單worker；首次失敗即輸出報告，成功時完整執行所有選定案例。兩個browser job及native job必須全部成功，不能以其中一份綠燈代表全套完成。
+
 功能詳細契約：[私人附件](convelta-private-media-20261116.md)、[網站聊天](convelta-website-chat-20261116.md)。本輪追蹤：[issue#15](https://github.com/kieran97125/growthos-crm/issues/15)。原有[#10](https://github.com/kieran97125/growthos-crm/issues/10)及[#12](https://github.com/kieran97125/growthos-crm/issues/12)的實際渠道／客戶／語音／裝置等驗收仍獨立保留。
 
 ## Product Learning Sync checked
 
 重新讀canonical protocol6a80846、index1080e95、main checkpoint e52e473；相關07-17regression、07-26broadcast、07-29readiness、08-10permission-aware scope及10-06density已讀。沿用已審閱中立的身份、派送、驗收及漸進揭露契約；不移植Enterprise Pilot程式、資料、價格、品牌、網域或憑證。checkpoint透過既有review proposal#88記錄本輪設計與證據，不直接覆寫canonical主分支。
+
+CI分組另核對`entries/2026-10-22-bounded-provider-qa-and-checkpointed-receipts.md`（c0bc126）：保留部分／取消／完成的證據界線；該項Observed實驗不作通過或實作採納，沒有從pilot移入測試harness或新的產品分類。

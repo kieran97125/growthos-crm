@@ -241,7 +241,8 @@ test("mobile publication controls remain accessible and fit the viewport", async
   await page.setViewportSize({ width: 390, height: 844 });
   const commands = await mount(page, { published: true });
   const publish = page.getByRole("button", { name: "發布新版本", exact: true });
-  await expect(publish).toHaveCSS("display", "inline-flex");
+  // A direct flex item is blockified: authored inline-flex computes to flex.
+  await expect(publish).toHaveCSS("display", "flex");
   await expect(publish).toHaveCSS("border-radius", "6px");
   await expect(publish).toHaveCSS("min-height", "32px");
   await expect(publish).toHaveCSS("color", "rgb(255, 255, 255)");

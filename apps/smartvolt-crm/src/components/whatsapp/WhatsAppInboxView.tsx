@@ -475,8 +475,9 @@ export default function WhatsAppInboxView({
                             <div className="wa-unsupported">
                               <MoreHorizontal size={24} aria-hidden="true" />
                               <strong>
-                                {m.messageType || "未支援類型"} 訊息
+                                收到 {m.messageType || "未支援類型"} 訊息
                               </strong>
+                              <small>目前未提供附件預覽或播放。</small>
                             </div>
                           )}
                           {m.body &&

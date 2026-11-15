@@ -10,6 +10,9 @@ permissions:
 concurrency:
   group: smartvolt-${{ github.head_ref || github.ref_name }}-${{ github.event_name }}
   cancel-in-progress: true
+env:
+  SMARTVOLT_EXPANSION_SPECS: >-
+    ["flow-runtime.spec.ts", "inbox-expansion-integration.spec.ts", "media.spec.ts", "social-comments.spec.ts", "web-chat-widget.spec.ts"]
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -44,19 +47,40 @@ jobs:
       - name: Verify customer memory, dynamic segments and private voice
         run: npm run test:e2e -- e2e/customer-memory.spec.ts e2e/dynamic-segments.spec.ts e2e/voice.spec.ts --output=customer-intelligence-test-results
       - name: Verify remaining CRM browser flows
-        # Together these invocations run every browser scenario exactly once. Test
-        # delivery intent first so its failures are visible before long flows.
-        run: |
+        env:
+          SMARTVOLT_BROWSER_PARTITION: remaining
+        # Both jobs use the same partition guard. Unknown specs stay in verify.
+        run: &partitioned-browser-run |
           node --input-type=module - <<'JS'
-          import { readdirSync } from 'node:fs';
+          import assert from 'node:assert/strict';
+          import { mkdirSync, readdirSync, writeFileSync } from 'node:fs';
           import { spawnSync } from 'node:child_process';
-          const files = readdirSync('e2e')
-            .filter(name => name.endsWith('.spec.ts') && !['engagement.spec.ts', 'initial-paint.spec.ts', 'coaching.spec.ts', 'company-ai.spec.ts', 'customer-memory.spec.ts', 'dynamic-segments.spec.ts', 'voice.spec.ts'].includes(name))
-            .map(name => 'e2e/' + name);
-          const result = spawnSync('npm', ['run', 'test:e2e', '--', ...files, '--reporter=dot,json'], {
+          const discovered = readdirSync('e2e').filter(name => name.endsWith('.spec.ts')).sort();
+          const earlier = ['engagement.spec.ts', 'initial-paint.spec.ts', 'coaching.spec.ts', 'company-ai.spec.ts', 'customer-memory.spec.ts', 'dynamic-segments.spec.ts', 'voice.spec.ts'];
+          const expansion = JSON.parse(process.env.SMARTVOLT_EXPANSION_SPECS);
+          assert.ok(Array.isArray(expansion) && expansion.length > 0, 'Expansion spec list must be nonempty.');
+          assert.equal(new Set(expansion).size, expansion.length, 'Duplicate expansion spec.');
+          for (const name of [...earlier, ...expansion]) {
+            assert.ok(discovered.includes(name), `Missing browser spec: ${name}`);
+          }
+          const remaining = discovered.filter(name => !earlier.includes(name) && !expansion.includes(name));
+          const assigned = [...earlier, ...expansion, ...remaining];
+          assert.equal(new Set(assigned).size, assigned.length, 'Browser partitions overlap.');
+          assert.deepEqual([...assigned].sort(), discovered, 'Browser coverage contains an orphan or duplicate.');
+          const partition = process.env.SMARTVOLT_BROWSER_PARTITION;
+          assert.ok(['remaining', 'expansion'].includes(partition), 'Unknown browser partition.');
+          const files = (partition === 'expansion' ? expansion : remaining).map(name => 'e2e/' + name);
+          assert.ok(files.length > 0, 'Browser partition cannot be empty.');
+          const output = partition === 'expansion' ? 'expansion-test-results' : 'test-results';
+          console.log(JSON.stringify({ partition, files, discovered, earlier, expansion, remaining }));
+          // Stop on a known failure so reports survive the job deadline. Every
+          // selected scenario still runs when the partition passes.
+          const result = spawnSync('npm', ['run', 'test:e2e', '--', ...files, '--max-failures=1', '--reporter=dot,json', '--output=' + output], {
             stdio: 'inherit',
-            env: { ...process.env, PLAYWRIGHT_JSON_OUTPUT_FILE: 'test-results/remaining-results.json' },
+            env: { ...process.env, PLAYWRIGHT_JSON_OUTPUT_FILE: output + '/' + partition + '-results.json' },
           });
+          mkdirSync(output, { recursive: true });
+          writeFileSync(output + '/browser-partition.json', JSON.stringify({ partition, files, discovered, earlier, expansion, remaining }, null, 2));
           process.exit(result.status ?? 1);
           JS
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -69,6 +93,33 @@ jobs:
             apps/smartvolt-crm/coaching-test-results/
             apps/smartvolt-crm/customer-intelligence-test-results/
             apps/smartvolt-crm/paint-test-results/
+          retention-days: 7
+
+  browser-expansion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/smartvolt-crm
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/smartvolt-crm/package-lock.json
+      - run: npm ci
+      - name: Select and record acceptance browser
+        run: bash ../../scripts/select-ci-browser.sh
+      - name: Verify media, social replies, website chat and free Flow
+        env:
+          SMARTVOLT_BROWSER_PARTITION: expansion
+        run: *partitioned-browser-run
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: smartvolt-expansion-browser-evidence
+          path: apps/smartvolt-crm/expansion-test-results/
           retention-days: 7
 
   postgres-operations:

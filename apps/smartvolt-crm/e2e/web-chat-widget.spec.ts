@@ -31,20 +31,20 @@ async function install(
     failed = false;
   await page.route(merchant + "/**", (r) =>
     r.fulfill({
-      contentType: "text/html",
-      body: `<html lang="zh-HK"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Merchant</title><body><h1>品牌網站</h1><script src="${app}/embed/chat.js" data-convelta-chat="${id}" defer></script></body></html>`,
+      contentType: "text/html; charset=utf-8",
+      body: `<html lang="zh-HK"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Merchant</title><body><h1>品牌網站</h1><script src="${app}/embed/chat.js" data-convelta-chat="${id}" defer></script></body></html>`,
     }),
   );
   await page.route(app + "/embed/chat.js", (r) =>
     r.fulfill({
-      contentType: "application/javascript",
+      contentType: "application/javascript; charset=utf-8",
       body: chatEmbedScript(app),
     }),
   );
   await page.route(app + "/chat/**", (r) =>
     r.fulfill({
       status: disabled ? 404 : 200,
-      contentType: "text/html",
+      contentType: "text/html; charset=utf-8",
       headers: {
         "Content-Security-Policy": disabled
           ? "default-src 'none'; frame-ancestors 'none'"

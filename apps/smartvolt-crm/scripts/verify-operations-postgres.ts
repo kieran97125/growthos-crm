@@ -447,7 +447,9 @@ async function main() {
   );
   type SocialClaim = { id: string; token: string } | null;
   const socialClaim = () =>
-      json<SocialClaim>(`select sv_social_comments_claim(${quote(company)});`),
+      json<SocialClaim>(
+        `select coalesce(sv_social_comments_claim(${quote(company)}),'null'::jsonb);`,
+      ),
     socialClaims = await Promise.all([socialClaim(), socialClaim()]),
     socialWinner = socialClaims.find((claim) => claim !== null);
   assert.equal(socialClaims.filter((claim) => claim !== null).length, 1);
@@ -463,7 +465,7 @@ async function main() {
     },
     socialAdmit = () =>
       json<boolean>(
-        `select sv_social_comment_admit(${quote(company)},${quote(socialWinner.id)},${quote(socialWinner.token)},${quote(JSON.stringify(socialEvidence))}::jsonb);`,
+        `select to_jsonb(sv_social_comment_admit(${quote(company)},${quote(socialWinner.id)},${quote(socialWinner.token)},${quote(JSON.stringify(socialEvidence))}::jsonb));`,
       ),
     socialAdmissions = await Promise.all([socialAdmit(), socialAdmit()]);
   assert.equal(socialAdmissions.filter(Boolean).length, 1);

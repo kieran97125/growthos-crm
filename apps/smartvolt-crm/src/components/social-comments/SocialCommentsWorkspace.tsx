@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
 import {
@@ -139,7 +139,8 @@ function SocialCommentsWorkspaceInner({
   companyId: string;
   initial?: SocialCommentsPage;
 }) {
-  const endpoint = `/api/companies/${encodeURIComponent(companyId)}/social-comments`,
+  const fieldId = useId(),
+    endpoint = `/api/companies/${encodeURIComponent(companyId)}/social-comments`,
     [brand, setBrand] = useState(""),
     [draft, setDraft] = useState<Draft | null>(null),
     [older, setOlder] = useState<SocialCommentDelivery[]>([]),
@@ -498,9 +499,11 @@ function SocialCommentsWorkspaceInner({
                     disabled={locked}
                     onChange={(postId) => patch({ postId })}
                   />
-                  <label>
-                    觸發關鍵字
+                  <div className="sc-field">
+                    <label htmlFor={`${fieldId}-keywords`}>觸發關鍵字</label>
                     <textarea
+                      id={`${fieldId}-keywords`}
+                      aria-describedby={`${fieldId}-keywords-hint`}
                       value={draft.keywordsText}
                       disabled={locked}
                       rows={3}
@@ -508,8 +511,10 @@ function SocialCommentsWorkspaceInner({
                       placeholder={"價錢\n想了解"}
                       onChange={(e) => patch({ keywordsText: e.target.value })}
                     />
-                    <small>每行一個，最多 20 個。</small>
-                  </label>
+                    <small id={`${fieldId}-keywords-hint`}>
+                      每行一個，最多 20 個。
+                    </small>
+                  </div>
                   <label>
                     符合方式
                     <select
@@ -523,9 +528,11 @@ function SocialCommentsWorkspaceInner({
                       <option value="all">包含全部關鍵字</option>
                     </select>
                   </label>
-                  <label>
-                    私訊內容
+                  <div className="sc-field">
+                    <label htmlFor={`${fieldId}-body`}>私訊內容</label>
                     <textarea
+                      id={`${fieldId}-body`}
+                      aria-describedby={`${fieldId}-body-count`}
                       value={draft.body}
                       disabled={locked}
                       rows={4}
@@ -533,8 +540,10 @@ function SocialCommentsWorkspaceInner({
                       placeholder="你好，收到你嘅留言。想了解邊方面多啲？"
                       onChange={(e) => patch({ body: e.target.value })}
                     />
-                    <span className="sc-count">{draft.body.length} / 1000</span>
-                  </label>
+                    <span id={`${fieldId}-body-count`} className="sc-count">
+                      {draft.body.length} / 1000
+                    </span>
+                  </div>
                 </div>
                 <aside className="sc-preview">
                   <div className="sc-preview-title">

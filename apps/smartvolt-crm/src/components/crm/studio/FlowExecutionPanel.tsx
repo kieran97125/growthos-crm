@@ -21,6 +21,7 @@ import type { MessageDefinition } from "@/lib/engagement/model";
 import MessageFields from "@/components/engagement/MessageFields";
 import type { Flow } from "./model";
 import "./flow-runtime.css";
+import "../../engagement/engagement.css";
 
 const statusNames: Record<FlowRun["state"], string> = {
   active: "處理中",

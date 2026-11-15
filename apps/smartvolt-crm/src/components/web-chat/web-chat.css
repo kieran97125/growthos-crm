@@ -429,6 +429,9 @@
   gap: 7px;
 }
 .wc-search button {
+  flex: 0 0 auto;
+  min-inline-size: 3.5rem;
+  white-space: nowrap;
   font-size: 11px;
   border: 1px solid var(--wc-border);
   background: white;
@@ -437,6 +440,9 @@
   padding: 0 10px;
 }
 .wc-search input {
+  flex: 1 1 0;
+  width: 0;
+  min-inline-size: 0;
   font-size: 12px;
 }
 .wc-filters {

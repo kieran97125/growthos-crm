@@ -1137,6 +1137,7 @@
   }
   .iq-composer {
     margin: 0 10px 10px;
+    padding-bottom: var(--cc-composer-clearance, 0px);
   }
   .iq-compose-footer {
     padding: 7px 10px 10px;

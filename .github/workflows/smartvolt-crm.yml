@@ -53,7 +53,10 @@ jobs:
           const files = readdirSync('e2e')
             .filter(name => name.endsWith('.spec.ts') && !['engagement.spec.ts', 'initial-paint.spec.ts', 'coaching.spec.ts', 'company-ai.spec.ts', 'customer-memory.spec.ts', 'dynamic-segments.spec.ts', 'voice.spec.ts'].includes(name))
             .map(name => 'e2e/' + name);
-          const result = spawnSync('npm', ['run', 'test:e2e', '--', ...files], { stdio: 'inherit' });
+          const result = spawnSync('npm', ['run', 'test:e2e', '--', ...files, '--reporter=dot,json'], {
+            stdio: 'inherit',
+            env: { ...process.env, PLAYWRIGHT_JSON_OUTPUT_FILE: 'test-results/remaining-results.json' },
+          });
           process.exit(result.status ?? 1);
           JS
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

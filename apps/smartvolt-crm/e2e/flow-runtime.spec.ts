@@ -1,5 +1,6 @@
 import { test, expect, type Page, type Route } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { build } from "esbuild";
 import {
   fixtureBundle,
   mountFixture,
@@ -50,10 +51,20 @@ function publication(): FlowPublication {
   };
 }
 let bundle = "";
+let globalStyles = "";
 test.beforeAll(async () => {
-  bundle = await fixtureBundle(
-    `import React from'react';import{createRoot}from'react-dom/client';import FlowExecutionPanel from'./src/components/crm/studio/FlowExecutionPanel';createRoot(document.getElementById('fixture')).render(<main><h1>正式流程驗收</h1><FlowExecutionPanel companyId='${companyId}' flow={${JSON.stringify(flow)}}/></main>);`,
-  );
+  const [component, styles] = await Promise.all([
+    fixtureBundle(
+      `import React from'react';import{createRoot}from'react-dom/client';import FlowExecutionPanel from'./src/components/crm/studio/FlowExecutionPanel';createRoot(document.getElementById('fixture')).render(<main><h1>正式流程驗收</h1><div className='cq-content'><div className='fh-app fh-studio-view' data-shared-chrome='true'><section className='st-workspace'><FlowExecutionPanel companyId='${companyId}' flow={${JSON.stringify(flow)}}/></section></div></div></main>);`,
+    ),
+    build({
+      entryPoints: ["src/app/globals.css"],
+      bundle: true,
+      write: false,
+    }),
+  ]);
+  bundle = component;
+  globalStyles = styles.outputFiles[0].text;
 });
 async function mount(
   page: Page,
@@ -68,11 +79,7 @@ async function mount(
   const commands = await mountFixture(page, {
     name: "flow_runtime",
     bundle,
-    styles: [
-      "src/components/crm/studio/studio.css",
-      "src/components/engagement/engagement.css",
-      "src/components/crm/studio/flow-runtime.css",
-    ],
+    styles: ["src/components/engagement/engagement.css"],
     handle: async (route, url, body) => {
       if (!url.pathname.endsWith("/flows"))
         return route.fulfill({
@@ -125,6 +132,9 @@ async function mount(
       return route.fulfill({ json: data });
     },
   });
+  // Apply the actual production stylesheet and ancestor scopes, including
+  // .fh-app .st-button; browser defaults must not become visual evidence.
+  await page.addStyleTag({ content: globalStyles });
   await page.locator(".fr-panel > summary").click();
   await expect(page.getByLabel("正式流程開始方式")).toBeVisible();
   return commands;
@@ -230,6 +240,14 @@ test("mobile publication controls remain accessible and fit the viewport", async
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const commands = await mount(page, { published: true });
+  const publish = page.getByRole("button", { name: "發布新版本", exact: true });
+  await expect(publish).toHaveCSS("display", "inline-flex");
+  await expect(publish).toHaveCSS("border-radius", "6px");
+  await expect(publish).toHaveCSS("min-height", "32px");
+  await expect(publish).toHaveCSS("color", "rgb(255, 255, 255)");
+  await expect(
+    page.getByRole("button", { name: "暫停流程", exact: true }),
+  ).toHaveCSS("background-color", "rgb(255, 255, 255)");
   const violations = (
     await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()
   ).violations;

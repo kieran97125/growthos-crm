@@ -735,3 +735,50 @@
   outline: 2px solid #3468ce;
   outline-offset: 3px;
 }
+@media (max-width: 480px) {
+  .cq-header {
+    padding: 0 10px;
+    gap: 8px;
+  }
+  .cq-brand strong {
+    display: none;
+  }
+  .cq-header-actions {
+    gap: 6px;
+  }
+  .cq-header .cq-tool {
+    min-height: 36px;
+    box-sizing: border-box;
+    padding: 7px 6px;
+    gap: 4px;
+    font-size: 10px;
+  }
+  .cq-header .cq-tool[aria-label="C 提醒"] > span {
+    display: none;
+  }
+  .cq-header .co-presence-control > summary {
+    min-width: 28px;
+    min-height: 36px;
+    box-sizing: border-box;
+    justify-content: center;
+    padding: 7px 4px;
+  }
+  .cq-header .co-presence-control summary > b {
+    max-width: 26px;
+    box-sizing: border-box;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .cq-switch {
+    min-height: 36px;
+    box-sizing: border-box;
+    padding: 6px 4px;
+    white-space: nowrap;
+  }
+  .cq-account summary {
+    min-width: 32px;
+    min-height: 36px;
+    justify-content: center;
+  }
+}

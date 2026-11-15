@@ -20,7 +20,7 @@
 
 所有正式讀寫在server重驗公司、產品、角色、品牌及歷史範圍。新增資料表RLS啟用、browser raw grants為0；原始來源、訪客秘密及附件不直接公開。跨來源身份只經精確已授權連結，不按名稱／電話推斷。
 
-外發沿用持久派送／相同請求／未知結果核對；超時不能冒稱未發送或自動重發。回覆、接手、來源變動、停用、權限及模板／同意資格於執行前重驗。實際送達與模型品質需獨立真實證據。
+外發沿用持久派送／相同請求／未知結果核對；超時不能冒稱未發送或自動重發。回覆、接手、來源變動、停用、權限及各功能適用的模板／同意資格於執行前重驗。實際送達與模型品質需獨立真實證據。
 
 網站訪客端點只服務特定聊天窗，不提供通用CRM資料API。每個嵌入來源受確切網域／origin及獨立visitor憑證限制，不以公開widget ID當讀取私人對話授權。
 
@@ -48,6 +48,16 @@ Flow保留原有三套標準旅程；新畫布發布後既有執行繼續使用�
 私人排程沿用既有租戶分頁及共享派送／Workflow；新增Flow推進、留言私訊及到期附件清理各自保存結果，單項失敗不阻止其他模組恢復。沒有新增公開cron或一般公司API憑證。
 
 初輪全套497項程式／PGlite、2項Workflow、lint、TypeScript及正式build通過；獨立覆查後的最終來源仍須以雲端CI、native PostgreSQL並行及完整桌面／手機browser結果為發布依據。PGlite功能預檢不等於native多連線競爭驗收；列出browser案例不等於執行通過。
+
+## 2026-11-16 HKT 定稿驗收及發布閘門
+
+[PR#16](https://github.com/kieran97125/growthos-crm/pull/16) 及本輪 issue#15 保存實作。來源`07d92249`的[native PostgreSQL job](https://github.com/kieran97125/growthos-crm/actions/runs/43741361081/job/132895110427)於01:31 HKT成功：四個新模組及原有並行驗收全部通過，包括網站設定鎖競爭、一次派送及未知結果。最初測試工具把psql的SQL NULL／boolean當JSON解析，已修正輸出編碼，保留全部斷言。
+
+同輪雲端build／TypeScript／lint／程式測試／Workflow、4個首屏、8個推播、20個教練／AI及33個記憶／分眾／語音browser成功；remaining browser group於15分鐘job期限取消，不能當通過。artifact指出社交欄位可及名稱混入提示／字數、附件fixture超遠期限造成計時器溢位及提示字色對比不足。定稿修正保留原有案例／斷言／時限，另外加入C與發送掣不重疊、320／390px頁首操作完整、搜尋文字單行及正式Flow樣式驗收；下一個完整exact-head CI為最終依據。
+
+正式資料庫目前只安裝`20261115173202_convelta_social_comment_replies`，與來源MD5 `8ebed139b052b737447306040b22cb54`一致；新規則0、啟用0。網站聊天migration的原生平台確認兩次逾時，未安裝；Flow及媒體migration尚未執行。正式App仍是上一輪runtime`64f352b`，本輪未部署。完整schema、hosted驗收及正式部署仍是發布閘門。
+
+可重現的hosted檢查腳本：[回滾功能驗收](acceptance/convelta-inbox-expansion-hosted-verify-20261116.sql)、[唯讀來源／RLS／grants／私人bucket核對](acceptance/convelta-inbox-expansion-hosted-readback-20261116.sql)。目前只完成本機驗證，待其餘schema完成後才能在hosted執行；不能將腳本準備好當作正式資料庫已通過。
 
 功能詳細契約：[私人附件](convelta-private-media-20261116.md)、[網站聊天](convelta-website-chat-20261116.md)。本輪追蹤：[issue#15](https://github.com/kieran97125/growthos-crm/issues/15)。原有[#10](https://github.com/kieran97125/growthos-crm/issues/10)及[#12](https://github.com/kieran97125/growthos-crm/issues/12)的實際渠道／客戶／語音／裝置等驗收仍獨立保留。
 

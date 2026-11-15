@@ -60,9 +60,12 @@ function Item({
     [expired, setExpired] = useState(false);
   useEffect(() => {
     if (!opened) return;
+    const remaining = Date.parse(opened.expiresAt) - Date.now();
     const timer = setTimeout(
       () => setExpired(true),
-      Math.max(0, Date.parse(opened.expiresAt) - Date.now()),
+      Number.isFinite(remaining)
+        ? Math.min(2_147_483_647, Math.max(0, remaining))
+        : 0,
     );
     return () => clearTimeout(timer);
   }, [opened]);

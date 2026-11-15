@@ -320,6 +320,7 @@
   min-width: 0;
 }
 .sc-fields > label,
+.sc-fields > .sc-field,
 .sc-preview > label {
   display: grid;
   gap: 7px;

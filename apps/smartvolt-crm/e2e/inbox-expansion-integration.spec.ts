@@ -1,4 +1,10 @@
-import { test, expect, type Page, type Route } from "@playwright/test";
+import {
+  test,
+  expect,
+  type Locator,
+  type Page,
+  type Route,
+} from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import {
   actor,
@@ -44,6 +50,54 @@ function customerWrites(captures: CapturedRequest[]) {
   return captures.filter(
     (c) => c.method !== "GET" && !c.path.endsWith("/editor"),
   );
+}
+
+async function expectClearOfCopilot(page: Page, sendButton: Locator) {
+  const launcher = page.getByRole("button", {
+    name: "開啟 C 全能助手",
+    exact: true,
+  });
+  await expect(launcher).toBeVisible();
+  await expect(sendButton).toBeVisible();
+  await expect
+    .poll(async () => {
+      const [c, send] = await Promise.all([
+        launcher.boundingBox(),
+        sendButton.boundingBox(),
+      ]);
+      return (
+        !!c &&
+        !!send &&
+        (send.x + send.width <= c.x ||
+          c.x + c.width <= send.x ||
+          send.y + send.height <= c.y ||
+          c.y + c.height <= send.y)
+      );
+    }, "C launcher must leave the complete send-button hit target clear")
+    .toBe(true);
+}
+
+async function expectHeaderControlsInsideViewport(page: Page) {
+  for (const control of [
+    page.getByRole("link", { name: "切換至 POS", exact: true }),
+    page.getByRole("link", { name: "C 提醒", exact: true }),
+    page.getByLabel("接客狀態：離線", { exact: true }),
+    page.getByLabel("公司及帳戶選單", { exact: true }),
+  ]) {
+    await expect(control).toBeVisible();
+    await expect
+      .poll(async () => {
+        const box = await control.boundingBox();
+        return (
+          !!box &&
+          box.x >= 0 &&
+          box.y >= 0 &&
+          box.x + box.width <= page.viewportSize()!.width &&
+          box.y + box.height <= page.viewportSize()!.height
+        );
+      }, "Every company header action must retain its complete visible hit target")
+      .toBe(true);
+  }
 }
 
 test("actual company inbox preserves each channel draft while hidden polls and customer context stop", async ({
@@ -475,6 +529,20 @@ for (const [name, viewport] of [
     await expect(
       page.getByRole("button", { name: "加入附件", exact: true }),
     ).toBeVisible();
+    if (name === "mobile") {
+      await page.setViewportSize({ width: 320, height: viewport.height });
+      await expectHeaderControlsInsideViewport(page);
+      await page.screenshot({
+        path: test.info().outputPath("company-header-320.png"),
+        clip: { x: 0, y: 0, width: 320, height: 120 },
+      });
+      await page.setViewportSize(viewport);
+      await expectHeaderControlsInsideViewport(page);
+    }
+    await expectClearOfCopilot(
+      page,
+      page.getByRole("button", { name: "傳送回覆", exact: true }),
+    );
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth,
@@ -495,6 +563,27 @@ for (const [name, viewport] of [
     await expect(
       page.getByRole("navigation", { name: "CRM 功能", exact: true }),
     ).toBeVisible();
+    await expectClearOfCopilot(
+      page,
+      page.getByRole("button", { name: "發送回覆", exact: true }),
+    );
+    if (name === "desktop") {
+      const searchButton = page.getByRole("button", {
+        name: "搜尋",
+        exact: true,
+      });
+      await expect(searchButton).toBeVisible();
+      expect(
+        await searchButton.evaluate((button) => {
+          const range = document.createRange();
+          range.selectNodeContents(button);
+          return new Set(
+            [...range.getClientRects()].map((r) => Math.round(r.top)),
+          ).size;
+        }),
+        "Website search action must keep its visible label on one line",
+      ).toBe(1);
+    }
     const violations = (
       await new AxeBuilder({ page })
         .withTags(["wcag2a", "wcag2aa", "wcag21aa"])

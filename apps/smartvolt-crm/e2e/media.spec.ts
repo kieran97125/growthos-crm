@@ -110,7 +110,7 @@ async function mount(page: Page, options: Options = {}) {
             },
             url: "/__media_image__",
             downloadUrl: "/__media_image__?download=1",
-            expiresAt: "2099-01-01T00:00:00Z",
+            expiresAt: new Date(Date.now() + 300_000).toISOString(),
           },
         });
         return;
@@ -121,7 +121,7 @@ async function mount(page: Page, options: Options = {}) {
           json: {
             assetId: uploadedId,
             uploadUrl: `https://synthetic.supabase.co/storage/v1/object/upload/sign/convelta-attachments/${companyId}/${uploadedId}?token=synthetic`,
-            expiresAt: "2099-01-01T00:00:00Z",
+            expiresAt: new Date(Date.now() + 300_000).toISOString(),
           },
         });
         return;

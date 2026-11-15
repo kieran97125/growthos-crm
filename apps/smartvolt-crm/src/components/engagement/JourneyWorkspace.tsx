@@ -193,6 +193,7 @@ export default function JourneyWorkspace({
                 </p>
                 <div className="eng-tags">
                   <span>{j.enabled ? "已啟用" : "已暫停"}</span>
+                  {j.segment_id && <span>已套用自動分眾</span>}
                   <span>{j.active_runs} 個跟進中</span>
                   <span>{j.accepted} 則獲平台接納</span>
                 </div>

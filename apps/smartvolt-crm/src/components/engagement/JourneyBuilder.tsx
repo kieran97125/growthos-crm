@@ -1,9 +1,12 @@
 "use client";
 import { useState, type FormEvent } from "react";
+import useSWR from "swr";
 import { Plus } from "lucide-react";
 import { recipeNames, recipeDescriptions } from "@/lib/engagement/journeys";
 import type { EngagementPage, MessageDefinition } from "@/lib/engagement/model";
 import MessageFields from "./MessageFields";
+import { engagementFetcher } from "./fetcher";
+import type { SegmentsPage } from "@/lib/segments/model";
 export default function JourneyBuilder({
   companyId,
   recipe,
@@ -25,6 +28,7 @@ export default function JourneyBuilder({
 }) {
   const [brand, setBrand] = useState(engagement.brands[0]?.id ?? ""),
     [connection, setConnection] = useState(""),
+    [segmentId, setSegmentId] = useState(""),
     [purpose, setPurpose] = useState<"marketing" | "service">("service"),
     [steps, setSteps] = useState<
       { id: string; delayMinutes: number; definition: MessageDefinition }[]
@@ -38,13 +42,26 @@ export default function JourneyBuilder({
   const selected = engagement.connections.find(
     (c) => c.id === connection && c.brand_id === brand,
   );
+  const segments = useSWR<SegmentsPage>(
+    brand
+      ? `/api/companies/${companyId}/segments?` +
+          new URLSearchParams({ brandId: brand })
+      : null,
+    engagementFetcher,
+    { keepPreviousData: false, refreshInterval: 15000 },
+  );
+  const segmentReady =
+    !segmentId ||
+    !!segments.data?.segments.some(
+      (s) => s.id === segmentId && s.enabled && !s.lastError,
+    );
   function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (frozen) {
       onRetry();
       return;
     }
-    if (!selected) return;
+    if (!selected || !segmentReady) return;
     const f = new FormData(e.currentTarget);
     void onSubmit({
       action: "publish",
@@ -52,6 +69,7 @@ export default function JourneyBuilder({
       id: crypto.randomUUID(),
       name: String(f.get("name")),
       brandId: brand,
+      ...(segmentId ? { segmentId } : {}),
       provider: selected.provider,
       connectionId: connection,
       recipe,
@@ -86,10 +104,12 @@ export default function JourneyBuilder({
           <label>
             品牌
             <select
+              aria-label="品牌"
               value={brand}
               onChange={(e) => {
                 setBrand(e.target.value);
                 setConnection("");
+                setSegmentId("");
               }}
             >
               {engagement.brands.map((b) => (
@@ -102,6 +122,7 @@ export default function JourneyBuilder({
           <label>
             發送渠道
             <select
+              aria-label="發送渠道"
               required
               value={connection}
               onChange={(e) => setConnection(e.target.value)}
@@ -118,8 +139,34 @@ export default function JourneyBuilder({
           </label>
         </div>
         <label>
+          自動分眾
+          <select
+            aria-label="流程自動分眾"
+            value={segmentId}
+            onChange={(e) => setSegmentId(e.target.value)}
+          >
+            <option value="">全部合資格客人</option>
+            {segments.data?.segments.map((s) => (
+              <option
+                key={s.id}
+                value={s.id}
+                disabled={!s.enabled || !!s.lastError}
+              >
+                {s.name}
+                {!s.enabled ? "（已停用）" : s.lastError ? "（待核對）" : ""}
+              </option>
+            ))}
+          </select>
+        </label>
+        {segments.error && (
+          <p className="eng-hint" role="alert">
+            未能讀取分眾；請稍後重新開啟此流程。
+          </p>
+        )}
+        <label>
           訊息用途
           <select
+            aria-label="訊息用途"
             value={purpose}
             onChange={(e) => setPurpose(e.target.value as typeof purpose)}
           >
@@ -207,6 +254,11 @@ export default function JourneyBuilder({
           預約提醒由較早時間排到較近時間；其他跟進由短至長。多次訊息亦要符合公司聯絡頻率。
         </p>
       </fieldset>
+      {segmentId && !segmentReady && (
+        <p className="eng-alert" role="alert">
+          所選分眾目前不可用，請重新選擇。
+        </p>
+      )}
       {error && (
         <p role="alert" className="eng-alert">
           {error}
@@ -224,7 +276,10 @@ export default function JourneyBuilder({
             核對同一請求
           </button>
         ) : (
-          <button className="eng-primary" disabled={busy || !selected}>
+          <button
+            className="eng-primary"
+            disabled={busy || !selected || !segmentReady}
+          >
             啟用流程
           </button>
         )}

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { DraftTranslation } from "@/components/translation/Translation";
 import {
   Sparkles,
@@ -15,6 +15,17 @@ type Context = { companyId: string; brandId: string } & (
   | { source: "conversation"; conversationId: string }
   | { source: "meta" | "whatsapp"; threadId: string }
 );
+const contextScope = (context: Context) =>
+  JSON.stringify([
+    context.companyId,
+    context.brandId,
+    context.source,
+    context.source === "playground"
+      ? context.message
+      : context.source === "conversation"
+        ? context.conversationId
+        : context.threadId,
+  ]);
 export default function AIDraft({
   context,
   disabled,
@@ -38,11 +49,23 @@ export default function AIDraft({
     [notice, setNotice] = useState("");
   const [adopting, setAdopting] = useState(false),
     [adoptedRequest, setAdoptedRequest] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [completedInput, setCompletedInput] = useState<
+    (Context & { requestId: string; goal: ReplyGoal }) | null
+  >(null);
   const [pending, setPending] = useState<
     (Context & { requestId: string; goal: ReplyGoal }) | null
   >(null);
+  const scope = contextScope(context);
+  const currentScope = useRef(scope);
+  useLayoutEffect(() => {
+    currentScope.current = scope;
+    return () => {
+      currentScope.current = "";
+    };
+  }, [scope]);
   async function generate() {
-    if (busy || disabled) return;
+    if (busy || checking || disabled) return;
     setBusy(true);
     onRequestState?.(true);
     setError("");
@@ -73,6 +96,7 @@ export default function AIDraft({
       }
       onRequestState?.(false);
       setResult(data);
+      setCompletedInput(input);
       setReplyDraft(data.reply);
       setPending(null);
       setNotice("真實 AI 建議已準備好，未向客戶發送。");
@@ -81,6 +105,61 @@ export default function AIDraft({
       setError(e instanceof Error ? e.message : "連線中斷，請核對生成結果。");
     } finally {
       setBusy(false);
+    }
+  }
+  async function validateResult() {
+    if (!completedInput || !result) return false;
+    const expectedScope = contextScope(completedInput);
+    if (currentScope.current !== expectedScope) return false;
+    try {
+      const response = await fetch("/api/assistant/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(completedInput),
+      });
+      const data = await response.json();
+      if (currentScope.current !== expectedScope) return false;
+      if (!response.ok) {
+        if (response.status < 500) {
+          setResult(null);
+          setCompletedInput(null);
+          setNotice("");
+        }
+        throw new Error(data.error ?? "暫時未能核對建議，請稍後再試。");
+      }
+      if (
+        data.state === "running" ||
+        data.requestId !== completedInput.requestId ||
+        data.reply !== result.reply
+      )
+        throw new Error("未能核對同一份建議，請稍後再試。");
+      return true;
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "暫時未能核對建議，請稍後再試。",
+      );
+      return false;
+    }
+  }
+  async function insertResult() {
+    if (disabled || busy || checking || !result) return;
+    setChecking(true);
+    setError("");
+    try {
+      if (!(await validateResult())) return;
+      if (onInsert) {
+        onInsert(replyDraft);
+        setNotice("已加入回覆草稿，請確認內容後再發送。");
+      } else {
+        await navigator.clipboard.writeText(replyDraft);
+        setNotice("建議已複製，未向客戶發送。");
+      }
+    } catch {
+      setError("未能自動複製，請選取建議文字。");
+    } finally {
+      setChecking(false);
     }
   }
   return (
@@ -92,7 +171,10 @@ export default function AIDraft({
         </span>
         <small>草稿</small>
       </div>
-      <fieldset className="ai-goals" disabled={busy || !!pending || disabled}>
+      <fieldset
+        className="ai-goals"
+        disabled={busy || checking || !!pending || disabled}
+      >
         <legend>回覆目的</legend>
         {Object.entries(replyGoals).map(([id, g]) => (
           <button
@@ -102,6 +184,7 @@ export default function AIDraft({
             onClick={() => {
               setGoal(id as ReplyGoal);
               setResult(null);
+              setCompletedInput(null);
               setNotice("");
             }}
           >
@@ -112,7 +195,7 @@ export default function AIDraft({
       <button
         className="ai-solid"
         onClick={() => void generate()}
-        disabled={busy || disabled}
+        disabled={busy || checking || disabled}
       >
         {busy
           ? "正在整理建議…"
@@ -163,20 +246,12 @@ export default function AIDraft({
             value={replyDraft}
             onChange={setReplyDraft}
             maxLength={5000}
-            disabled={disabled || busy}
+            disabled={disabled || busy || checking}
           />
           <div className="ai-result-actions">
             <button
-              onClick={() => {
-                if (onInsert) {
-                  onInsert(replyDraft);
-                  setNotice("已加入回覆草稿，請確認內容後再發送。");
-                } else
-                  void navigator.clipboard.writeText(replyDraft).then(
-                    () => setNotice("建議已複製，未向客戶發送。"),
-                    () => setError("未能自動複製，請選取建議文字。"),
-                  );
-              }}
+              disabled={disabled || busy || checking}
+              onClick={() => void insertResult()}
             >
               <ClipboardCopy size={14} aria-hidden="true" />
               {onInsert ? "加入回覆草稿" : "複製建議"}
@@ -184,11 +259,18 @@ export default function AIDraft({
             {onHandoff && result.requestId && (
               <button
                 disabled={
-                  disabled || adopting || adoptedRequest === result.requestId
+                  disabled ||
+                  busy ||
+                  checking ||
+                  adopting ||
+                  adoptedRequest === result.requestId
                 }
                 onClick={() => {
                   setAdopting(true);
-                  void onHandoff(result)
+                  setChecking(true);
+                  setError("");
+                  void validateResult()
+                    .then((valid) => (valid ? onHandoff(result) : false))
                     .then((ok) => {
                       if (ok) {
                         setAdoptedRequest(result.requestId!);
@@ -196,7 +278,10 @@ export default function AIDraft({
                       }
                     })
                     .catch(() => setError("交接結果未確認，請核對同一操作。"))
-                    .finally(() => setAdopting(false));
+                    .finally(() => {
+                      setAdopting(false);
+                      setChecking(false);
+                    });
                 }}
               >
                 <Check size={14} aria-hidden="true" />

@@ -23,6 +23,8 @@ import {
 import "./engagement.css";
 import { engagementFetcher } from "./fetcher";
 import { formatHongKongDateTime } from "@/lib/datetime";
+import DynamicSegmentsManager from "@/components/dynamic-segments/DynamicSegmentsManager";
+import type { SegmentsPage } from "@/lib/segments/model";
 export function displayDate(d: string) {
   return formatHongKongDateTime(d);
 }
@@ -282,6 +284,13 @@ export default function EngagementWorkspace({
           </button>
         )}
       </div>
+      <DynamicSegmentsManager
+        key={companyId + ":" + brand}
+        companyId={companyId}
+        brands={data.brands}
+        canManage={data.canManage}
+        brandId={brand || undefined}
+      />
       <details className="eng-details">
         <summary>
           <ShieldCheck size={18} />
@@ -450,6 +459,7 @@ function CampaignBuilder({
     [connection, setConnection] = useState(""),
     [purpose, setPurpose] = useState<"marketing" | "service">("marketing"),
     [tag, setTag] = useState(""),
+    [segmentId, setSegmentId] = useState(""),
     [body, setBody] = useState(""),
     [templateId, setTemplateId] = useState(""),
     [templates, setTemplates] = useState(data.templates),
@@ -471,16 +481,30 @@ function CampaignBuilder({
           t.supported &&
           t.category === (purpose === "marketing" ? "MARKETING" : "UTILITY"),
       ) ?? [];
-  const previewKey = selected
-    ? `/api/companies/${companyId}/engagement?` +
-      new URLSearchParams({
-        brand,
-        connection,
-        provider: selected.provider,
-        purpose,
-        tag,
-      })
-    : null;
+  const segments = useSWR<SegmentsPage>(
+    brand
+      ? `/api/companies/${companyId}/segments?` +
+          new URLSearchParams({ brandId: brand })
+      : null,
+    engagementFetcher,
+    { keepPreviousData: false, refreshInterval: 15000 },
+  );
+  const selectedSegment = segments.data?.segments.find(
+    (s) => s.id === segmentId && s.enabled && !s.lastError,
+  );
+  const segmentReady = !segmentId || !!selectedSegment;
+  const previewKey =
+    selected && segmentReady
+      ? `/api/companies/${companyId}/engagement?` +
+        new URLSearchParams({
+          brand,
+          connection,
+          provider: selected.provider,
+          purpose,
+          tag,
+          ...(segmentId ? { segmentId } : {}),
+        })
+      : null;
   const audience = useSWR<EngagementPage>(previewKey, engagementFetcher, {
     keepPreviousData: false,
   });
@@ -555,7 +579,13 @@ function CampaignBuilder({
       onRetry();
       return;
     }
-    if (!selected || !validMessage || !audience.data?.audience?.total) return;
+    if (
+      !selected ||
+      !segmentReady ||
+      !validMessage ||
+      !audience.data?.audience?.total
+    )
+      return;
     let dueAt = new Date().toISOString();
     if (when === "later") {
       const parsed = new Date(date + ":00+08:00");
@@ -578,7 +608,7 @@ function CampaignBuilder({
       name,
       purpose,
       definition,
-      audience: { tag },
+      audience: { tag, ...(segmentId ? { segmentId } : {}) },
       dueAt,
     });
   }
@@ -607,6 +637,7 @@ function CampaignBuilder({
                   onChange={(e) => {
                     setBrand(e.target.value);
                     setConnection("");
+                    setSegmentId("");
                     setTemplateId("");
                   }}
                 >
@@ -654,7 +685,36 @@ function CampaignBuilder({
               </select>
             </label>
             <label>
-              客戶標籤 <span>留空即揀全部有呢個渠道嘅客人</span>
+              自動分眾
+              <select
+                aria-label="推播自動分眾"
+                value={segmentId}
+                onChange={(e) => setSegmentId(e.target.value)}
+              >
+                <option value="">全部合資格客人</option>
+                {segments.data?.segments.map((s) => (
+                  <option
+                    key={s.id}
+                    value={s.id}
+                    disabled={!s.enabled || !!s.lastError}
+                  >
+                    {s.name}
+                    {!s.enabled
+                      ? "（已停用）"
+                      : s.lastError
+                        ? "（待核對）"
+                        : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {segments.error && (
+              <p className="eng-hint" role="alert">
+                未能讀取分眾；請稍後重新開啟此推播。
+              </p>
+            )}
+            <label>
+              客戶標籤 <span>可再收窄所選客群</span>
               <input
                 value={tag}
                 onChange={(e) => setTag(e.target.value)}
@@ -842,6 +902,11 @@ function CampaignBuilder({
           </div>
         )}
       </fieldset>
+      {segmentId && !segmentReady && (
+        <p className="eng-alert" role="alert">
+          所選分眾目前不可用，請返回第一步重新選擇。
+        </p>
+      )}
       {(error || localError) && (
         <p role="alert" className="eng-alert">
           {error || localError}
@@ -872,7 +937,7 @@ function CampaignBuilder({
             className="eng-primary"
             disabled={
               step === 1
-                ? !selected || !audience.data?.audience?.total
+                ? !selected || !segmentReady || !audience.data?.audience?.total
                 : !validMessage || !name.trim()
             }
             onClick={(event) => {
@@ -891,6 +956,8 @@ function CampaignBuilder({
             className="eng-primary"
             disabled={
               busy ||
+              !segmentReady ||
+              !audience.data?.audience?.total ||
               data.policy.automations_paused ||
               (purpose === "marketing" && !data.policy.marketing_enabled)
             }

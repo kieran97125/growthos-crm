@@ -3,11 +3,11 @@ import { useState } from "react";
 import { CTagHint } from "@/components/copilot/CopilotProvider";
 import MeasurementPreferences from "@/components/feedback/MeasurementPreferences";
 import ContactPreferences from "@/components/engagement/ContactPreferences";
+import CustomerMemoryWorkspace from "@/components/customer-memory/CustomerMemoryWorkspace";
 import Link from "next/link";
 import {
   CalendarDays,
   Link2,
-  History,
   Pencil,
   ArrowUpRight,
   Search,
@@ -34,50 +34,6 @@ const time = (value: string | number) =>
     minute: "2-digit",
     hour12: false,
   }).format(new Date(value));
-function EventText({
-  kind,
-  detail,
-}: {
-  kind: string;
-  detail: Record<string, unknown>;
-}) {
-  const operational: Record<string, string> = {
-    "lifecycle-changed": "更新客戶階段",
-    "routing-assigned": "派發對話負責人",
-    "ai-handoff": "採納 AI 交接重點",
-    "followup-created": "加入跟進事項",
-    "followup-updated": "更新跟進事項",
-  };
-  const text =
-    kind === "pos-payment"
-      ? `人工核實收款 HK$${Number(detail.amountCents ?? 0) / 100}`
-      : kind === "pos-refund"
-        ? `人工核實退款 HK$${Number(detail.amountCents ?? 0) / 100}`
-        : kind === "pos-appointment"
-          ? `${String(detail.serviceName ?? "預約")} · ${bookingNames[String(detail.status)] ?? String(detail.status)}`
-          : kind === "identity-linked"
-            ? "已確認渠道身份連結"
-            : kind === "identity-unlinked"
-              ? "渠道已改為連結另一客戶"
-              : kind === "channel-linked"
-                ? "建立渠道客戶身份"
-                : kind === "customer-updated"
-                  ? "更新客戶資料"
-                  : kind === "booking-create"
-                    ? "登記預約意向"
-                    : kind === "booking-confirm"
-                      ? "確認基本預約"
-                      : kind === "booking-cancel"
-                        ? "取消預約意向"
-                        : (operational[kind] ?? kind);
-  return (
-    <>
-      <b>{text}</b>
-      {typeof detail.reason === "string" && <p>{detail.reason}</p>}
-      {typeof detail.service === "string" && <p>{detail.service}</p>}
-    </>
-  );
-}
 function ConfirmBooking({
   request,
   companyId,
@@ -295,7 +251,6 @@ export default function CustomerPanel({
   canEdit,
   busy,
   mutate,
-  onLoadMore,
 }: {
   data: CustomerDetail;
   thread?: Inquiry;
@@ -331,6 +286,7 @@ export default function CustomerPanel({
       <div className="iq-customer-tabs" role="tablist" aria-label="客戶資訊">
         {[
           ["profile", "客戶資料"],
+          ["memory", "客戶記憶"],
           ["bookings", "預約"],
           ["history", "時間線"],
         ].map(([id, label]) => (
@@ -378,9 +334,7 @@ export default function CustomerPanel({
             brandIds={c.brandIds ?? []}
             canEdit={canEdit}
           />
-          <p className="iq-note">
-            {c.note || "加入客戶偏好及長期備忘，方便同事接手。"}
-          </p>
+          {c.note && <p className="iq-note">{c.note}</p>}
           <div className="iq-identity">
             <b>
               <Link2 size={14} /> 已連結渠道
@@ -679,31 +633,15 @@ export default function CustomerPanel({
           )}
         </div>
       )}
-      {tab === "history" && (
-        <div className="iq-panel-content">
-          <p className="iq-section-label">
-            <History size={14} />
-            客戶活動及營運紀錄
-          </p>
-          <ol className="iq-timeline">
-            {data.events.map((e) => (
-              <li key={e.seq}>
-                <span />
-                <div>
-                  <EventText kind={e.kind} detail={e.detail} />
-                  <time>{time(e.created_at)}</time>
-                </div>
-              </li>
-            ))}
-          </ol>
-          {!data.events.length && <p>未有已記錄嘅活動。</p>}
-          {data.nextEvent && onLoadMore && (
-            <button disabled={busy} onClick={onLoadMore}>
-              載入較早紀錄
-            </button>
-          )}
-        </div>
-      )}
+      <CustomerMemoryWorkspace
+        key={companyId + ":" + c.id + ":" + (thread?.brand_id ?? "directory")}
+        companyId={companyId}
+        customerId={c.id}
+        brandId={thread?.brand_id}
+        canEdit={canEdit}
+        view={tab === "history" ? "timeline" : "memory"}
+        active={tab === "memory" || tab === "history"}
+      />
       {error && (
         <p className="iq-error" role="alert">
           {error}

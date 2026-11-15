@@ -4,6 +4,7 @@ import { z } from "zod";
 import { loadCompany } from "@/lib/saas/server";
 import { AccessError } from "@/lib/saas/identity";
 import type { AssistantInput } from "@/lib/demo/ai-contract";
+import { readMemoryGuidanceForSource } from "@/lib/customer-memory/server";
 import {
   approvedKnowledge,
   approvedStyleGuidance,
@@ -30,7 +31,9 @@ function dbError(error: { message?: string } | null) {
   if (!error) return;
   const m = error.message ?? "";
   if (
-    /access_denied|product_required|brand_scope|ai_conversation_scope/.test(m)
+    /access_denied|product_required|brand_scope|ai_conversation_scope|memory_scope/.test(
+      m,
+    )
   )
     throw new AccessError("你無權使用呢個公司或品牌嘅 AI。", 403);
   if (/ai_daily_limit/.test(m))
@@ -39,7 +42,9 @@ function dbError(error: { message?: string } | null) {
     throw new AccessError("上一個 AI 請求仲處理緊，請先等候結果。", 409);
   if (/ai_disabled/.test(m))
     throw new AccessError("公司 AI 尚未啟用，請由公司擁有人開啟。", 409);
-  if (/ai_(context_changed|idempotency_conflict)/.test(m))
+  if (
+    /ai_(context_changed|idempotency_conflict)|memory_context_changed/.test(m)
+  )
     throw new AccessError(
       "對話或知識已更新，請重新讀取，再為最新資料生成建議。",
       409,
@@ -163,7 +168,10 @@ export async function configureCompanyAI(companyId: string, enabled: boolean) {
   dbError(r.error);
   return { saved: true };
 }
-export async function prepareCompanyAnswer(raw: unknown) {
+export async function prepareCompanyAnswer(
+  raw: unknown,
+  options: { completedOnly?: boolean } = {},
+) {
   const envelope = z.object({ companyId: z.uuid() }).safeParse(raw);
   if (!envelope.success) throw new AccessError("請先登入公司工作空間。", 401);
   const a = await loadCompany(envelope.data.companyId, "crm");
@@ -282,6 +290,27 @@ export async function prepareCompanyAnswer(raw: unknown) {
       "客戶訊息較長，請先在 AI 工作室整理需要核對嘅重點。",
       400,
     );
+  let memoryStamp: string | null = null;
+  let customerMemory: AssistantInput["customerMemory"] = [];
+  let reviewedVoice: AssistantInput["reviewedVoice"] = [];
+  if (request.source !== "playground") {
+    const context = await readMemoryGuidanceForSource(
+      a,
+      request.brandId,
+      request.source,
+      sourceId!,
+    );
+    memoryStamp = context.stamp;
+    customerMemory = context.guidance;
+    reviewedVoice = context.reviewedVoice.map(
+      ({ id, messageId, revision, text }) => ({
+        id,
+        messageId,
+        revision,
+        text,
+      }),
+    );
+  }
   const now = Date.now(),
     articles = retrieveKnowledge(
       approvedKnowledge(
@@ -304,6 +333,8 @@ export async function prepareCompanyAnswer(raw: unknown) {
     profile,
     articles,
     history,
+    customerMemory,
+    reviewedVoice,
     styleGuidance: approvedStyleGuidance(
       a.state.studio.articles,
       request.companyId,
@@ -315,29 +346,81 @@ export async function prepareCompanyAnswer(raw: unknown) {
     humanOwned: true,
     businessHours: true,
   };
-  const hash = createHash("sha256")
-    .update(
-      JSON.stringify({
-        request,
-        input,
-        revision: a.revision,
-        sourceRevision,
-        model,
-      }),
+  const contextHash = (revision: number) =>
+    createHash("sha256")
+      .update(
+        JSON.stringify({ request, input, revision, sourceRevision, model }),
+      )
+      .digest("hex");
+  if (options.completedOnly) {
+    // Applying a draft is a read-only freshness check. A missing, expired or
+    // unfinished receipt must never reserve usage or dispatch a model again.
+    const [prior, settings] = await Promise.all([
+      a.db
+        .from("sv_ai_requests")
+        .select(
+          "status,result,error_code,feature,product,brand_id,source,source_id,workspace_revision,model,request_hash",
+        )
+        .eq("company_id", request.companyId)
+        .eq("actor_id", a.user.id)
+        .eq("request_id", request.requestId)
+        .maybeSingle(),
+      a.db
+        .from("sv_ai_settings")
+        .select("enabled")
+        .eq("company_id", request.companyId)
+        .maybeSingle(),
+    ]);
+    dbError(prior.error);
+    dbError(settings.error);
+    if (settings.data?.enabled !== true)
+      throw new AccessError("公司擁有人已暫停 AI，建議未有套用。", 409);
+    const row = prior.data;
+    if (
+      !row ||
+      row.status !== "completed" ||
+      row.feature !== "reply" ||
+      row.product !== "crm" ||
+      row.brand_id !== request.brandId ||
+      row.source !== request.source ||
+      row.source_id !== sourceId ||
+      row.model !== model ||
+      !Number.isSafeInteger(row.workspace_revision) ||
+      // Reuse the receipt's workspace revision so unrelated workspace edits
+      // do not invalidate an otherwise identical source/knowledge/context.
+      row.request_hash !== contextHash(row.workspace_revision)
     )
-    .digest("hex");
-  const claim = await a.db.rpc("sv_ai_claim", {
-    p_company: request.companyId,
-    p_actor: a.user.id,
-    p_request: request.requestId,
-    p_brand: request.brandId,
-    p_source: request.source,
-    p_source_id: sourceId,
-    p_workspace_revision: a.revision,
-    p_source_revision: sourceRevision,
-    p_model: model,
-    p_hash: hash,
-  });
+      throw new AccessError("建議所用資料已更新，請重新生成後再採用。", 409);
+    if (memoryStamp) {
+      const retained = await a.db.rpc("sv_memory_ai_validate", {
+        p_company: request.companyId,
+        p_actor: a.user.id,
+        p_request: request.requestId,
+        p_expected_stamp: memoryStamp,
+      });
+      dbError(retained.error);
+      if (retained.data !== true)
+        throw new AccessError("客戶背景已更新，請重新生成後再採用。", 409);
+    }
+    return savedResult(row);
+  }
+  const hash = contextHash(a.revision);
+  const claim = await a.db.rpc(
+    memoryStamp ? "sv_memory_ai_claim" : "sv_ai_claim",
+    {
+      p_company: request.companyId,
+      p_actor: a.user.id,
+      p_request: request.requestId,
+      p_brand: request.brandId,
+      p_source: request.source,
+      p_source_id: sourceId,
+      p_workspace_revision: a.revision,
+      p_source_revision: sourceRevision,
+      p_model: model,
+      p_hash: hash,
+      ...(memoryStamp ? { p_memory_stamp: memoryStamp } : {}),
+    },
+  );
   dbError(claim.error);
   if (!claim.data.dispatch) return savedResult(claim.data);
   let answer: unknown = null,
@@ -362,15 +445,18 @@ export async function prepareCompanyAnswer(raw: unknown) {
   } catch (e) {
     errorCode = classifyAIError(e);
   }
-  const completed = await a.db.rpc("sv_ai_finish", {
-    p_company: request.companyId,
-    p_actor: a.user.id,
-    p_request: request.requestId,
-    p_result: answer,
-    p_error: errorCode,
-    p_input: inputTokens,
-    p_output: outputTokens,
-  });
+  const completed = await a.db.rpc(
+    memoryStamp ? "sv_memory_ai_finish" : "sv_ai_finish",
+    {
+      p_company: request.companyId,
+      p_actor: a.user.id,
+      p_request: request.requestId,
+      p_result: answer,
+      p_error: errorCode,
+      p_input: inputTokens,
+      p_output: outputTokens,
+    },
+  );
   dbError(completed.error);
   // A successful real request also confirms readiness after an operator tops
   // up credits; no redeploy or public diagnostic endpoint is needed.

@@ -41,6 +41,7 @@ const querySchema = z
     purpose: z.enum(["marketing", "service"]).optional(),
     tag: z.string().max(40).optional(),
     stage: z.string().max(100).optional(),
+    segmentId: z.uuid().optional(),
   })
   .strict();
 async function access(company: string) {
@@ -55,11 +56,14 @@ export async function readEngagement(
 ): Promise<EngagementPage> {
   const a = await access(company),
     q = querySchema.parse(input),
-    { tag, stage, ...query } = q;
+    { tag, stage, segmentId, ...query } = q;
   const r = await a.db.rpc("sv_engagement_read", {
     p_company: company,
     p_actor: a.user.id,
-    p_query: { ...query, audience: audienceSchema.parse({ tag, stage }) },
+    p_query: {
+      ...query,
+      audience: audienceSchema.parse({ tag, stage, segmentId }),
+    },
   });
   engagementFailure(r.error);
   const d = r.data as EngagementPage,

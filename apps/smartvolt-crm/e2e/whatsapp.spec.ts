@@ -112,7 +112,8 @@ const props: WhatsAppInboxViewProps = {
 };
 const css =
   readFileSync("src/components/whatsapp/whatsapp.css", "utf8") +
-  readFileSync("src/components/translation/translation.css", "utf8");
+  readFileSync("src/components/translation/translation.css", "utf8") +
+  readFileSync("src/components/voice/voice.css", "utf8");
 function html(data: WhatsAppInboxViewProps) {
   return `<!doctype html><html lang="zh-HK"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>WhatsApp presentation acceptance</title><style>body{margin:0}*{box-sizing:border-box}${css}</style></head><body>${renderToStaticMarkup(createElement(WhatsAppInboxView, data))}</body></html>`;
 }
@@ -263,6 +264,8 @@ test.beforeAll(async () => {
     platform: "browser",
     format: "iife",
     jsx: "automatic",
+    // Keep CSS out of the in-memory JS bundle; html()/mountController inject it.
+    loader: { ".css": "empty" },
     define: { "process.env.NODE_ENV": JSON.stringify("test") },
   });
   clientBundle = result.outputFiles[0].text;

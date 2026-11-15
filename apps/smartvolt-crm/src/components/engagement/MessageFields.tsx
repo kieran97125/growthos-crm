@@ -76,6 +76,7 @@ export default function MessageFields({
       <label>
         訊息內容
         <textarea
+          aria-label="訊息內容"
           required
           maxLength={1000}
           rows={4}

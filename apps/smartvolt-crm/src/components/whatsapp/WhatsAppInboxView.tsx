@@ -3,6 +3,7 @@ import {
   MessageTranslation,
   DraftTranslation,
 } from "@/components/translation/Translation";
+import VoiceMessage from "@/components/voice/VoiceMessage";
 import { useWorkspaceChrome } from "@/components/workspace/context";
 import {
   ArrowDown,
@@ -438,7 +439,15 @@ export default function WhatsAppInboxView({
                             "已引用訊息"}
                         </div>
                       )}
-                      {m.messageType === "text" || m.direction === "note" ? (
+                      {m.messageType === "audio" && p.selected ? (
+                        <VoiceMessage
+                          companyId={p.companyId}
+                          brandId={p.selected.brandId}
+                          source="whatsapp"
+                          sourceId={p.selected.id}
+                          messageId={m.id}
+                        />
+                      ) : m.messageType === "text" || m.direction === "note" ? (
                         <p>{m.body}</p>
                       ) : (
                         <div className="wa-unsupported">

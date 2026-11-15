@@ -29,6 +29,8 @@ const css = [
   "operations/operations.css",
   "translation/translation.css",
   "engagement/engagement.css",
+  "customer-memory/customer-memory.css",
+  "voice/voice.css",
 ]
   .map((f) => readFileSync("src/components/" + f, "utf8"))
   .join("\n");
@@ -201,6 +203,54 @@ async function mock(
   const editorFixture = createEditorFixture();
   await page.route("**/api/companies/**", async (r) => {
     const url = new URL(r.request().url());
+    if (url.pathname.endsWith("/voice") && r.request().method() === "GET") {
+      await r.fulfill({
+        json: {
+          items: [],
+          canTranscribe: true,
+          canCorrect: true,
+          readiness: "configured",
+          blocker: null,
+        },
+      });
+      return;
+    }
+    const memory = /\/customers\/([^/]+)\/memory$/.exec(url.pathname);
+    if (memory && r.request().method() === "GET") {
+      await r.fulfill({
+        json: {
+          brandId: url.searchParams.get("brandId") ?? "main",
+          customerId: decodeURIComponent(memory[1]),
+          brands: f.overview.brands,
+          canEdit: true,
+          memories: [],
+          history: [],
+          timeline:
+            decodeURIComponent(memory[1]) === f.detail.customer.id
+              ? f.detail.events.map((e) => ({
+                  id: "event:" + e.seq,
+                  at: e.created_at,
+                  kind: e.kind,
+                  title: "已連結渠道",
+                  summary: "已連結來源對話",
+                  source: {
+                    type: "customer-event",
+                    id: String(e.seq),
+                    label: "客戶紀錄",
+                    href: null,
+                  },
+                }))
+              : [],
+          nextCursor: null,
+          coverage: {
+            timelinePageSize: 30,
+            historyLimit: 100,
+            moreHistory: false,
+          },
+        },
+      });
+      return;
+    }
     if (url.pathname.endsWith("/editor")) {
       await editorFixture(r);
       return;
@@ -541,7 +591,7 @@ test("staff adopts saved AI context, sets an operational stage and schedules a f
 }, info) => {
   const f = await mock(page);
   let requestId = "";
-  await page.route("**/api/assistant", (r) => {
+  await page.route(/\/api\/assistant(?:\/validate)?$/, (r) => {
     const input = r.request().postDataJSON();
     requestId = input.requestId;
     return r.fulfill({

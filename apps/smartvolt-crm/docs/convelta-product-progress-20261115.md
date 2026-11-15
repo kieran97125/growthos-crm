@@ -54,4 +54,15 @@
 
 ## 本輪驗證記錄
 
-實作中。未發布前，正式基準仍為 ABC `8157daf`，不得將本分支視為正式版本。完成後補記 exact source、測試、資料庫安裝與正式讀回。
+1–3 程式已完成，另修正 C 新任務誤報無權限：未建立的本機任務可讀取空歷史，既有任務仍重驗公司／使用者／產品。候選版本由 [PR #13](https://github.com/kieran97125/growthos-crm/pull/13) 驗收。未發布前，正式基準仍為 ABC `8157daf`。
+
+本機原全套 367 項通過，最後新增的資料庫／負面案例／C 讀取 25 項聚焦檢查通過，TypeScript、ESLint 及建置通過。最新完整測試及 13 項新增瀏覽器案例以 PR CI 結果為準。本機 Chromium 因 socket 執行限制未能啟動，不當作瀏覽器驗收成功。
+
+兩項新增 migration 已安裝及原文 MD5 核對，來源檔名對齊平台實際版本：
+
+| migration | SQL MD5 |
+|---|---|
+| 20261115094751_convelta_coaching_roadmap | c0cb6f6b6de5d176c458750bcfdd787b |
+| 20261115094755_convelta_cs_coaching | 4ff7f9a3285739bdab4828f1fab2a502 |
+
+原生 PostgreSQL 的 `BEGIN…ROLLBACK` 合成案例驗收通過，涵蓋隔離、防重、共用配額、模型偽造成功拒絕、主管覆核、話術採用及過時來源拒絕；回滾後合成公司／正式分析／覆核均為 0。新增兩表 RLS=true、瀏覽器原表 grants=0；既有安全 WARN 數目不變，新增 server-only 表的 RLS-no-policy INFO 不以擴大權限消除。既有工作區 revision 5 及 inbox／POS／studio／broadcasts 指紋保持原狀。

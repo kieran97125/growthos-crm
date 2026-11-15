@@ -135,6 +135,7 @@ export default function LearningCard({
           <label>
             話術標題
             <input
+              aria-label="話術標題"
               required
               maxLength={100}
               value={title}
@@ -145,6 +146,7 @@ export default function LearningCard({
           <label>
             可重用內容
             <textarea
+              aria-label="可重用內容"
               required
               rows={5}
               maxLength={1600}
@@ -156,6 +158,7 @@ export default function LearningCard({
           <label>
             有效至
             <input
+              aria-label="有效至"
               required
               type="date"
               value={validUntil}

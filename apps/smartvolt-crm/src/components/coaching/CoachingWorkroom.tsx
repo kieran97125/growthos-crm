@@ -97,6 +97,7 @@ export default function CoachingWorkroom({
             <label>
               選擇已儲存對話
               <select
+                aria-label="選擇已儲存對話"
                 value={sourceKey(selected)}
                 onChange={(e) => setSelection(e.target.value)}
               >

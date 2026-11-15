@@ -337,6 +337,7 @@ export default function CoachPanel({
                     <label>
                       建議回覆
                       <textarea
+                        aria-label="建議回覆"
                         rows={4}
                         maxLength={1800}
                         value={reply}

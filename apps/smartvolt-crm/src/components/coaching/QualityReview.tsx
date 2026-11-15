@@ -70,6 +70,7 @@ export default function QualityReview({
         <label>
           實際顧慮
           <select
+            aria-label="實際顧慮"
             value={lossCode}
             disabled={disabled || busy || !!pending}
             onChange={(e) => setLossCode(e.target.value as typeof lossCode)}
@@ -108,6 +109,7 @@ export default function QualityReview({
         <label>
           覆核原因
           <textarea
+            aria-label="覆核原因"
             required
             minLength={3}
             maxLength={500}

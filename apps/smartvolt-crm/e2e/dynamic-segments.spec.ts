@@ -112,7 +112,7 @@ let bundle = "";
 let journeyBundle = "";
 test.beforeAll(async () => {
   journeyBundle = await fixtureBundle(
-    `import React,{useState}from'react';import{createRoot}from'react-dom/client';import JourneyBuilder from './src/components/engagement/JourneyBuilder';function Fixture(){const[saved,setSaved]=useState(false);const engagement={brands:[{id:'main',name:'Synthetic brand'}],connections:[{id:'${segmentId}',brand_id:'main',provider:'meta',channel:'messenger',label:'Synthetic Messenger',ready:true,inbound:true,accepted:false,delivered:false}],templates:[]};async function submit(body){const r=await fetch('/api/companies/${companyId}/journeys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});if(r.ok)setSaved(true);}return <main><h1>分眾旅程驗收</h1><JourneyBuilder companyId='${companyId}' recipe='unanswered' engagement={engagement} busy={false} frozen={false} error='' onSubmit={submit} onRetry={()=>{}}/>{saved&&<p role='status'>流程已保存</p>}</main>}createRoot(document.getElementById('fixture')).render(<Fixture/>);`,
+    `import React,{useState}from'react';import{createRoot}from'react-dom/client';import JourneyBuilder from './src/components/engagement/JourneyBuilder';function Fixture(){const[saved,setSaved]=useState(false);const engagement={brands:[{id:'main',name:'Synthetic brand'}],connections:[{id:'${segmentId}',brand_id:'main',provider:'meta',channel:'messenger',label:'Synthetic Messenger',ready:true,inbound:true,accepted:false,delivered:false}],templates:[]};async function submit(body){const r=await fetch('/api/companies/${companyId}/journeys',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});if(r.ok)setSaved(true);}return <main className='eng-work'><h1>分眾旅程驗收</h1><JourneyBuilder companyId='${companyId}' recipe='unanswered' engagement={engagement} busy={false} frozen={false} error='' onSubmit={submit} onRetry={()=>{}}/>{saved&&<p role='status'>流程已保存</p>}</main>}createRoot(document.getElementById('fixture')).render(<Fixture/>);`,
   );
   bundle = await fixtureBundle(
     `import React from'react';import{createRoot}from'react-dom/client';import DynamicSegmentsManager from './src/components/dynamic-segments/DynamicSegmentsManager';createRoot(document.getElementById('fixture')).render(<main><h1>自動分眾驗收</h1><DynamicSegmentsManager companyId='${companyId}' brands={[{id:'main',name:'Synthetic brand'},{id:'other',name:'Other brand'}]} canManage={true}/></main>);`,
@@ -334,8 +334,15 @@ test("membership refresh shows automatic entry and exit without a browser write"
     exact: true,
   });
   await expect(details).toContainText("Synthetic Leah · 加入");
+  const detailReads = () =>
+    f.reads.filter((url) => url.searchParams.get("segmentId") === segmentId)
+      .length;
+  const initialReads = detailReads();
   f.membershipChanged();
-  await page.clock.fastForward(31000);
+  // Exercise elapsed foreground polling, including SWR's earlier dedupe
+  // cleanup. A fastForward jump models sleep and may coalesce those timers.
+  await page.clock.runFor(31000);
+  await expect.poll(detailReads).toBeGreaterThan(initialReads);
   await expect(details).toContainText("Synthetic Noah · 加入");
   await expect(details).toContainText("Synthetic Leah · 退出");
   await expect(details).toContainText("已核實預約，不再符合條件");
@@ -400,12 +407,14 @@ for (const [name, viewport] of [
 
 async function mountJourney(page: Page) {
   let enabled = true;
+  const segmentReads: boolean[] = [];
   const commands = await mountFixture(page, {
     name: "segment_journey",
     bundle: journeyBundle,
     styles: ["src/components/engagement/engagement.css"],
     handle: async (route, url, body) => {
       if (url.pathname.endsWith("/segments") && !body) {
+        segmentReads.push(enabled);
         await route.fulfill({ json: resultPage([segment({ enabled })]) });
         return;
       }
@@ -428,6 +437,7 @@ async function mountJourney(page: Page) {
     .fill("你好 {{name}}，想問你仲需唔需要同事協助？");
   return {
     commands,
+    segmentReads,
     disableSegment: () => {
       enabled = false;
     },
@@ -438,6 +448,10 @@ test("a standard journey publishes a saved segment reference without a caller-su
   page,
 }) => {
   const f = await mountJourney(page);
+  await expect(page.getByLabel("流程名稱", { exact: true })).toHaveCSS(
+    "border-radius",
+    "8px",
+  );
   await page.getByRole("button", { name: "啟用流程", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("流程已保存");
   expect(f.commands).toHaveLength(1);
@@ -458,8 +472,12 @@ test("a paused segment cannot be published through a standard journey after refr
 }) => {
   await page.clock.install();
   const f = await mountJourney(page);
+  await expect(
+    page.getByRole("button", { name: "啟用流程", exact: true }),
+  ).toBeEnabled();
   f.disableSegment();
-  await page.clock.fastForward(16000);
+  await page.clock.runFor(16000);
+  await expect.poll(() => f.segmentReads.includes(false)).toBe(true);
   await expect(
     page.getByText("所選分眾目前不可用，請重新選擇。", { exact: true }),
   ).toBeVisible();

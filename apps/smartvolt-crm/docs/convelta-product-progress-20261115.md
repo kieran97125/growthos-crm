@@ -103,3 +103,8 @@ Product Learning Sync checked：fresh canonical protocol/index/main checkpoint�
 已將該測試改為按警告語義與問題文字定位，保留禁用發送、零提交及重選提示檢查，並在同一案例驗證返回第一步、停用名單不會自動換成全客群、明確重選後草稿名稱與變數保留，以及最後提交不夾帶舊分眾。沒有移除斷言、跳過案例、放寬等待時間或修改原本已存在的發送保護。現有專業測試工具足夠，沒有新增依賴。
 
 本機該檔ESLint／TypeScript與diff檢查通過，8項browser case可列出；完整雲端結果待本次提交。已安裝roadmap SQL來源MD5不變，檔名對齊正式平台20261115112412。Product Learning Sync checked：重新讀canonical protocol/index/checkpoint，以及07-26broadcast boundary、07-17regression、07-29readiness；沿用既有中立契約與review proposal#88，未移入客戶資料。
+
+
+第二次雲端 CI43721216943：434單元／資料庫、2Workflow、4首屏、8推播、20教練／AI及nativePostgreSQL通過；4–6互動33項中31通過。餘下兩項分眾fixture使用fastForward模擬休眠並合併計時器，與SWR去重清理的順序不符，未發出預期新GET。已改用runFor按原31秒／16秒順序推進，先驗證實際新讀取及停用狀態，再保留原有入退組、停用提示、禁用按鈕及零提交斷言；沒有人工觸發刷新或放寬期限。旅程fixture補回正式.eng-work容器。完整重跑待本次head。
+
+正式分眾migration於本輪再次由原工具提交，平台確認仍逾時；獨立查核migration及schema均未安裝。未繞過確認，正式App仍3533fc3，不能在資料庫缺少必要RPC時發布4–6。已安裝其他四項SQL來源不變。

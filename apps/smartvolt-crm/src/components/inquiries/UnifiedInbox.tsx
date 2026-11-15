@@ -24,8 +24,10 @@ import {
   Store,
   ChevronRight,
   Sparkles,
+  Mic,
 } from "lucide-react";
 import CoachPanel from "@/components/coaching/CoachPanel";
+import VoiceMessage from "@/components/voice/VoiceMessage";
 import { BrandMark } from "@/components/BrandMark";
 import ThreadOperationsPanel, {
   type OperationDraft,
@@ -128,6 +130,7 @@ export default function UnifiedInbox({
     [mobile, setMobile] = useState(initialThread ? "chat" : "list"),
     [aside, setAside] = useState("customer"),
     [coachOpen, setCoachOpen] = useState(false),
+    [voiceOpen, setVoiceOpen] = useState(false),
     [operationCache, setOperationCache] = useState<
       Record<string, OperationDraft | undefined>
     >({}),
@@ -1031,6 +1034,25 @@ export default function UnifiedInbox({
                               setNote(false);
                               setMobile("chat");
                             }}
+                          />
+                        )}
+                      </details>
+                      <details
+                        className="coach-inline-disclosure"
+                        onToggle={(event) =>
+                          setVoiceOpen(event.currentTarget.open)
+                        }
+                      >
+                        <summary>
+                          <Mic size={14} aria-hidden="true" />
+                          語音與逐字稿
+                        </summary>
+                        {voiceOpen && (
+                          <VoiceMessage
+                            companyId={companyId}
+                            brandId={detail.thread.brand_id}
+                            source={detail.thread.provider}
+                            sourceId={detail.thread.id}
                           />
                         )}
                       </details>

@@ -62,6 +62,7 @@ export const audienceSchema = z
     tag: label(40).default(""),
     stage: brand.optional(),
     customer: brand.optional(),
+    segmentId: z.uuid().optional(),
   })
   .strict();
 const campaign = {
@@ -141,6 +142,7 @@ export const stateNames: Record<DeliveryState, string> = {
   cancelled: "已取消",
 };
 export const reasonNames: Record<string, string> = {
+  segment_changed: "客人已不符合所選分眾，今次訊息已停止。",
   source_details_missing: "預約資料未齊，已略過提醒",
   execution_paused: "公司已暫停自動排程",
   human_takeover: "真人已接手，已停止自動訊息",

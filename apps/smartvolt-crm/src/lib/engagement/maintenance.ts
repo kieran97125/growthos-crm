@@ -20,6 +20,9 @@ export async function maintenance() {
       batch.map(async (company) => {
         try {
           checked(
+            (await db.rpc("sv_segments_catchup", { p_company: company })).error,
+          );
+          checked(
             (await db.rpc("sv_journey_catchup", { p_company: company })).error,
           );
           await wakeDelivery(company);

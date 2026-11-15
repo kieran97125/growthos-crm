@@ -24,6 +24,18 @@ export const assistantRequest = z.object({
 // absent from assistantRequest so client requests cannot add trusted guidance.
 export type AssistantInput = z.infer<typeof assistantRequest> & {
   styleGuidance?: string[];
+  customerMemory?: {
+    id: string;
+    revision: number;
+    category: string;
+    content: string;
+  }[];
+  reviewedVoice?: {
+    id: string;
+    messageId: string;
+    revision: number;
+    text: string;
+  }[];
 };
 export const answerSchema = z.object({
   intent: z.enum(["faq", "booking", "handoff"]),

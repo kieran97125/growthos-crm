@@ -4,6 +4,7 @@ import {
   MessageTranslation,
   DraftTranslation,
 } from "@/components/translation/Translation";
+import VoiceMessage from "@/components/voice/VoiceMessage";
 import { useWorkspaceChrome } from "@/components/workspace/context";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -791,6 +792,17 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
                         : "跟進中"}
                     </span>
                   </div>
+                  {connection && (
+                    <details className="coach-inline-disclosure">
+                      <summary>語音與逐字稿</summary>
+                      <VoiceMessage
+                        companyId={companyId}
+                        brandId={connection.brand_id}
+                        source="meta"
+                        sourceId={detail.thread.id}
+                      />
+                    </details>
+                  )}
                   <div className="meta-messages">
                     {!!detail.sources?.length && (
                       <p className="meta-source-evidence">

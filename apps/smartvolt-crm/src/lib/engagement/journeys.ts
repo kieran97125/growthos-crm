@@ -18,6 +18,7 @@ const publish = z
     revision: z.number().int().nonnegative(),
     name: z.string().trim().min(1).max(100),
     brandId: z.string().min(1).max(100),
+    segmentId: z.uuid().optional(),
     provider: z.enum(["whatsapp", "meta"]),
     connectionId: z.uuid(),
     recipe: z.enum(["unanswered", "appointment", "completed"]),
@@ -66,6 +67,7 @@ export const journeyAction = z.union([
 export type Journey = {
   id: string;
   brand_id: string;
+  segment_id?: string | null;
   name: string;
   recipe: keyof typeof recipeNames;
   provider: "whatsapp" | "meta";

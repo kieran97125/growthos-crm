@@ -1,0 +1,436 @@
+.voice-work {
+  border: 1px solid #dce6f4;
+  border-radius: 13px;
+  background: #fff;
+  color: #233e63;
+  padding: 16px;
+  margin: 12px 0;
+  font-size: 12px;
+  min-width: 0;
+}
+.voice-work * {
+  box-sizing: border-box;
+}
+.voice-work h3,
+.voice-work h4,
+.voice-work p {
+  margin: 0;
+}
+.voice-work button {
+  font: inherit;
+  font-weight: 550;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 11px;
+  min-height: 34px;
+  background: #fff;
+  border: 1px solid #dce5f2;
+  border-radius: 8px;
+  color: #4c6990;
+  cursor: pointer;
+}
+.voice-work button:hover {
+  background: #f2f6ff;
+  border-color: #a9c0eb;
+}
+.voice-work button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.voice-work .voice-primary {
+  background: #285ee8;
+  color: #fff;
+  border-color: #285ee8;
+}
+.voice-work .voice-primary:hover {
+  background: #1d4cc5;
+}
+.voice-work .voice-icon {
+  width: 31px;
+  min-height: 31px;
+  padding: 6px;
+  flex-shrink: 0;
+}
+.voice-head,
+.voice-head > div,
+.voice-item-head,
+.voice-transcript-head,
+.voice-transcript-head > div,
+.voice-editor-actions,
+.voice-upload-choice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+}
+.voice-head > div {
+  justify-content: start;
+  min-width: 0;
+}
+.voice-head h3 {
+  font-size: 13px;
+  letter-spacing: -0.2px;
+}
+.voice-head p {
+  margin-top: 4px;
+  color: #5c6f8a;
+  font-size: 10px;
+  line-height: 1.8;
+}
+.voice-symbol {
+  height: 32px;
+  width: 32px;
+  border-radius: 9px;
+  background: #eef3ff;
+  display: grid;
+  place-items: center;
+  color: #4170e8;
+  flex-shrink: 0;
+}
+.voice-muted,
+.voice-empty {
+  line-height: 1.8;
+  color: #5c6f8a;
+  margin-top: 13px !important;
+}
+.voice-empty {
+  background: #f8faff;
+  border: 1px dashed #dce6f6;
+  border-radius: 8px;
+  padding: 14px;
+}
+.voice-capability {
+  background: #fff8e9;
+  border-radius: 8px;
+  padding: 11px;
+  margin-top: 12px !important;
+  color: #7d632f;
+  line-height: 1.8;
+}
+.voice-error {
+  background: #fff2ef;
+  color: #a84f41;
+  border-radius: 8px;
+  padding: 11px;
+  margin-top: 12px !important;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.voice-notice {
+  background: #edf8f2;
+  color: #367052;
+  border-radius: 8px;
+  padding: 10px;
+  margin-top: 11px !important;
+  line-height: 1.8;
+}
+.voice-item {
+  border-top: 1px solid #edf1f7;
+  padding-top: 15px;
+  margin-top: 15px;
+  min-width: 0;
+}
+.voice-item-head {
+  font-size: 10px;
+  color: #5c6f8a;
+  margin-bottom: 10px;
+}
+.voice-item-head > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 550;
+}
+.voice-item-head small {
+  font-size: 10px;
+  color: #5c6f8a;
+}
+.voice-work audio {
+  width: 100%;
+  height: 37px;
+  display: block;
+  border-radius: 8px;
+}
+.voice-transcribe {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.voice-transcribe small {
+  color: #5c6f8a;
+  font-size: 10px;
+  line-height: 1.8;
+}
+.voice-transcript-head {
+  margin-top: 16px;
+  align-items: start;
+}
+.voice-transcript-head > strong {
+  font-size: 11px;
+  padding-top: 4px;
+}
+.voice-transcript-head > div {
+  gap: 5px;
+  justify-content: end;
+  flex-wrap: wrap;
+}
+.voice-transcript-head > div > span {
+  font-size: 9px;
+  padding: 4px 6px;
+  border-radius: 5px;
+  background: #f0f4fb;
+  color: #5c6f8a;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.voice-transcript-head .voice-corrected {
+  background: #eaf6ef;
+  color: #367052;
+}
+.voice-transcript-head button {
+  min-height: 26px;
+  padding: 4px 7px;
+  font-size: 10px;
+}
+.voice-transcript {
+  white-space: pre-wrap;
+  font-size: 12px;
+  line-height: 1.95;
+  background: #f7f9fd;
+  border-radius: 9px;
+  padding: 13px;
+  margin-top: 10px !important;
+  overflow-wrap: anywhere;
+}
+.voice-editor {
+  margin-top: 12px;
+  display: grid;
+  gap: 11px;
+}
+.voice-editor label {
+  display: grid;
+  gap: 6px;
+  color: #5c6f8a;
+  font-size: 11px;
+}
+.voice-editor input,
+.voice-editor textarea {
+  width: 100%;
+  font: inherit;
+  font-size: 12px;
+  border: 1px solid #d5e1f4;
+  border-radius: 8px;
+  background: #fff;
+  padding: 10px;
+  color: #233f64;
+  line-height: 1.9;
+  min-width: 0;
+}
+.voice-editor textarea {
+  resize: vertical;
+  min-height: 108px;
+}
+.voice-editor-actions {
+  justify-content: end;
+  margin-top: 1px;
+  flex-wrap: wrap;
+}
+.voice-editor-actions button {
+  font-size: 11px;
+}
+.voice-extractions {
+  padding: 14px 0 0;
+  margin-top: 14px;
+  border-top: 1px solid #edf1f6;
+}
+.voice-extractions h4 {
+  font-size: 10px;
+  color: #5c6f8a;
+  margin-bottom: 10px;
+}
+.voice-extractions > div {
+  border-left: 2px solid #d9e5ff;
+  padding: 2px 0 2px 11px;
+  margin: 11px 0;
+}
+.voice-extractions > div > span {
+  color: #4d68a4;
+  font-size: 9px;
+}
+.voice-extractions > div > p {
+  font-size: 11px;
+  line-height: 1.85;
+  margin: 5px 0;
+  color: #415d85;
+  overflow-wrap: anywhere;
+}
+.voice-extractions details summary {
+  font-size: 9px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #5c6f8a;
+  cursor: pointer;
+  list-style: none;
+}
+.voice-extractions blockquote {
+  font-size: 10px;
+  line-height: 1.9;
+  margin: 7px 0 0;
+  padding: 7px;
+  background: #f5f8fd;
+  color: #5c6f8a;
+  border-radius: 6px;
+}
+.voice-extractions > small {
+  font-size: 9px;
+  color: #5c6f8a;
+  line-height: 1.8;
+  display: block;
+  margin-top: 12px;
+}
+.voice-history {
+  margin-top: 13px;
+  border-top: 1px solid #edf1f7;
+  padding-top: 11px;
+}
+.voice-history > summary {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  list-style: none;
+  cursor: pointer;
+  font-size: 10px;
+  color: #5c6f8a;
+}
+.voice-history > div {
+  font-size: 11px;
+  line-height: 1.85;
+  color: #5c6f8a;
+  margin-top: 11px;
+}
+.voice-history > div > strong {
+  font-size: 10px;
+  font-weight: 500;
+  color: #5c6f8a;
+}
+.voice-history p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin-top: 5px;
+}
+.voice-history article {
+  border-top: 1px dashed #e6ecf6;
+  margin-top: 11px;
+  padding-top: 10px;
+}
+.voice-history article > span,
+.voice-history article > small {
+  font-size: 9px;
+  color: #5c6f8a;
+}
+.voice-upload {
+  border-top: 1px solid #e8eef7;
+  margin-top: 16px;
+  padding-top: 15px;
+}
+.voice-upload > label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 11px;
+  color: #4d68a4;
+  border: 1px solid #dde7f6;
+  border-radius: 8px;
+  padding: 8px 10px;
+  position: relative;
+  overflow: hidden;
+}
+.voice-upload > label input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+}
+.voice-upload > label:focus-within {
+  outline: 3px solid #9ab9ff;
+  outline-offset: 3px;
+}
+.voice-upload > span {
+  display: block;
+  font-size: 9px;
+  color: #5c6f8a;
+  margin-top: 7px;
+  line-height: 1.7;
+}
+.voice-upload-choice {
+  justify-content: start;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.voice-upload-choice > span {
+  font-size: 10px;
+  color: #5c6f8a;
+  overflow-wrap: anywhere;
+  min-width: 0;
+  flex: 1;
+}
+.voice-upload-choice button {
+  font-size: 10px;
+}
+.voice-work :focus-visible {
+  outline: 3px solid #9ab9ff;
+  outline-offset: 3px;
+}
+.voice-spin {
+  animation: voice-spin 1s linear infinite;
+}
+@keyframes voice-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .voice-spin {
+    animation: none;
+  }
+}
+@media (max-width: 600px) {
+  .voice-work {
+    padding: 13px 11px;
+  }
+  .voice-head h3 {
+    font-size: 12px;
+  }
+  .voice-head p {
+    font-size: 9px;
+  }
+  .voice-transcribe {
+    align-items: start;
+  }
+  .voice-transcribe > button {
+    width: 100%;
+  }
+  .voice-transcript-head {
+    flex-wrap: wrap;
+  }
+  .voice-transcript-head > div {
+    gap: 4px;
+  }
+  .voice-transcript-head button {
+    font-size: 9px;
+  }
+  .voice-editor-actions .voice-primary {
+    flex: 1;
+  }
+  .voice-extractions > small {
+    font-size: 9px;
+  }
+}

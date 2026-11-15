@@ -10,7 +10,11 @@ import {
 const company = "11111111-1111-4111-8111-111111111111",
   connection = "22222222-2222-4222-8222-222222222222";
 let bundle = "";
-const styles = ["src/app/saas.css", "src/components/engagement/engagement.css"]
+const styles = [
+  "src/app/saas.css",
+  "src/components/engagement/engagement.css",
+  "src/components/dynamic-segments/dynamic-segments.css",
+]
   .map((p) => readFileSync(p, "utf8"))
   .join("\n");
 test.beforeAll(async () => {
@@ -39,7 +43,7 @@ test.beforeAll(async () => {
 });
 async function fixture(
   page: Page,
-  { viewer = false, lost = false, existing = false } = {},
+  { viewer = false, lost = false, existing = false, dynamic = false } = {},
 ) {
   const now = new Date().toISOString(),
     data: EngagementPage = {
@@ -117,10 +121,43 @@ async function fixture(
   const commands: ReturnType<typeof engagementAction.parse>[] = [],
     receipts = new Map<string, unknown>();
   let dropped = false;
+  let savedSegmentEnabled = true;
+  const audienceReads: URLSearchParams[] = [];
+  const savedSegmentId = "55555555-5555-4555-8555-555555555555";
+  await page.route(`**/api/companies/${company}/segments*`, async (r) => {
+    const url = new URL(r.request().url());
+    await r.fulfill({
+      json: {
+        brands: data.brands,
+        canManage: !viewer,
+        hasPos: false,
+        segments:
+          dynamic && url.searchParams.get("brandId") === "main"
+            ? [
+                {
+                  id: savedSegmentId,
+                  brandId: "main",
+                  name: "問過未預約",
+                  mode: "all",
+                  rules: [{ kind: "booking", value: "none" }],
+                  includePos: false,
+                  enabled: savedSegmentEnabled,
+                  revision: 1,
+                  count: 3,
+                  evaluatedAt: now,
+                  sourceStamp: "synthetic-authoritative-source",
+                  lastError: null,
+                },
+              ]
+            : [],
+      },
+    });
+  });
   await page.route(`**/api/companies/${company}/engagement*`, async (r) => {
     const url = new URL(r.request().url());
     if (r.request().method() === "GET") {
       if (url.searchParams.has("connection")) {
+        audienceReads.push(new URLSearchParams(url.searchParams));
         await r.fulfill({
           json: {
             ...data,
@@ -203,15 +240,29 @@ async function fixture(
   await expect(
     page.getByRole("heading", { name: "客戶訊息", exact: true }),
   ).toBeVisible();
-  return { data, commands };
+  return {
+    data,
+    commands,
+    audienceReads,
+    savedSegmentId,
+    setSavedSegmentEnabled: (enabled: boolean) => {
+      savedSegmentEnabled = enabled;
+    },
+  };
 }
-async function compose(page: Page) {
+async function compose(page: Page, segmentId?: string) {
   await page.getByRole("button", { name: "新增推播", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await dialog
     .getByRole("combobox", { name: "發送渠道", exact: true })
     .selectOption(connection);
   await expect(dialog.locator(".eng-audience strong")).toContainText("3");
+  if (segmentId) {
+    await dialog
+      .getByLabel("推播自動分眾", { exact: true })
+      .selectOption(segmentId);
+    await expect(dialog.locator(".eng-audience strong")).toContainText("3");
+  }
   await dialog.getByRole("button", { name: "下一步" }).click();
   await dialog.getByLabel("推播名稱").fill("November members");
   await dialog
@@ -317,4 +368,48 @@ test("campaign overview and dialog pass accessibility checks", async ({
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   await page.getByRole("button", { name: "新增推播", exact: true }).click();
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test("a saved dynamic segment is included in the authoritative audience preview and immutable campaign command", async ({
+  page,
+}) => {
+  const f = await fixture(page, { dynamic: true });
+  const dialog = await compose(page, f.savedSegmentId);
+  await expect
+    .poll(() =>
+      f.audienceReads.some((q) => q.get("segmentId") === f.savedSegmentId),
+    )
+    .toBe(true);
+  expect(f.commands).toHaveLength(0);
+  await dialog.getByRole("button", { name: "安排發送", exact: true }).click();
+  await expect(dialog).not.toBeVisible();
+  const campaign = f.commands.find((c) => c.action === "campaign");
+  expect(campaign?.action).toBe("campaign");
+  if (campaign?.action === "campaign") {
+    expect(campaign.audience.segmentId).toBe(f.savedSegmentId);
+    expect(campaign.audience).not.toHaveProperty("members");
+    expect(campaign.audience).not.toHaveProperty("count");
+  }
+});
+
+test("a segment disabled after preview cannot be submitted from the final scheduling step", async ({
+  page,
+}) => {
+  await page.clock.install();
+  const f = await fixture(page, { dynamic: true });
+  const dialog = await compose(page, f.savedSegmentId);
+  await expect
+    .poll(() =>
+      f.audienceReads.some((q) => q.get("segmentId") === f.savedSegmentId),
+    )
+    .toBe(true);
+  f.setSavedSegmentEnabled(false);
+  await page.clock.fastForward(16000);
+  await expect(
+    dialog.getByText("所選分眾目前不可用，請重新選擇。", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    dialog.getByRole("button", { name: "安排發送", exact: true }),
+  ).toBeDisabled();
+  expect(f.commands).toHaveLength(0);
 });

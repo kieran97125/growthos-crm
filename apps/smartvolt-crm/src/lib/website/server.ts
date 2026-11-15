@@ -1,3 +1,4 @@
+import { projectMemberWorkspace } from "@/lib/saas/member-scope";
 import "server-only";
 import { z } from "zod";
 import { loadCompany } from "@/lib/saas/server";
@@ -146,7 +147,10 @@ export async function commitWebsiteImport(companyId: string, raw: unknown) {
   fail(r.error);
   const state = appSchema.parse(r.data.state);
   return {
-    state: projectWorkspace(state, a.products),
+    state: projectMemberWorkspace(
+      projectWorkspace(state, a.products),
+      a.memberScope,
+    ),
     revision: r.data.revision,
     added: r.data.added,
     skipped: r.data.skipped,

@@ -1,3 +1,5 @@
+import { scopeBrands } from "@/lib/saas/scope-server";
+import { assertBrand, projectMemberWorkspace } from "@/lib/saas/member-scope";
 import "server-only";
 import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
@@ -48,6 +50,7 @@ async function access(companyId: string, context: CopilotContext) {
   z.uuid().parse(companyId);
   const a = await requireCompany(companyId);
   requireProduct(a.products, context.product);
+  if (context.brandId) assertBrand(a.memberScope, context.brandId);
   return a;
 }
 async function snapshot(
@@ -113,7 +116,10 @@ async function configurationFact(
     .eq("company_id", a.company.id)
     .single();
   checked(r.error);
-  const state = appSchema.parse(r.data?.payload);
+  const state = projectMemberWorkspace(
+    appSchema.parse(r.data?.payload),
+    a.memberScope,
+  );
   const brand = (id: string) => !context.brandId || id === context.brandId;
   let rows: unknown[] = [],
     total = 0;
@@ -178,6 +184,7 @@ async function configurationFact(
       .gte("starts_at", Date.now() - 30 * 86400000)
       .lte("starts_at", Date.now() + 90 * 86400000)
       .order("starts_at");
+    query = scopeBrands(a, query);
     if (context.brandId) query = query.eq("brand_id", context.brandId);
     if (context.customerId) query = query.eq("contact_id", context.customerId);
     const ap = await query.limit(50);
@@ -217,26 +224,14 @@ async function messagesFor(
   product: string,
 ) {
   if (!threadId) return [];
-  const t = await a.db
-    .from("sv_copilot_threads")
-    .select("id")
-    .eq("company_id", a.company.id)
-    .eq("actor_id", a.user.id)
-    .eq("product", product)
-    .eq("id", z.uuid().parse(threadId))
-    .maybeSingle();
-  checked(t.error);
-  if (!t.data) return [];
-  const r = await a.db
-    .from("sv_copilot_messages")
-    .select("id,role,body,result,created_at")
-    .eq("company_id", a.company.id)
-    .eq("thread_id", threadId)
-    .order("created_at", { ascending: false })
-    .order("id", { ascending: false })
-    .limit(100);
+  const r = await a.db.rpc("sv_copilot_thread_read", {
+    p_company: a.company.id,
+    p_actor: a.user.id,
+    p_product: product,
+    p_thread: z.uuid().parse(threadId),
+  });
   checked(r.error);
-  return (r.data ?? []).reverse() as Message[];
+  return (r.data ?? []) as Message[];
 }
 export async function readCopilot(
   companyId: string,
@@ -250,22 +245,16 @@ export async function readCopilot(
     await Promise.all([
       snapshot(a, context),
       feedbackFor(a),
-      a.db
-        .from("sv_copilot_threads")
-        .select("id,title,product,updated_at")
-        .eq("company_id", companyId)
-        .eq("actor_id", a.user.id)
-        .eq("product", context.product)
-        .order("updated_at", { ascending: false })
-        .limit(30),
+      a.db.rpc("sv_copilot_thread_list", {
+        p_company: companyId,
+        p_actor: a.user.id,
+        p_product: context.product,
+      }),
       context.product === "crm"
-        ? a.db
-            .from("sv_copilot_briefs")
-            .select("id,title,status,revision,plan,created_at")
-            .eq("company_id", companyId)
-            .eq("actor_id", a.user.id)
-            .order("created_at", { ascending: false })
-            .limit(50)
+        ? a.db.rpc("sv_copilot_briefs_list", {
+            p_company: companyId,
+            p_actor: a.user.id,
+          })
         : Promise.resolve({ data: [], error: null }),
       a.db
         .from("sv_ai_settings")

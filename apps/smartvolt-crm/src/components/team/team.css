@@ -1,0 +1,324 @@
+.team-settings {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 40px 24px 80px;
+  color: #15233b;
+}
+.team-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.team-heading h1 {
+  margin: 8px 0 10px;
+  font-size: 30px;
+  letter-spacing: -1px;
+}
+.team-heading p {
+  color: #52617a;
+}
+.team-settings button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  font: inherit;
+  cursor: pointer;
+}
+.team-settings .sv-primary {
+  border: 1px solid var(--kies-accent, #2457e7);
+  border-radius: 10px;
+  background: var(--kies-accent, #2457e7);
+  color: #fff;
+  padding: 10px 16px;
+  font-weight: 600;
+  box-shadow: 0 2px 3px #15233b0a;
+}
+.team-settings .sv-primary:hover:not(:disabled) {
+  background: var(--kies-strong, #1a43bc);
+  border-color: var(--kies-strong, #1a43bc);
+}
+.team-settings button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.team-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  border: 1px solid #dce3ee;
+  border-radius: 16px;
+  margin: 24px 0;
+  background: #f4f7fc;
+  color: #52617a;
+  font-size: 14px;
+}
+.team-summary span {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.team-summary strong {
+  font-size: 22px;
+  color: #15233b;
+}
+.team-members {
+  border: 1px solid #dce3ee;
+  border-radius: 18px;
+  background: white;
+  overflow: hidden;
+}
+.team-member {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 22px;
+  border-bottom: 1px solid #e8edf5;
+  min-width: 0;
+}
+.team-member:last-child {
+  border: 0;
+}
+.team-member > div {
+  flex: 1;
+  min-width: 0;
+}
+.team-member h2 {
+  font-size: 16px;
+  margin: 0 0 5px;
+  overflow-wrap: anywhere;
+}
+.team-member p {
+  font-size: 14px;
+  margin: 0 0 6px;
+  color: #52617a;
+}
+.team-member span:not(.team-avatar) {
+  font-size: 13px;
+  color: #52617a;
+}
+.team-avatar {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 14px;
+  background: #eaf0ff;
+  color: #2457e7;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  font-weight: 600;
+}
+.team-invitations {
+  margin-top: 30px;
+}
+.team-invitations h2 {
+  font-size: 18px;
+}
+.team-invitations h2 span {
+  background: #eaf0ff;
+  padding: 3px 8px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+.team-invitations article {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 0;
+  border-bottom: 1px solid #dce3ee;
+}
+.team-invitations article div {
+  min-width: 0;
+}
+.team-invitations p {
+  margin: 5px 0;
+  color: #52617a;
+  overflow-wrap: anywhere;
+}
+.team-invitations span,
+.team-hint {
+  font-size: 13px;
+  color: #52617a;
+  line-height: 1.7;
+}
+.team-history {
+  margin-top: 32px;
+  font-size: 14px;
+}
+.team-history summary {
+  cursor: pointer;
+  color: #52617a;
+}
+.team-history ol {
+  list-style: none;
+  padding: 0;
+  line-height: 2.4;
+}
+.team-history li span {
+  color: #52617a;
+}
+.team-note {
+  padding: 14px 18px;
+  border-radius: 10px;
+  background: #eaf0ff;
+  color: #1a43bc;
+}
+.team-error {
+  padding: 12px;
+  border-radius: 10px;
+  background: #fff0ef;
+  color: #a63028;
+  line-height: 1.6;
+}
+.team-settings dialog {
+  width: min(520px, calc(100% - 32px));
+  max-height: calc(100dvh - 48px);
+  border: 1px solid #dce3ee;
+  border-radius: 22px;
+  padding: 24px;
+  color: #15233b;
+  box-shadow: 0 24px 100px #15233b25;
+  overflow-y: auto;
+}
+.team-settings dialog::backdrop {
+  background: #15233b70;
+  backdrop-filter: blur(4px);
+}
+.team-settings dialog header,
+.team-settings dialog footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+.team-settings dialog h2 {
+  margin: 0;
+  font-size: 21px;
+}
+.team-close {
+  border: 0;
+  background: none;
+  width: 40px;
+  color: #52617a;
+}
+.team-settings fieldset {
+  border: 0;
+  padding: 0;
+  margin: 18px 0;
+}
+.team-settings fieldset > label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 16px 0;
+  font-size: 14px;
+  font-weight: 500;
+}
+.team-settings input:not([type="checkbox"]),
+.team-settings select {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #cbd7ef;
+  border-radius: 9px;
+  background: white;
+  font: inherit;
+  color: #15233b;
+}
+.team-settings input:focus-visible,
+.team-settings select:focus-visible,
+.team-settings button:focus-visible,
+.team-settings summary:focus-visible {
+  outline: 3px solid #2457e7;
+  outline-offset: 3px;
+}
+.team-settings input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #2457e7;
+}
+.team-product {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  font-size: 14px;
+  flex-wrap: wrap;
+}
+.team-product label,
+.team-brand-options label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.team-brand-options {
+  margin-top: 22px;
+  border-top: 1px solid #e8edf5;
+  padding-top: 16px;
+  font-size: 14px;
+}
+.team-brand-options summary {
+  cursor: pointer;
+  color: #34445e;
+}
+.team-brand-options label {
+  margin-top: 14px;
+}
+.team-settings dialog footer {
+  margin-top: 22px;
+}
+.team-spin {
+  animation: team-spin 1s linear infinite;
+}
+@keyframes team-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .team-spin {
+    animation: none;
+  }
+}
+@media (max-width: 640px) {
+  .team-settings {
+    padding: 24px 16px 64px;
+  }
+  .team-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .team-summary {
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 16px;
+  }
+  .team-summary span:last-child {
+    display: none;
+  }
+  .team-member {
+    padding: 16px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .team-member > div {
+    width: calc(100% - 62px);
+  }
+  .team-member button {
+    margin-left: 56px;
+  }
+  .team-invitations article {
+    flex-wrap: wrap;
+  }
+  .team-settings dialog {
+    padding: 20px;
+  }
+  .team-heading h1 {
+    font-size: 27px;
+  }
+}

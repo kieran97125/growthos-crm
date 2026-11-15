@@ -60,6 +60,14 @@ export default async function CompanySettings({
       {access.products.includes("crm") && (
         <section className="sv-settings-section">
           <h2>通訊渠道設定</h2>
+          {canManage(access.actor.role) && (
+            <Link
+              className="sv-secondary"
+              href={`/company/${companyId}/settings/meta-feedback`}
+            >
+              Meta 成效回傳 →
+            </Link>
+          )}
           <p>
             日常覆客統一喺收件匣處理；喺呢度管理授權、接駁及個別渠道收發記錄。
           </p>
@@ -88,28 +96,29 @@ export default async function CompanySettings({
       {members && (
         <section className="sv-settings-section">
           <h2>團隊權限</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>同事</th>
-                <th>角色</th>
-                <th>狀態</th>
-              </tr>
-            </thead>
-            <tbody>
-              {members.map((m) => (
-                <tr key={m.user_id}>
-                  <td>{m.display_name}</td>
-                  <td>{m.role}</td>
-                  <td>{m.status}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {access.products.includes("crm") &&
+            access.memberScope.brandIds === null && (
+              <Link
+                className="sv-secondary"
+                href={`/company/${companyId}/settings/routing`}
+              >
+                分店、專長與值班設定 →
+              </Link>
+            )}
+          <p>邀請同事加入，管理角色、品牌及產品權限。</p>
+          <Link
+            className="sv-secondary"
+            href={`/company/${companyId}/settings/team`}
+          >
+            管理同事與權限 →
+          </Link>
         </section>
       )}
-      <section className="sv-settings-section">
-        <h2>系統工作卡</h2>
+      <details className="sv-settings-section">
+        <summary>
+          系統工作卡（
+          {cards?.filter((c) => c.status !== "complete").length ?? 0} 項待跟進）
+        </summary>
         <p>尚未啟用嘅功能會列喺呢度，避免將示範狀態當作已接通。</p>
         <div className="sv-system-cards">
           {cards?.map((c) => (
@@ -122,7 +131,7 @@ export default async function CompanySettings({
             </article>
           ))}
         </div>
-      </section>
+      </details>
     </main>
   );
 }

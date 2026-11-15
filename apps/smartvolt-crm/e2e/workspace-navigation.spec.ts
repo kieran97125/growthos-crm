@@ -65,6 +65,8 @@ test.beforeAll(async () => {
       const provider=child=>React.createElement(CompanyProvider,{state,revision:0,actor,products},React.createElement(AIProvider,null,child));
       const view=url.searchParams.get('view');let child;
       if(url.pathname.endsWith('/pos'))child=provider(React.createElement(ProductWorkspace,{initialProduct:'pos'}));
+      else if(url.pathname.endsWith('/journeys'))child=React.createElement('main',null,React.createElement('h1',null,'自動追客'),React.createElement('p',null,'Isolated navigation fixture'));
+      else if(url.pathname.endsWith('/messaging'))child=React.createElement('main',null,React.createElement('h1',null,'客戶訊息'),React.createElement('p',null,'Isolated navigation fixture'));
       else if(view)child=provider(React.createElement(ProductWorkspace,{initialProduct:'crm',initialView:view}));
       else if(url.pathname.endsWith('/customers'))child=React.createElement(Customers,{companyId:id,companyName:name,hasPos:true,canEdit:true});
       else if(url.pathname.endsWith('/ai'))child=React.createElement(AI,{companyId:id,initialStatus:${JSON.stringify(aiStatus)}});
@@ -137,7 +139,7 @@ for (const mobile of [false, true])
       "收件匣",
       "客戶",
       "跟進",
-      "Flow",
+      "自動追客",
       "AI 助理",
       "BOT／知識庫",
       "推播",
@@ -145,7 +147,7 @@ for (const mobile of [false, true])
     ];
     for (const [label, section] of [
       ["收件匣", "inbox"],
-      ["Flow", "flows"],
+      ["自動追客", "flows"],
       ["AI 助理", "ai"],
       ["BOT／知識庫", "knowledge"],
       ["推播", "broadcasts"],
@@ -175,7 +177,7 @@ for (const mobile of [false, true])
       ).toHaveCount(0);
       if (section === "flows")
         await expect(
-          page.getByRole("heading", { name: /Flow Studio/ }),
+          page.getByRole("heading", { name: "自動追客", exact: true }),
         ).toBeVisible();
       if (section === "knowledge")
         await expect(
@@ -183,7 +185,7 @@ for (const mobile of [false, true])
         ).toBeVisible();
       if (section === "broadcasts")
         await expect(
-          page.getByRole("heading", { name: "推播", exact: true }),
+          page.getByRole("heading", { name: "客戶訊息", exact: true }),
         ).toBeVisible();
       if (section === "operations")
         await expect(

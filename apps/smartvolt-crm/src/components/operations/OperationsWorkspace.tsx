@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useCallback, useState } from "react";
 import useSWRInfinite from "swr/infinite";
+import OperationsNavigation from "./OperationsNavigation";
 import { operationsFetcher, operationsReadOptions } from "./fetcher";
 import {
   ArrowUpRight,
@@ -138,6 +139,11 @@ export default function OperationsWorkspace({
           </button>
         </div>
       </header>
+      <OperationsNavigation
+        companyId={companyId}
+        current="operations"
+        canManage={page?.canManage}
+      />
       <div className="co-filterbar">
         <label>
           <span className="co-sr">品牌</span>

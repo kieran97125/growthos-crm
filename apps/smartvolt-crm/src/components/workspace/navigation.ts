@@ -13,10 +13,10 @@ export const crmSections: { id: CrmSection; label: string; suffix: string }[] =
     { id: "inbox", label: "收件匣", suffix: "/crm" },
     { id: "customers", label: "客戶", suffix: "/crm/customers" },
     { id: "operations", label: "跟進", suffix: "/crm/operations" },
-    { id: "flows", label: "Flow", suffix: "/crm?view=flows" },
+    { id: "flows", label: "自動追客", suffix: "/crm/journeys" },
     { id: "ai", label: "AI 助理", suffix: "/crm/ai" },
     { id: "knowledge", label: "BOT／知識庫", suffix: "/crm?view=bot" },
-    { id: "broadcasts", label: "推播", suffix: "/crm?view=broadcasts" },
+    { id: "broadcasts", label: "推播", suffix: "/crm/messaging" },
     { id: "settings", label: "團隊與設定", suffix: "/settings" },
   ];
 export function workspaceLocation(
@@ -45,7 +45,18 @@ export function workspaceLocation(
   )
     section = "settings";
   else if (relative === "/crm/customers") section = "customers";
-  else if (relative === "/crm/operations") section = "operations";
+  else if (
+    [
+      "/crm/operations",
+      "/crm/supervision",
+      "/crm/reports",
+      "/crm/sales",
+      "/crm/notifications",
+    ].includes(relative)
+  )
+    section = "operations";
+  else if (relative === "/crm/messaging") section = "broadcasts";
+  else if (relative === "/crm/journeys") section = "flows";
   else if (relative === "/crm/ai" || relative === "/copilot") section = "ai";
   else if (view === "flows") section = "flows";
   else if (view === "bot") section = "knowledge";

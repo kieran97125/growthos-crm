@@ -1,4 +1,5 @@
 "use client";
+import { useReplyLease } from "@/components/operations/useReplyLease";
 import {
   MessageTranslation,
   DraftTranslation,
@@ -122,12 +123,19 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
       threadId: string;
       body: string;
       revision: number;
+      editorToken: string;
     } | null>(null),
     drafts = useRef<Record<string, string>>({});
   const query = new URLSearchParams({ channel, queue, search }).toString();
   const view = useRef(query);
   const [loadedQuery, setLoadedQuery] = useState("");
   const displayedOverview = loadedQuery === query ? overview : null;
+  const replyLease = useReplyLease(
+    companyId,
+    "meta",
+    selected ?? undefined,
+    overview?.canSend ?? false,
+  );
   const request = useCallback(
     async <T,>(
       query = "",
@@ -299,11 +307,15 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
             pending.current.body !== text)
         )
           throw new Error("有一項發送結果待核對，請先重新讀取對話紀錄。");
+        const editorToken =
+          pending.current?.editorToken ?? (await replyLease.acquire());
+        if (!editorToken || selection.current !== selected) return;
         pending.current ??= {
           clientId: crypto.randomUUID(),
           threadId: selected,
           body: text,
           revision: detail.thread.revision,
+          editorToken,
         };
         setPendingThread(selected);
         const result = await request<{ state: string }>("", {
@@ -883,7 +895,36 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
                     <label className="meta-sr" htmlFor="meta-draft">
                       {note ? "內部備註" : "回覆內容"}
                     </label>
+                    {!note &&
+                      (replyLease.error ||
+                        (replyLease.state.occupied &&
+                          !replyLease.state.held)) && (
+                        <div
+                          className="meta-editor-status"
+                          role={replyLease.error ? "alert" : "status"}
+                        >
+                          <span>
+                            {replyLease.error ||
+                              (replyLease.state.actorName ?? "另一位同事") +
+                                " 正在回覆，草稿會保留。"}
+                          </span>
+                          {replyLease.state.occupied &&
+                            !replyLease.state.held &&
+                            overview?.canSend && (
+                              <button
+                                type="button"
+                                disabled={busy || replyLease.busy}
+                                onClick={() => void replyLease.acquire(true)}
+                              >
+                                接手回覆
+                              </button>
+                            )}
+                        </div>
+                      )}
                     <textarea
+                      onFocus={() => {
+                        if (!note) void replyLease.acquire();
+                      }}
                       id="meta-draft"
                       placeholder={
                         note ? "記低下一步、重點或交接資料…" : "輸入回覆…"
@@ -891,7 +932,10 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
                       rows={3}
                       maxLength={max}
                       value={draft}
-                      onChange={(e) => setDraft(e.target.value)}
+                      onChange={(e) => {
+                        if (!note) replyLease.touch();
+                        setDraft(e.target.value);
+                      }}
                       disabled={!overview?.canSend || busy}
                     />
                     {!note && connection && (
@@ -930,7 +974,13 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
                           !draft.trim() ||
                           !overview?.canSend ||
                           (!note &&
-                            (!windowOpen || !connection?.enabled || unresolved))
+                            (!windowOpen ||
+                              !connection?.enabled ||
+                              unresolved)) ||
+                          (!note &&
+                            (replyLease.busy ||
+                              (replyLease.state.occupied &&
+                                !replyLease.state.held)))
                         }
                         onClick={() => void send()}
                       >

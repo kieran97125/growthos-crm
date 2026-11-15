@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { BRAND } from "@/lib/brand";
 import { BrandMark } from "@/components/BrandMark";
+import NotificationBell from "@/components/notifications/NotificationBell";
 import type { Product } from "@/lib/saas/products";
 import { WorkspaceChromeContext, type WorkspaceCustomer } from "./context";
 import { crmSections, workspaceLocation } from "./navigation";
@@ -134,6 +135,9 @@ export function CompanyWorkspaceChrome({
               <span className="cq-company">{companyName}</span>
             )}
             <div className="cq-header-actions">
+              {products.includes("crm") && (
+                <NotificationBell companyId={companyId} />
+              )}
               {products.includes("crm") && (
                 <OperationsPresence
                   companyId={companyId}

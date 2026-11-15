@@ -1,8 +1,10 @@
+import { requireThreadScope, scopeBrands } from "@/lib/saas/scope-server";
 import "server-only";
 import { createHmac, hkdfSync, randomUUID, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { database, requireCompany } from "@/lib/saas/server";
 import { AccessError, scopeSchema } from "@/lib/saas/identity";
+import { assertBrand } from "@/lib/saas/member-scope";
 import { requireProduct } from "@/lib/saas/products";
 import {
   readMasterKey,
@@ -48,6 +50,7 @@ export const metaAction = z.discriminatedUnion("action", [
       clientId: uuid,
       revision: z.number().int().min(0),
       body: bodySchema,
+      editorToken: uuid,
     })
     .strict(),
   z.object({ action: z.enum(["resolve", "reopen"]), threadId: uuid }).strict(),
@@ -94,6 +97,11 @@ const messageFields =
   "id,thread_id,seq,direction,body,provider_id,state,provider_at,created_at,error_code,referral";
 function check(error: { code?: string; message?: string } | null) {
   if (!error) return;
+  if (/editor_conflict|editor_expired/.test(error.message ?? ""))
+    throw new AccessError(
+      "回覆已由另一個視窗或同事接手。請重新核對；草稿會保留。",
+      409,
+    );
   if (/meta_(access|product|brand|connection)/.test(error.message ?? ""))
     throw new AccessError("你無權操作此公司或通訊連接。", 403);
   if (/meta_assignee_invalid/.test(error.message ?? ""))
@@ -137,6 +145,7 @@ export async function readMeta(
   const a = await access(companyId);
   if (threadId) {
     uuid.parse(threadId);
+    await requireThreadScope(a, "meta", threadId);
     const thread = await a.db
       .from("sv_meta_threads")
       .select(
@@ -194,11 +203,13 @@ export async function readMeta(
       hasMore: rows.length > 60,
     };
   }
-  const connections = await a.db
-    .from("sv_meta_connections")
-    .select(connectionFields)
-    .eq("company_id", companyId)
-    .order("created_at");
+  const connections = await scopeBrands(
+    a,
+    a.db
+      .from("sv_meta_connections")
+      .select(connectionFields)
+      .eq("company_id", companyId),
+  ).order("created_at");
   check(connections.error);
   const filter = inboxQuerySchema.parse(filters);
   let cursor: { at: string; id: string } | null = null;
@@ -254,7 +265,13 @@ export async function readMeta(
     .eq("company_id", companyId)
     .single();
   check(scope.error);
-  const brands = scopeSchema.parse(scope.data?.payload?.scope).brands;
+  const brands = scopeSchema
+    .parse(scope.data?.payload?.scope)
+    .brands.filter(
+      (b) =>
+        a.memberScope.brandIds === null ||
+        a.memberScope.brandIds.includes(b.id),
+    );
   const origin = process.env.SMARTVOLT_APP_URL
     ? new URL(process.env.SMARTVOLT_APP_URL).origin
     : null;
@@ -291,6 +308,7 @@ export async function actMeta(companyId: string, input: unknown) {
   if (data.action === "connect") {
     if (a.actor.role !== "owner")
       throw new AccessError("接駁需要公司擁有人權限。", 403);
+    assertBrand(a.memberScope, data.brandId);
     const config = platform(),
       master = key();
     let inspected;
@@ -412,6 +430,7 @@ export async function actMeta(companyId: string, input: unknown) {
     p_client: data.clientId,
     p_expected: data.revision,
     p_body: data.body,
+    p_editor_token: data.editorToken ?? null,
   });
   check(claimed.error);
   if (!claimed.data.dispatch)
@@ -459,7 +478,11 @@ export function metaChallenge(params: URLSearchParams) {
     throw new AccessError("Webhook 驗證失敗。", 400);
   return challenge;
 }
-export async function receiveMeta(raw: Buffer, signature: string | null) {
+export async function receiveMeta(
+  raw: Buffer,
+  signature: string | null,
+  onAccepted?: (company: string) => void,
+) {
   const config = platform();
   if (!signatureValid(raw, signature, config.appSecret))
     throw new AccessError("Webhook 簽署無效。", 403);
@@ -481,7 +504,7 @@ export async function receiveMeta(raw: Buffer, signature: string | null) {
     const first = group[0];
     const c = await db
       .from("sv_meta_connections")
-      .select("id")
+      .select("id,company_id")
       .eq("app_id", config.appId)
       .eq("channel", first.channel)
       .eq("account_id", first.accountId)
@@ -494,6 +517,7 @@ export async function receiveMeta(raw: Buffer, signature: string | null) {
       p_events: group,
     });
     check(ingested.error);
+    if (c.data.company_id) onAccepted?.(c.data.company_id);
   }
   return { received: true };
 }

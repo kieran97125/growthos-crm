@@ -1,8 +1,14 @@
+import {
+  requireThreadScope,
+  requireCustomerScope,
+  scopeBrands,
+} from "@/lib/saas/scope-server";
+import { assertBrand } from "@/lib/saas/member-scope";
 import "server-only";
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
-import { loadCompany, requireCompany } from "@/lib/saas/server";
+import { loadCompanyForCommand, requireCompany } from "@/lib/saas/server";
 import { requireProduct } from "@/lib/saas/products";
 import { AccessError } from "@/lib/saas/identity";
 import { appSchema } from "@/lib/demo/state";
@@ -92,14 +98,20 @@ export async function readInquiries(companyId: string, raw: unknown) {
       .eq("status", "active")
       .neq("role", "viewer")
       .order("display_name"),
-    a.db
-      .from("sv_wa_connections")
-      .select("display_phone,state")
-      .eq("company_id", companyId),
-    a.db
-      .from("sv_meta_connections")
-      .select("channel,label,enabled,last_inbound_at")
-      .eq("company_id", companyId),
+    scopeBrands(
+      a,
+      a.db
+        .from("sv_wa_connections")
+        .select("display_phone,state")
+        .eq("company_id", companyId),
+    ),
+    scopeBrands(
+      a,
+      a.db
+        .from("sv_meta_connections")
+        .select("channel,label,enabled,last_inbound_at")
+        .eq("company_id", companyId),
+    ),
     a.db
       .from("sv_workspaces")
       .select("payload")
@@ -131,7 +143,12 @@ export async function readInquiries(companyId: string, raw: unknown) {
     members: members.data ?? [],
     brands: z
       .array(z.object({ id: z.string(), name: z.string() }))
-      .parse(w.data?.payload?.scope?.brands),
+      .parse(w.data?.payload?.scope?.brands)
+      .filter(
+        (b) =>
+          a.memberScope.brandIds === null ||
+          a.memberScope.brandIds.includes(b.id),
+      ),
     connections: [
       ...(wa.data ?? []).map((c) => ({
         channel: "whatsapp",
@@ -156,6 +173,19 @@ async function customerWith(
   before?: number,
 ): Promise<CustomerDetail> {
   z.string().min(1).max(100).parse(id);
+  await requireCustomerScope(a, id);
+  let eventQuery = scopeBrands(
+    a,
+    a.db
+      .from("sv_customer_events")
+      .select("seq,kind,detail,created_at")
+      .eq("company_id", a.company.id)
+      .eq("customer_id", id),
+  );
+  if (!a.products.includes("pos"))
+    eventQuery = eventQuery.not("kind", "like", "pos-%");
+  if (!a.products.includes("crm"))
+    eventQuery = eventQuery.or("kind.like.pos-%,kind.eq.customer-updated");
   const [c, b, links, events, requests] = await Promise.all([
     a.db
       .from("sv_customers")
@@ -163,32 +193,37 @@ async function customerWith(
       .eq("company_id", a.company.id)
       .eq("id", id)
       .maybeSingle(),
-    a.db
-      .from("sv_customer_brands")
-      .select("brand_id")
-      .eq("company_id", a.company.id)
-      .eq("customer_id", id),
+    scopeBrands(
+      a,
+      a.db
+        .from("sv_customer_brands")
+        .select("brand_id")
+        .eq("company_id", a.company.id)
+        .eq("customer_id", id),
+    ),
     a.products.includes("crm")
-      ? a.db
-          .from("sv_customer_threads")
-          .select("provider,thread_id,brand_id")
-          .eq("company_id", a.company.id)
-          .eq("customer_id", id)
+      ? scopeBrands(
+          a,
+          a.db
+            .from("sv_customer_threads")
+            .select("provider,thread_id,brand_id")
+            .eq("company_id", a.company.id)
+            .eq("customer_id", id),
+        )
       : Promise.resolve({ data: [], error: null }),
-    a.db
-      .from("sv_customer_events")
-      .select("seq,kind,detail,created_at")
-      .eq("company_id", a.company.id)
-      .eq("customer_id", id)
+    eventQuery
       .lt("seq", before ?? Number.MAX_SAFE_INTEGER)
       .order("seq", { ascending: false })
       .limit(51),
     a.products.includes("crm")
-      ? a.db
-          .from("sv_booking_requests")
-          .select("*")
-          .eq("company_id", a.company.id)
-          .eq("customer_id", id)
+      ? scopeBrands(
+          a,
+          a.db
+            .from("sv_booking_requests")
+            .select("*")
+            .eq("company_id", a.company.id)
+            .eq("customer_id", id),
+        )
           .order("created_at", { ascending: false })
           .order("id", { ascending: false })
           .limit(21)
@@ -228,26 +263,23 @@ async function customerWith(
   return {
     customer: { ...c.data, brandIds: (b.data ?? []).map((x) => x.brand_id) },
     links: links.data ?? [],
-    events: history
-      .slice(0, 50)
-      .map((e) => ({
-        ...e,
-        detail: e.kind.startsWith("pos-")
-          ? Object.fromEntries(
-              Object.entries(e.detail as Record<string, unknown>).filter(
-                ([k]) =>
-                  [
-                    "amountCents",
-                    "orderId",
-                    "source",
-                    "serviceName",
-                    "startsAt",
-                    "status",
-                  ].includes(k),
-              ),
-            )
-          : e.detail,
-      })),
+    events: history.slice(0, 50).map((e) => ({
+      ...e,
+      detail: e.kind.startsWith("pos-")
+        ? Object.fromEntries(
+            Object.entries(e.detail as Record<string, unknown>).filter(([k]) =>
+              [
+                "amountCents",
+                "orderId",
+                "source",
+                "serviceName",
+                "startsAt",
+                "status",
+              ].includes(k),
+            ),
+          )
+        : e.detail,
+    })),
     nextEvent: (events.data?.length ?? 0) > 50 ? events.data![49].seq : null,
     requests: reqs,
     hasMoreRequests: (requests.data?.length ?? 0) > 20,
@@ -312,6 +344,7 @@ export async function readInquiry(
   const a = await access(companyId),
     p = providerSchema.parse(provider);
   uuid.parse(threadId);
+  await requireThreadScope(a, p, threadId);
   const link = await a.db
     .from("sv_customer_threads")
     .select("customer_id,brand_id,revision")
@@ -410,7 +443,9 @@ export async function readInquiry(
   return { ...customer, thread: row, messages, nextBefore, activity };
 }
 async function bookingContext(companyId: string, requestId: string) {
-  const a = await loadCompany(companyId, "pos");
+  // Reduce the authoritative aggregate on the server; a scoped UI document must
+  // never replace another brand's retained records during a POS conversion.
+  const a = await loadCompanyForCommand(companyId, { type: "pos" });
   requireProduct(a.products, "crm");
   const r = await a.db
     .from("sv_booking_requests")
@@ -420,6 +455,8 @@ async function bookingContext(companyId: string, requestId: string) {
     .single();
   checked(r.error);
   const request = r.data as BookingRequest;
+  assertBrand(a.memberScope, request.brand_id);
+  await requireCustomerScope(a, request.customer_id);
   const c = await a.db.rpc("sv_customer_json", {
     p_company: companyId,
     p_id: request.customer_id,
@@ -460,16 +497,16 @@ export async function availability(
     );
   const service = services.find((s) => s.id === q.serviceId),
     choices: Availability["choices"] = [];
-  const active = await a.db
-    .from("sv_memberships")
-    .select("user_id")
-    .eq("company_id", companyId)
-    .eq("status", "active")
-    .neq("role", "viewer");
+  const active = await a.db.rpc("sv_pos_staff_list", {
+    p_company: companyId,
+    p_actor: a.user.id,
+    p_brand: a.request.brand_id,
+  });
   checked(active.error);
+  const staffIds = z.array(z.object({ user_id: z.uuid() })).parse(active.data);
   if (service && a.request.status === "requested")
     for (const staff of a.scope.team.filter((s) =>
-      active.data?.some((m) => m.user_id === s.id),
+      staffIds.some((m) => m.user_id === s.id),
     ))
       for (const resource of service.resourceKind === "none"
         ? [null]
@@ -538,6 +575,7 @@ export async function actInquiry(companyId: string, raw: unknown) {
   if (a.actor.role === "viewer")
     throw new AccessError("你目前只有檢視權限。", 403);
   if (c.action === "booking-convert") {
+    const ctx = await bookingContext(companyId, c.requestId);
     const req = {
       kind: "convert",
       request: c.requestId,
@@ -566,7 +604,6 @@ export async function actInquiry(companyId: string, raw: unknown) {
         throw new AccessError("同一操作識別碼已用於另一項改動。", 409);
       return receipt.data.result;
     }
-    const ctx = await bookingContext(companyId, c.requestId);
     if (ctx.actor.role === "viewer")
       throw new AccessError("你目前只有檢視權限。", 403);
     if (
@@ -640,6 +677,7 @@ export async function actInquiry(companyId: string, raw: unknown) {
     return r.data;
   }
   if (!("provider" in c)) throw new AccessError("操作格式不完整。", 400);
+  await requireThreadScope(a, c.provider, c.threadId);
   // Every thread action must resolve an actual company-owned provider link.
   const link = await a.db
     .from("sv_customer_threads")
@@ -725,6 +763,7 @@ export async function actInquiry(companyId: string, raw: unknown) {
         clientId: c.commandId,
         revision: c.revision,
         body: c.body,
+        ...(c.editorToken ? { editorToken: c.editorToken } : {}),
       });
     if (c.action === "read")
       return actMeta(companyId, {
@@ -740,6 +779,7 @@ export async function actInquiry(companyId: string, raw: unknown) {
       revision: c.revision,
       body: c.body,
       ...(c.replyTo ? { replyTo: c.replyTo } : {}),
+      ...(c.editorToken ? { editorToken: c.editorToken } : {}),
     });
   return conversationCommand(companyId, c.threadId, {
     clientId: c.commandId,

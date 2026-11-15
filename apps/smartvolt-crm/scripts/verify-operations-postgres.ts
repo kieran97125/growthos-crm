@@ -241,6 +241,130 @@ async function main() {
     quotaFailure?.status === "rejected" &&
       /ai_daily_limit/.test(String(quotaFailure.reason)),
   );
+  // The same outbox claim is contested by separate native PostgreSQL sessions.
+  await sql(
+    `select sv_engagement_action(${quote(company)},${quote(owner)},${quote(randomUUID())},'policy',${quote(JSON.stringify({ marketingEnabled: true, quietStart: 0, quietEnd: 0, frequencyHours: 72, dailyLimit: 1000, minuteLimit: 2, revision: 0 }))}::jsonb);`,
+  );
+  async function delivery() {
+    const thread = await inquiry();
+    await sql(
+      `update sv_meta_threads set last_inbound_at=${Date.now()} where id=${quote(thread)};`,
+    );
+    const customer = await sql(
+      `select customer_id from sv_customer_threads where company_id=${quote(company)}and provider='meta'and thread_id=${quote(thread)};`,
+    );
+    await sql(
+      `select sv_engagement_action(${quote(company)},${quote(owner)},${quote(randomUUID())},'preference',${quote(JSON.stringify({ customerId: customer, brandId: "main", channel: "messenger", purpose: "marketing", allowed: true, source: "Native synthetic opt-in evidence", revision: 0 }))}::jsonb);`,
+    );
+    const source = randomUUID();
+    await sql(
+      `select sv_engagement_action(${quote(company)},${quote(owner)},${quote(randomUUID())},'campaign',${quote(JSON.stringify({ id: source, brandId: "main", provider: "meta", connectionId: connection, name: "Native synthetic campaign", purpose: "marketing", definition: { kind: "text", body: "Native message", values: [] }, audience: { customer }, dueAt: new Date().toISOString() }))}::jsonb);`,
+    );
+    const job = await sql(
+      `select id from sv_delivery_jobs where company_id=${quote(company)}and source_id=${quote(source)};`,
+    );
+    return { job, customer };
+  }
+  const firstDelivery = await delivery(),
+    claim = (job: string) =>
+      json<{ dispatch: boolean }>(
+        `select sv_delivery_claim(${quote(company)},${quote(job)});`,
+      );
+  const claims = await Promise.all([
+    claim(firstDelivery.job),
+    claim(firstDelivery.job),
+  ]);
+  assert.equal(claims.filter((c) => c.dispatch).length, 1);
+  await sql(
+    `select sv_delivery_finish(${quote(company)},${quote(firstDelivery.job)},'ambiguous',null,'delivery_unknown');`,
+  );
+  assert.equal((await claim(firstDelivery.job)).dispatch, false);
+  const quotaDeliveries = [await delivery(), await delivery()],
+    quotaClaims = await Promise.all(quotaDeliveries.map((d) => claim(d.job)));
+  assert.equal(quotaClaims.filter((c) => c.dispatch).length, 1);
+  assert.equal(
+    await sql(
+      `select count(*)from sv_delivery_jobs where company_id=${quote(company)}and attempted_at is not null;`,
+    ),
+    "2",
+  );
+  const withdrawn = await delivery();
+  await sql(
+    `select sv_engagement_action(${quote(company)},${quote(owner)},${quote(randomUUID())},'preference',${quote(JSON.stringify({ customerId: withdrawn.customer, brandId: "main", channel: "messenger", purpose: "marketing", allowed: false, source: "Native synthetic withdrawal", revision: 1 }))}::jsonb);`,
+  );
+  assert.equal((await claim(withdrawn.job)).dispatch, false);
+  assert.equal(
+    await sql(
+      `select state from sv_delivery_jobs where company_id=${quote(company)}and id=${quote(withdrawn.job)};`,
+    ),
+    "cancelled",
+  );
+  // Roster constraints participate in the same serialized final capacity slot.
+  const branch = randomUUID();
+  const roster = (kind: string, data: object) =>
+    sql(
+      `select sv_roster_action(${quote(company)},${quote(owner)},${quote(randomUUID())},${quote(kind)},${quote(JSON.stringify(data))}::jsonb);`,
+    );
+  await roster("branch", {
+    id: branch,
+    name: "Native branch",
+    active: true,
+    revision: 0,
+  });
+  for (const user of [owner, agent])
+    await roster("member", {
+      userId: user,
+      branchIds: user === owner ? [branch] : [],
+      skills: user === owner ? ["English"] : [],
+      timeZone: "Asia/Hong_Kong",
+      rosterEnabled: false,
+      weekly: [],
+      leavePeriods: [],
+      revision: 0,
+    });
+  await sql(
+    `update sv_meta_threads set status='resolved'where company_id=${quote(company)};update sv_agent_routing set paused=false,presence='online',seen_at=now(),capacity=1 where company_id=${quote(company)};`,
+  );
+  await settings(1);
+  const routed = await Promise.all(Array.from({ length: 8 }, () => inquiry()));
+  for (const id of routed)
+    await roster("requirement", {
+      provider: "meta",
+      threadId: id,
+      branchId: branch,
+      skills: ["English"],
+      revision: 0,
+    });
+  const routeResults = await Promise.all(
+    routed.map((id) =>
+      json<{ saved: boolean; ownerId?: string }>(call(id, randomUUID())),
+    ),
+  );
+  assert.equal(routeResults.filter((r) => r.saved).length, 1);
+  assert.equal(routeResults.find((r) => r.saved)?.ownerId, owner);
+  // A native race between two members admits exactly one editor window.
+  const editorThread = await inquiry(),
+    tokens = [randomUUID(), randomUUID()],
+    actors = [owner, agent];
+  const editor = (who: number, mode: string, revision: number | null = null) =>
+    json<{ held: boolean; revision: number }>(
+      `select sv_editor_action(${quote(company)},${quote(actors[who])},'meta',${quote(editorThread)},${quote(tokens[who])},${quote(mode)},${revision ?? "null"});`,
+    );
+  const edits = await Promise.all([editor(0, "acquire"), editor(1, "acquire")]);
+  assert.equal(edits.filter((r) => r.held).length, 1);
+  const old = edits.findIndex((r) => r.held),
+    next = 1 - old;
+  assert.equal(
+    (await editor(next, "takeover", edits[old].revision)).held,
+    true,
+  );
+  assert.equal((await editor(old, "read")).held, false);
+  console.log(
+    "Native PostgreSQL: roster-scoped final slot and competing editor takeover passed.",
+  );
+  console.log(
+    "Native PostgreSQL: one external-attempt admission, unknown replay, concurrent shared quota and consent cancellation passed.",
+  );
   console.log(
     "Native PostgreSQL: parallel translation deduplication and shared last-slot AI quota passed.",
   );

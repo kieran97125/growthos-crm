@@ -1,5 +1,22 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
-  "git": {"deploymentEnabled": false}
+  "git": {
+    "deploymentEnabled": false
+  },
+  "functions": {
+    "src/app/api/internal/maintenance/route.ts": {
+      "experimentalTriggers": [
+        {
+          "type": "schedule/v1beta"
+        }
+      ]
+    }
+  },
+  "schedules": {
+    "convelta-maintenance": {
+      "schedule": "*/15 * * * *",
+      "function": "api/internal/maintenance"
+    }
+  }
 }

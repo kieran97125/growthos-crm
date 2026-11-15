@@ -1,3 +1,4 @@
+import { scheduleDeliveryWake } from "@/lib/engagement/request-signal";
 import type { NextRequest } from "next/server";
 import { failure, json, sameOrigin } from "@/lib/saas/http";
 import { boundedJson } from "@/lib/whatsapp/http";
@@ -30,9 +31,10 @@ export async function GET(request: NextRequest, { params }: Context) {
 export async function POST(request: NextRequest, { params }: Context) {
   try {
     sameOrigin(request);
-    return json(
-      await actInquiry((await params).companyId, await boundedJson(request)),
-    );
+    const { companyId } = await params;
+    const result = await actInquiry(companyId, await boundedJson(request));
+    scheduleDeliveryWake(companyId);
+    return json(result);
   } catch (e) {
     return failure(e);
   }

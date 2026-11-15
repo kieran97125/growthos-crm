@@ -7,6 +7,12 @@ next-env.d.ts
 *.tsbuildinfo
 test-results/
 paint-test-results/
+campaign-test-results/
 playwright-report/
 
 supabase/.temp/
+src/app/.well-known/workflow/
+.workflow-data/
+/.swc
+
+.workflow-vitest/

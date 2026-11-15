@@ -28,7 +28,10 @@ import { BrandMark } from "@/components/BrandMark";
 import ThreadOperationsPanel, {
   type OperationDraft,
 } from "@/components/meta/ThreadOperations";
+import ManualTemplateReply from "@/components/engagement/ManualTemplateReply";
+import RoutingRequirement from "@/components/operations/RoutingRequirement";
 import InquiryOperations from "@/components/operations/InquiryOperations";
+import { useReplyLease } from "@/components/operations/useReplyLease";
 import { inboxQueues } from "@/lib/meta/operations";
 import {
   actionSchema,
@@ -403,9 +406,22 @@ export default function UnifiedInbox({
   const draft = drafts[key] ?? "",
     locked = busy || !!pending,
     canEdit = overview?.canEdit ?? false;
+  const replyLease = useReplyLease(
+    companyId,
+    selected?.provider,
+    selected?.id,
+    canEdit,
+  );
   async function send() {
     if (!detail || !selected || !draft.trim()) return;
     const body = draft;
+    const editorToken = note ? null : await replyLease.acquire();
+    if (!note && !editorToken) return;
+    if (
+      selectedRef.current?.id !== selected.id ||
+      selectedRef.current?.provider !== selected.provider
+    )
+      return;
     const ok = await mutate("inbox", {
       action: note ? "note" : "send",
       provider: selected.provider,
@@ -413,6 +429,7 @@ export default function UnifiedInbox({
       commandId: crypto.randomUUID(),
       revision: detail.thread.revision,
       body,
+      ...(!note && editorToken ? { editorToken } : {}),
       ...(!note && quote && selected.provider === "whatsapp"
         ? { replyTo: quote.id }
         : {}),
@@ -780,6 +797,31 @@ export default function UnifiedInbox({
               <label className="iq-sr-only" htmlFor="iq-reply">
                 {note ? "內部備註" : "回覆草稿"}
               </label>
+              {!note &&
+                (replyLease.error ||
+                  (replyLease.state.occupied && !replyLease.state.held)) && (
+                  <div
+                    className="iq-editor-status"
+                    role={replyLease.error ? "alert" : "status"}
+                  >
+                    <span>
+                      {replyLease.error ||
+                        (replyLease.state.actorName ?? "另一位同事") +
+                          " 正在回覆；你嘅草稿會保留。"}
+                    </span>
+                    {replyLease.state.occupied &&
+                      !replyLease.state.held &&
+                      canEdit && (
+                        <button
+                          type="button"
+                          disabled={locked || replyLease.busy}
+                          onClick={() => void replyLease.acquire(true)}
+                        >
+                          接手回覆
+                        </button>
+                      )}
+                  </div>
+                )}
               <textarea
                 data-copilot-activity="replying"
                 id="iq-reply"
@@ -787,9 +829,13 @@ export default function UnifiedInbox({
                 maxLength={2000}
                 value={draft}
                 disabled={!canEdit || locked}
-                onChange={(e) =>
-                  setDrafts((old) => ({ ...old, [key]: e.target.value }))
-                }
+                onFocus={() => {
+                  if (!note) void replyLease.acquire();
+                }}
+                onChange={(e) => {
+                  if (!note) replyLease.touch();
+                  setDrafts((old) => ({ ...old, [key]: e.target.value }));
+                }}
                 placeholder={
                   note ? "只供團隊查看…" : "輸入回覆，或者加入 AI 建議…"
                 }
@@ -812,6 +858,17 @@ export default function UnifiedInbox({
                 />
               )}
               <div className="iq-compose-footer">
+                {!note && selected?.provider === "whatsapp" && (
+                  <ManualTemplateReply
+                    key={key}
+                    companyId={companyId}
+                    threadId={selected.id}
+                    disabled={!canEdit || locked || !!unresolved}
+                    acquire={replyLease.acquire}
+                    touch={replyLease.touch}
+                    onSent={() => refresh()}
+                  />
+                )}
                 <small>
                   {!canEdit
                     ? "你目前只有檢視權限"
@@ -820,7 +877,7 @@ export default function UnifiedInbox({
                       : unresolved
                         ? "上一則結果待核對，請先重新讀取回執"
                         : !openWindow
-                          ? "服務視窗已過；可記錄內部備註"
+                          ? "服務視窗已過；WhatsApp 可用服務模板回覆"
                           : "使用此對話原本渠道回覆"}
                 </small>
                 <button
@@ -828,8 +885,12 @@ export default function UnifiedInbox({
                   disabled={
                     !canEdit ||
                     locked ||
+                    replyLease.busy ||
                     !draft.trim() ||
-                    (!note && (!openWindow || unresolved))
+                    (!note &&
+                      (!openWindow ||
+                        unresolved ||
+                        (replyLease.state.occupied && !replyLease.state.held)))
                   }
                 >
                   <Send size={15} />
@@ -935,17 +996,26 @@ export default function UnifiedInbox({
                     mutate("inbox", { ...c, provider: detail.thread.provider })
                   }
                   assistant={
-                    <InquiryOperations
-                      key={key}
-                      companyId={companyId}
-                      actorId={overview.actorId}
-                      thread={detail.thread}
-                      disabled={!canEdit || locked}
-                      onInsert={(text) => {
-                        setDrafts((old) => ({ ...old, [key]: text }));
-                        setMobile("chat");
-                      }}
-                    />
+                    <>
+                      <RoutingRequirement
+                        key={key}
+                        companyId={companyId}
+                        provider={detail.thread.provider}
+                        threadId={detail.thread.id}
+                        canEdit={canEdit}
+                      />
+                      <InquiryOperations
+                        key={key}
+                        companyId={companyId}
+                        actorId={overview.actorId}
+                        thread={detail.thread}
+                        disabled={!canEdit || locked}
+                        onInsert={(text) => {
+                          setDrafts((old) => ({ ...old, [key]: text }));
+                          setMobile("chat");
+                        }}
+                      />
+                    </>
                   }
                 />
               </>

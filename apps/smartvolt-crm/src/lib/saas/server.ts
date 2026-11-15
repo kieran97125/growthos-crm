@@ -3,7 +3,10 @@ import { cache } from "react";
 import { z } from "zod";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
-import { createClient } from "@supabase/supabase-js";
+import { database } from "./database";
+export { database } from "./database";
+import { projectMemberWorkspace, type MemberScope } from "./member-scope";
+import { requireCustomerScope } from "./scope-server";
 import { saasConfig } from "./config";
 import { AccessError, roleSchema, scopeSchema, type Actor } from "./identity";
 import {
@@ -41,13 +44,6 @@ export async function authClient() {
     },
   });
 }
-export function database() {
-  const config = saasConfig();
-  if (!config) throw new AccessError("公司資料服務尚未啟用。", 503);
-  return createClient(config.url, config.secret, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-}
 export const requireUser = cache(async function requireUser() {
   const client = await authClient();
   const {
@@ -78,7 +74,9 @@ export const requireCompany = cache(async function requireCompany(
   const db = database();
   const { data: member, error } = await db
     .from("sv_memberships")
-    .select("role,display_name,sv_companies!inner(id,name,status)")
+    .select(
+      "role,display_name,brand_ids,product_ids,sv_companies!inner(id,name,status)",
+    )
     .eq("company_id", companyId)
     .eq("user_id", user.id)
     .eq("status", "active")
@@ -99,12 +97,20 @@ export const requireCompany = cache(async function requireCompany(
     .select("product,status,starts_at,ends_at")
     .eq("company_id", companyId);
   if (grantError) throw new AccessError("暫時未能核實公司產品方案。", 503);
-  const products = activeProducts(grants ?? [], Date.now());
+  const memberScope: MemberScope = {
+    brandIds: member.brand_ids,
+    productIds: member.product_ids,
+  };
+  const products = activeProducts(grants ?? [], Date.now()).filter(
+    (p) =>
+      memberScope.productIds === null || memberScope.productIds.includes(p),
+  );
   return {
     db,
     user,
     actor,
     products,
+    memberScope,
     company: company as { id: string; name: string; status: string },
   };
 });
@@ -144,6 +150,7 @@ async function readCompanyDocument(
   }
   if (extraCustomerId) {
     z.string().min(1).max(100).parse(extraCustomerId);
+    await requireCustomerScope(access, extraCustomerId);
     const customer = await access.db.rpc("sv_customer_json", {
       p_company: access.company.id,
       p_id: extraCustomerId,
@@ -183,9 +190,16 @@ export async function loadCompany(
   if (!access.products.length)
     throw new AccessError("公司未有可使用嘅產品方案。");
   const document = await readCompanyDocument(access, customerId);
+  const state = appSchema.parse(
+    projectMemberWorkspace(
+      projectWorkspace(document.state, access.products),
+      access.memberScope,
+    ),
+  );
   return {
     ...document,
-    state: appSchema.parse(projectWorkspace(document.state, access.products)),
+    state,
+    scope: scopeSchema.parse(state.scope),
   };
 }
 /** Full aggregate stays server-side so an allowed product write cannot erase another product's retained data. */

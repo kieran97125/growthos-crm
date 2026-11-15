@@ -8,12 +8,13 @@ import WhatsAppInboxView, {
   type WhatsAppInboxViewProps,
 } from "../src/components/whatsapp/WhatsAppInboxView";
 import type { WaMessageSummary } from "../src/lib/whatsapp/responses";
+import { createEditorFixture } from "./support/editor";
 
 // Synthetic presentation fixtures only. No production contacts, credential bypass,
 // provider requests or claims about actual hosted WhatsApp connectivity.
 const now = Date.parse("2026-11-11T08:30:00Z");
 const conversation = {
-  id: "fixture-conversation",
+  id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
   connectionId: "fixture-connection",
   contactId: "fixture-customer",
   brandId: "fixture-brand",
@@ -267,6 +268,10 @@ test.beforeAll(async () => {
   clientBundle = result.outputFiles[0].text;
 });
 async function mountController(page: Page, setup = false) {
+  await page.route(
+    "**/api/companies/isolated-presentation/editor",
+    createEditorFixture(),
+  );
   // Keep a same-origin base for real relative fetch URLs, then replace only
   // this test page's DOM with the harness. APIs remain intercepted per test.
   await page.route(
@@ -294,7 +299,7 @@ function liveFixture() {
   };
   const second = {
     ...first,
-    id: "fixture-second",
+    id: "ffffffff-ffff-4fff-8fff-ffffffffffff",
     customerName: "第二位客戶 · 測試資料",
     lastMessageAt: time - 40000,
   };

@@ -28,6 +28,8 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
+      - name: Verify durable delivery pause and recovery
+        run: npm run test:workflow
       - name: Verify public website scan without company writes
         run: node --import tsx scripts/verify-public-website.ts https://convelta.io
       - run: npm run build
@@ -35,19 +37,28 @@ jobs:
         run: bash ../../scripts/select-ci-browser.sh
       - name: Verify production cold load and refresh
         run: npm run test:paint
-      - name: Verify conversation operations interactions
-        run: npm run test:e2e -- e2e/operations.spec.ts
-      - name: Verify website knowledge import interactions
-        run: npm run test:e2e -- e2e/website.spec.ts
-      - name: Verify inbox and draft translation interactions
-        run: npm run test:e2e -- e2e/translation.spec.ts
-      - run: npm run test:e2e
+      - name: Verify campaign composer and explicit delivery intent
+        run: npm run test:e2e -- e2e/engagement.spec.ts --output=campaign-test-results
+      - name: Verify remaining CRM browser flows
+        # Together these invocations run all 126 scenarios exactly once. Test
+        # delivery intent first so its failures are visible before long flows.
+        run: |
+          node --input-type=module - <<'JS'
+          import { readdirSync } from 'node:fs';
+          import { spawnSync } from 'node:child_process';
+          const files = readdirSync('e2e')
+            .filter(name => name.endsWith('.spec.ts') && !['engagement.spec.ts', 'initial-paint.spec.ts'].includes(name))
+            .map(name => 'e2e/' + name);
+          const result = spawnSync('npm', ['run', 'test:e2e', '--', ...files], { stdio: 'inherit' });
+          process.exit(result.status ?? 1);
+          JS
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
           name: smartvolt-browser-evidence
           path: |
             apps/smartvolt-crm/test-results/
+            apps/smartvolt-crm/campaign-test-results/
             apps/smartvolt-crm/paint-test-results/
           retention-days: 7
 

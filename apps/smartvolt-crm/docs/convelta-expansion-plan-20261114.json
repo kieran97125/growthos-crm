@@ -1,0 +1,685 @@
+{
+  "version": 1,
+  "plan_id": "convelta-expansion-20261114",
+  "date_hkt": "2026-11-14",
+  "scope": "planning_and_backlog_only",
+  "baseline_commit": "19450c1893d46f6feb4dfd1518b9530c44202f37",
+  "runtime_changed": false,
+  "external_sends_enabled": false,
+  "phases": [
+    {
+      "id": "A",
+      "title": "共用底層與接通準備",
+      "goal": "建立可靠執行、授權、同意與事件契約；渠道準備可與功能開發並行。"
+    },
+    {
+      "id": "B",
+      "title": "第二輪：正式追客與推播",
+      "goal": "令受眾、訊息、時間能真正執行，客人回覆／退訂／已約時及時停止不適用訊息。"
+    },
+    {
+      "id": "C",
+      "title": "第二輪：客服管理與成效",
+      "goal": "防漏覆、按更表接客，並對到同事、渠道、活動及真實預約／到店結果。"
+    },
+    {
+      "id": "D",
+      "title": "新增：收件匣與社交引流",
+      "goal": "補齊媒體、語音轉字、留言轉私訊、同號共存及 WhatsApp 原生表單。"
+    },
+    {
+      "id": "E",
+      "title": "新增：可控 AI 與外部串接",
+      "goal": "由真人輔助延伸至獲授權的接待工具、外部系統及官網對話入口。"
+    },
+    {
+      "id": "F",
+      "title": "後續：通話與會員商務",
+      "goal": "在已有可靠文字流程後，按實際客戶需求接通通話、會員優惠及購物車挽回。"
+    }
+  ],
+  "work_packages": [
+    {
+      "id": "A1",
+      "phase": "A",
+      "title": "真實渠道、連接能力與維運",
+      "origin": "existing",
+      "baseline_state": "provider_pending",
+      "plan_state": "planned",
+      "system_cards": [
+        "wa-live-acceptance",
+        "meta-live-acceptance",
+        "wa-operations"
+      ],
+      "depends_on": [],
+      "activation_gates": ["real-wa-text", "real-meta-text"],
+      "ui_entry": "團隊與設定 → 渠道",
+      "acceptance": [
+        "每渠道獨立驗證授權、Webhook、實際收訊／回覆及供應商回執；未接通清楚列出下一步。",
+        "斷線、撤權、重連及租戶隔離可重現；不將 HTTP 接收當送達。"
+      ],
+      "relative_effort": "L",
+      "implementation_note": ""
+    },
+    {
+      "id": "A2",
+      "phase": "A",
+      "title": "員工邀請及品牌／模組權限",
+      "origin": "existing",
+      "baseline_state": "missing",
+      "plan_state": "planned",
+      "system_cards": ["staff-invitations"],
+      "depends_on": [],
+      "activation_gates": ["authorized-owner-mailbox"],
+      "ui_entry": "團隊與設定 → 成員",
+      "acceptance": [
+        "邀請、接受、停用、復原、角色及品牌／產品權限各有紀錄；邀請提交與實際接受分開。",
+        "撤權立即在下一次受保護操作生效，排程工作亦重新核權；保留 Owner 復原路徑。"
+      ],
+      "relative_effort": "L",
+      "implementation_note": ""
+    },
+    {
+      "id": "A3",
+      "phase": "A",
+      "title": "共用持久排程、派送與事件底層",
+      "origin": "new",
+      "baseline_state": "missing",
+      "plan_state": "planned",
+      "system_cards": [
+        "messaging-execution-core",
+        "domain-projections",
+        "workspace-performance-observability"
+      ],
+      "depends_on": [],
+      "activation_gates": ["workflow-compatibility"],
+      "ui_entry": "內部共用能力；管理員在推播／流程查看執行紀錄",
+      "acceptance": [
+        "重啟、部署、延後、取消及失敗恢復通過；供應商結果不明時暫停核對，不盲目重送。",
+        "跨公司／品牌／產品隔離、同時搶工作、權限撤銷、重複事件及完整資料集計數通過。",
+        "每租戶限速、工作量上限、終止開關與告警可驗證；保留現有 provider 原始證據。"
+      ],
+      "relative_effort": "XL",
+      "implementation_note": "評估並優先導入 workflow；SQL outbox／claim／receipt 是業務授權及發送依據。逐步擴充 typed ChannelAdapter／事件 envelope，網站、通話與原生表單不可冒充文字渠道。"
+    },
+    {
+      "id": "A4",
+      "phase": "A",
+      "title": "行銷同意、退訂與發送資格",
+      "origin": "new",
+      "baseline_state": "missing",
+      "plan_state": "planned",
+      "system_cards": ["messaging-consent-preferences"],
+      "depends_on": ["A3"],
+      "activation_gates": ["tenant-send-policy"],
+      "ui_entry": "客戶 → 聯絡偏好；推播預覽 → 可發送人數",
+      "acceptance": [
+        "品牌／渠道／用途分開記錄同意及來源；退訂優先，不因匯入電話或跨品牌身份而推定同意。",
+        "每次實際發送前重查退訂、視窗／範本、頻率、靜音時段、權限及渠道健康。"
+      ],
+      "relative_effort": "L",
+      "implementation_note": ""
+    },
+    {
+      "id": "A5",
+      "phase": "A",
+      "title": "Convelta 自身官網銷售查詢交接",
+      "origin": "existing",
+      "baseline_state": "partial",
+      "plan_state": "planned",
+      "system_cards": ["website-sales-app-handoff"],
+      "depends_on": ["A3"],
+      "activation_gates": ["authorized-sales-handoff"],
+      "ui_entry": "Convelta 自身銷售工作台",
+      "acceptance": [
+        "現有官網提交 ID 一次交接至正確公司；重試不產生重複查詢，來源及跟進歷史保留。",
+        "自身銷售查詢與各 SaaS 租戶客戶資料隔離；不將此入口冒充已完成的租戶官網聊天窗。"
+      ],
+      "relative_effort": "M",
+      "implementation_note": ""
+    },
+    {
+      "id": "B1",
+      "phase": "B",
+      "title": "正式 WhatsApp 範本及變數",
+      "origin": "existing",
+      "baseline_state": "missing",
+      "plan_state": "planned",
+      "system_cards": ["wa-templates"],
+      "depends_on": ["A3", "A4"],
+      "activation_gates": ["real-wa-text", "approved-template"],
+      "ui_entry": "推播 → 訊息；收件匣 → 視窗外回覆",
+      "acceptance": [
+        "同步並驗證範本／語言／版本與審批狀態，稱呼／服務／價格／日期等變數缺漏會在發送前指出。",
+        "過期、停用、變更或不適用的範本不派送；視窗外回覆只用平台允許方式。"
+      ],
+      "relative_effort": "L",
+      "implementation_note": ""
+    },
+    {
+      "id": "B2",
+      "phase": "B",
+      "title": "分眾、個人化推播及排程",
+      "origin": "existing",
+      "baseline_state": "partial",
+      "plan_state": "planned",
+      "system_cards": ["customer-messaging-automation"],
+      "depends_on": ["B1"],
+      "activation_gates": ["real-wa-text", "tenant-send-policy"],
+      "ui_entry": "推播：揀客人 → 寫訊息 → 定時間",
+      "acceptance": [
+        "受眾預覽、排除原因及收件快照可追溯；實際發送再次核資格。",
+        "立即／排程／取消、單客頻率、重試及收件人回執完整；修改受眾／訊息會產生新版本。",
+        "活動草稿不等於已發送；未有可靠單價時不顯示虛構零成本。"
+      ],
+      "relative_effort": "L",
+      "implementation_note": ""
+    },
+    {
+      "id": "B3",
+      "phase": "B",
+      "title": "自動追客與旅程執行",
+      "origin": "existing",
+      "baseline_state": "partial",
+      "plan_state": "planned",
+      "system_cards": ["round-two-journeys"],
+      "depends_on": ["B2"],
+      "activation_gates": ["real-wa-text", "tenant-send-policy"],
+      "ui_entry": "跟進 → 自動跟進；Flow → 進階流程",
+      "acceptance": [
+        "先交付未回覆跟進、預約前提醒、完成服務後回訪三套可設定旅程。",
+        "客人回覆／已約／取消／退訂／真人接管後，取消或重算不再適用步驟。",
+        "Flow 的已發佈版本、每客進度、每步結果與停止原因可恢復；改圖不靜默改變進行中版本。"
+      ],
+      "relative_effort": "XL",
+      "implementation_note": ""
+    },
+    {
+      "id": "B4",
+      "phase": "B",
+      "title": "離線跟進提醒與 C 背景觀察",
+      "origin": "existing",
+      "baseline_state": "partial",
+      "plan_state": "planned",
+      "system_cards": [
+        "inbox-followup-notifications",
+        "copilot-background-observations"
+      ],
+      "depends_on": ["A3"],
+      "activation_gates": ["notification-device-optin", "ai-budget-policy"],
+      "ui_entry": "跟進待辦；C 通知；個人通知設定",
+      "acceptance": [
+        "經授權裝置及瀏覽器的背景通知、撤銷訂閱、送達失敗／過期端點處理通過。",
+        "同一任務只提醒一次並可延後／完成；C 保留安靜偏好、來源與每日 AI 上限。",
+        "推送不含客戶敏感原文；按通知返回後重新驗證公司與對話權限。"
+      ],
+      "relative_effort": "L",
+      "implementation_note": ""
+    },
+    {
+      "id": "C1",
+      "phase": "C",
+      "title": "漏覆預警與主管工作台",
+      "origin": "new",
+      "baseline_state": "partial",
+      "plan_state": "planned",
+      "system_cards": ["inbox-sla-supervision"],
+      "depends_on": ["A3"],
+      "activation_gates": ["populated-operational-acceptance"],
+      "ui_entry": "收件匣 → 待覆／逾時；跟進 → 團隊",
+      "acceptance": [
+        "首覆、未覆、解決及重開的時間定義一致；AI／真人、內部備註及供應商回執分開。",
+        "按營業時間計時，逾時通知／升級有去重、取消與稽核；多人處理提示保留草稿並防止意外撞覆。"
+      ],
+      "relative_effort": "L",
+      "implementation_note": ""
+    },
+    {
+      "id": "C2",
+      "phase": "C",
+      "title": "分店、更表、休假及技能派客",
+      "origin": "existing",
+      "baseline_state": "partial",
+      "plan_state": "planned",
+      "system_cards": ["inquiry-shift-routing"],
+      "depends_on": ["A2", "A3"],
+      "activation_gates": ["tenant-roster-policy"],
+      "ui_entry": "團隊與設定 → 更表；跟進 → 派客",
+      "acceptance": [
+        "現有在線／容量派客繼續有效，再疊加更表、休假、分店與服務技能。",
+        "無可用同事保留待分派並有原因；高併發不超上限、不派停用／無品牌權限同事。"
+      ],
+      "relative_effort": "L",
+      "implementation_note": ""
+    },
+    {
+      "id": "C3",
+      "phase": "C",
+      "title": "客服、活動與查詢到預約成效",
+      "origin": "existing",
+      "baseline_state": "partial",
+      "plan_state": "planned",
+      "system_cards": [
+        "inbox-conversion-insights",
+        "broadcast-performance",
+        "pos-acquisition"
+      ],
+      "depends_on": ["B2", "C1"],
+      "activation_gates": [
+        "populated-operational-acceptance",
+        "verified-outcome-source"
+      ],
+      "ui_entry": "跟進 → 成效；推播 → 活動結果",
+      "acceptance": [
+        "完整資料集先聚合再分頁；同事／品牌／渠道／活動一致，事件期間與查詢 cohort 分開顯示。",
+        "提供送達／回覆／退訂／預約／到店等分層結果；來源缺失、不支援回執及延遲清楚呈現。",
+        "預約來自確認事件、到店來自實際紀錄、收入來自有權來源扣退款；AI 意向和階段不當成轉化。",
+        "廣告成本及歸因規則未齊時不計療程 ROAS，不把相關性說成因果。"
+      ],
+      "relative_effort": "XL",
+      "implementation_note": ""
+    },
+    {
+      "id": "C4",
+      "phase": "C",
+      "title": "Meta 來源連結與轉化回傳",
+      "origin": "existing",
+      "baseline_state": "missing",
+      "plan_state": "planned",
+      "system_cards": ["meta-conversions-feedback"],
+      "depends_on": ["C3"],
+      "activation_gates": ["ads-account-authority", "verified-outcome-source"],
+      "ui_entry": "成效 → 廣告來源；團隊與設定 → Meta",
+      "acceptance": [
+        "來源事件／快照與穩定客戶、對話及結果 ID 可對數；已有 LeadHub 時尊重其來源權威。",
+        "依當期 Meta 支援及權限映射真實事件，穩定 event ID 去重；測試模式、供應商接受／拒絕及正式事件分開。",
+        "不得以 AI 高意向、手動階段或未核實付款觸發虛構成交。"
+      ],
+      "relative_effort": "L",
+      "implementation_note": ""
+    },
+    {
+      "id": "D1",
+      "phase": "D",
+      "title": "媒體收發、預覽及語音轉文字",
+      "origin": "new_extension",
+      "baseline_state": "missing",
+      "plan_state": "planned",
+      "system_cards": ["wa-media", "meta-media"],
+      "depends_on": ["A3"],
+      "activation_gates": ["provider-media-capability", "ai-budget-policy"],
+      "ui_entry": "收件匣 → 附件；語音訊息 → 轉文字",
+      "acceptance": [
+        "按渠道能力支援圖片／語音／文件，受保護儲存、檔案類型／大小驗證、進度及取消。",
+        "真實廣東話／中英夾雜、品牌及數字樣本量測轉字品質；可播放原音、修正譯稿且不自動發送。",
+        "圖片／收據內容只係內容，不能變成已收款或已確認預約的依據。"
+      ],
+      "relative_effort": "L",
+      "implementation_note": ""
+    },
+    {
+      "id": "D2",
+      "phase": "D",
+      "title": "IG／FB 留言轉私訊",
+      "origin": "new",
+      "baseline_state": "missing",
+      "plan_state": "planned",
+      "system_cards": ["social-comment-to-dm"],
+      "depends_on": ["A3", "A4"],
+      "activation_gates": ["real-meta-text", "comment-permission"],
+      "ui_entry": "Flow → 社交引流範本",
+      "acceptance": [
+        "指定貼文／Reels／關鍵字觸發一次，重複 Webhook 不重覆私訊。",
+        "按當期 Meta 私訊資格、次數及期限執行；客人未互動前不假定可以持續追發。",
+        "保留貼文來源，停止貼文規則／撤權／刪留言等邊界有明確結果。"
+      ],
+      "relative_effort": "L",
+      "implementation_note": ""
+    },
+    {
+      "id": "D3",
+      "phase": "D",
+      "title": "WhatsApp 同號共存及自助接入",
+      "origin": "new_extension",
+      "baseline_state": "missing",
+      "plan_state": "planned",
+      "system_cards": ["wa-coexistence", "wa-app-routing"],
+      "depends_on": ["A1", "A2", "A3"],
+      "activation_gates": ["coexistence-eligibility"],
+      "ui_entry": "團隊與設定 → 連接 WhatsApp",
+      "acceptance": [
+        "官方授權選對公司／號碼，保留 Business App 的適用帳戶可接 CRM；資格不足清楚指出替代途徑。",
+        "App／Cloud 訊息回聲及可取得歷史按穩定 ID 去重，來源方向正確，不重算為兩次外發。",
+        "驗證斷線／撤權／重連與多號碼路由；不承諾不受平台限制的完整歷史搬移。"
+      ],
+      "relative_effort": "XL",
+      "implementation_note": ""
+    },
+    {
+      "id": "D4",
+      "phase": "D",
+      "title": "WhatsApp 原生留資／預約需求表單",
+      "origin": "new",
+      "baseline_state": "missing",
+      "plan_state": "planned",
+      "system_cards": ["whatsapp-native-forms"],
+      "depends_on": ["A3", "A4"],
+      "activation_gates": ["real-wa-text", "native-form-publication"],
+      "ui_entry": "Flow → WhatsApp 表單",
+      "acceptance": [
+        "服務、分店、方便時間等資料直接收集到有來源的預約意向，表單版本與回覆可追溯。",
+        "提交去重、過期／竄改／錯租戶 token 及資料交換失敗通過；只由權威預約服務確認時段。",
+        "與現有內部 Flow 畫布分清功能，不把意向提交標成預約成功。"
+      ],
+      "relative_effort": "L",
+      "implementation_note": ""
+    },
+    {
+      "id": "E1",
+      "phase": "E",
+      "title": "對外 API、Webhook 與常用工具串接",
+      "origin": "new",
+      "baseline_state": "missing",
+      "plan_state": "planned",
+      "system_cards": ["tenant-public-api-webhooks"],
+      "depends_on": ["A2", "A3"],
+      "activation_gates": ["authorized-external-destination"],
+      "ui_entry": "團隊與設定 → 整合",
+      "acceptance": [
+        "按租戶／品牌／產品簽發最小權限 API 憑證，可撤銷與輪換；簽名 Webhook 有重試及可查事件。",
+        "外部 destination 驗證、去重、限速及失敗核對完整；先按客戶實際需求選 n8n／Make／預約工具 adapter。",
+        "部署平台或 n8n 不會取代 CRM 事件、同意與派送權威；不導出不必要原始證據。"
+      ],
+      "relative_effort": "L",
+      "implementation_note": ""
+    },
+    {
+      "id": "E2",
+      "phase": "E",
+      "title": "可控 AI 接待、資料追問與工具動作",
+      "origin": "existing",
+      "baseline_state": "partial",
+      "plan_state": "planned",
+      "system_cards": ["ai-controlled-replies", "copilot-answer-quality"],
+      "depends_on": ["A3", "A4", "C1"],
+      "activation_gates": ["ai-budget-policy", "real-ai-channel"],
+      "ui_entry": "BOT／知識庫 → 接待模式；收件匣 → 真人接管",
+      "acceptance": [
+        "保留真人輔助預設；由公司開啟及限定可自動問的資料、工具／動作與轉交條件。",
+        "已授權工具讀到服務／時段／訂單等真資料；價格、預約、付款等承諾必須有可查依據。",
+        "中文／英文／廣東話、惡意指令、資料不足、接管、重複工具呼叫及超用量通過情境評估。",
+        "AI 回覆與真實動作各有收據；失敗不可冒稱完成，真人接管即停止不適用的自動外發。"
+      ],
+      "relative_effort": "XL",
+      "implementation_note": ""
+    },
+    {
+      "id": "E3",
+      "phase": "E",
+      "title": "可嵌入客戶官網的聊天窗",
+      "origin": "new",
+      "baseline_state": "missing",
+      "plan_state": "planned",
+      "system_cards": ["website-chat-widget"],
+      "depends_on": ["A3", "A4", "E1"],
+      "activation_gates": ["verified-widget-domain"],
+      "ui_entry": "團隊與設定 → 官網聊天；收件匣 → 網站",
+      "acceptance": [
+        "租戶品牌可嵌入，訪客識別、留資、反垃圾、限速及租戶／網域隔離通過。",
+        "網站成為明確 typed channel adapter，支援人手接待；AI 接待依 E2 另行啟用。",
+        "訪客不因名字／電話相似而自動合併；自身 Convelta 銷售查詢仍保持原有範圍。"
+      ],
+      "relative_effort": "L",
+      "implementation_note": ""
+    },
+    {
+      "id": "F1",
+      "phase": "F",
+      "title": "通話、轉真人及後續語音 AI",
+      "origin": "existing",
+      "baseline_state": "provider_pending",
+      "plan_state": "planned",
+      "system_cards": ["unified-business-calling"],
+      "depends_on": ["A1", "A3", "D1"],
+      "activation_gates": ["voice-provider-authority"],
+      "ui_entry": "收件匣 → 通話",
+      "acceptance": [
+        "先核對實際 WhatsApp／VoIP 能力、來電／去電、未接／接通／轉接及回執。",
+        "通話與文字共用明確客戶身份；錄音／逐字稿依公司政策及已告知設定管理。",
+        "語音 AI 另依 E2 品質與接管門檻啟用；拒接、失聯及轉真人失敗有可見後備流程。"
+      ],
+      "relative_effort": "XL",
+      "implementation_note": ""
+    },
+    {
+      "id": "F2",
+      "phase": "F",
+      "title": "會員分層、優惠券與回訪",
+      "origin": "new",
+      "baseline_state": "missing",
+      "plan_state": "planned",
+      "system_cards": ["loyalty-coupons-retention"],
+      "depends_on": ["B3", "C3"],
+      "activation_gates": ["verified-loyalty-source"],
+      "ui_entry": "客戶 → 會員；推播 → 回訪",
+      "acceptance": [
+        "以已核實會員／消費來源觸發分層、生日或回訪；優惠券發出、核銷、到期、撤銷可追溯。",
+        "POS 扣次、付款、優惠券及積分分清權威；CRM／POS 分開購買與品牌範圍不變。"
+      ],
+      "relative_effort": "L",
+      "implementation_note": ""
+    },
+    {
+      "id": "F3",
+      "phase": "F",
+      "title": "電商購物車挽回",
+      "origin": "new",
+      "baseline_state": "missing",
+      "plan_state": "planned",
+      "system_cards": ["commerce-cart-recovery"],
+      "depends_on": ["B3", "C3", "E1"],
+      "activation_gates": ["verified-commerce-events"],
+      "ui_entry": "推播 → 購物車旅程（有接駁才顯示）",
+      "acceptance": [
+        "只對已連接商店的真實未完成購物車事件執行；完成購買／退訂／過期即停止。",
+        "產品、金額及連結來自商店資料，不虛構購物車或營收；不另建通用商城取代服務業主線。"
+      ],
+      "relative_effort": "L",
+      "implementation_note": ""
+    }
+  ],
+  "new_system_cards": [
+    {
+      "id": "convelta-expansion-blueprint",
+      "title": "功能擴充藍圖與交付排序",
+      "category": "build",
+      "status": "complete",
+      "detail": "已整理既有第二輪與競品能力，完成六批次、23 個工作包、共用底層、畫面入口及驗收條件。此卡只代表策劃完成，功能仍按各開發卡狀態推進。"
+    },
+    {
+      "id": "convelta-expansion-program",
+      "title": "Convelta 下一階段功能擴充",
+      "category": "build",
+      "status": "planned",
+      "detail": "依批次 A–F 推進：共用底層／接通、第二輪追客推播、客服成效、收件匣引流、AI／串接、通話會員。沿用原卡及其完成證據；本輪只記錄規劃，未部署功能或開啟外發。"
+    },
+    {
+      "id": "messaging-execution-core",
+      "title": "共用排程、派送與執行紀錄",
+      "category": "build",
+      "status": "planned",
+      "detail": "批次 A／A3。為推播、旅程、提醒及 C 背景工作共用持久執行、取消、限速、核權與對帳。先驗證中斷恢復及併發防重；供應商結果不明時保留核對狀態，不盲目重發。"
+    },
+    {
+      "id": "messaging-consent-preferences",
+      "title": "客戶聯絡偏好、退訂與發送資格",
+      "category": "build",
+      "status": "planned",
+      "detail": "批次 A／A4，依賴 A3。按公司、品牌、渠道及用途保留同意與退訂證據；實際派送前重查視窗／範本、頻率與安靜時段。匯入電話及跨品牌身份不代表已同意行銷。"
+    },
+    {
+      "id": "inbox-sla-supervision",
+      "title": "漏覆預警與主管客服工作台",
+      "category": "build",
+      "status": "planned",
+      "detail": "批次 C／C1，依賴 A3。統一首覆／未覆／解決／重開口徑，按營業時間提醒及升級；加入多人處理提示。現有容量派客及跟進清單已上線，這張卡追蹤額外主管能力。"
+    },
+    {
+      "id": "broadcast-performance",
+      "title": "推播送達、回覆及預約成效",
+      "category": "build",
+      "status": "planned",
+      "detail": "批次 C／C3，依賴 B2 與 C1。按活動、渠道及同事對到送達、回覆、退訂、預約與到店；只用有權真實結果。缺回執、缺成本及未完成歸因清楚標示，不估造 ROI。"
+    },
+    {
+      "id": "meta-media",
+      "title": "Messenger／Instagram 媒體與語音轉字",
+      "category": "build",
+      "status": "planned",
+      "detail": "批次 D／D1，與 wa-media 共用私有附件底層；依賴 A3。按各渠道可用能力提供預覽、收發與可核對原音的轉文字；檔案驗證、短效存取、數字及廣東話品質須驗收。"
+    },
+    {
+      "id": "social-comment-to-dm",
+      "title": "IG／FB 留言自動轉私訊",
+      "category": "build",
+      "status": "planned",
+      "detail": "批次 D／D2，依賴 A3、A4 及正式 Meta 權限；多步旅程接入 B3。指定貼文／Reels／關鍵字觸發一次，遵守當期平台互動資格、次數及期限；保留來源並防重覆回覆。"
+    },
+    {
+      "id": "wa-coexistence",
+      "title": "WhatsApp 原有號碼與 CRM 共存",
+      "category": "build",
+      "status": "planned",
+      "detail": "批次 D／D3，依賴 A1–A3 與 Meta 資格。以官方授權保留合資格 Business App，核對 App／API 訊息回聲、可取得歷史、多電話路由、撤權及重連；不承諾完整搬移。"
+    },
+    {
+      "id": "whatsapp-native-forms",
+      "title": "WhatsApp 原生留資與預約需求表單",
+      "category": "build",
+      "status": "planned",
+      "detail": "批次 D／D4，依賴 A3、A4 及平台發佈能力；視窗外使用 B1 的範本政策。客人於 WhatsApp 填服務、分店及方便時段，結果連到有來源的預約意向；權威預約系統確認後先顯示已預約。"
+    },
+    {
+      "id": "tenant-public-api-webhooks",
+      "title": "租戶 API、Webhook 與工具整合",
+      "category": "build",
+      "status": "planned",
+      "detail": "批次 E／E1，依賴 A2、A3。提供公司／品牌／模組範圍憑證、撤銷輪換、簽名事件、去重、重試及核對；按客戶實際需求接 n8n／Make／預約工具，不擴大來源證據權限。"
+    },
+    {
+      "id": "website-chat-widget",
+      "title": "客戶官網嵌入式聊天窗",
+      "category": "build",
+      "status": "planned",
+      "detail": "批次 E／E3，依賴 A3、A4、E1。支援租戶品牌、訪客留資、人手接待、網域及資料隔離，網站以獨立渠道接入收件匣；自動 AI 接待依 E2 另外啟用。"
+    },
+    {
+      "id": "loyalty-coupons-retention",
+      "title": "會員分層、優惠券與回訪",
+      "category": "build",
+      "status": "planned",
+      "detail": "批次 F／F2，依賴 B3、C3 及已核實會員來源；外部會員系統另接 E1。優惠券發出、核銷、到期、撤銷與會員回訪可追溯；不以意向標籤或未核實付款推算會員消費。"
+    },
+    {
+      "id": "commerce-cart-recovery",
+      "title": "電商購物車挽回旅程",
+      "category": "build",
+      "status": "planned",
+      "detail": "批次 F／F3，依賴 B3、C3、E1 與真實商店事件。只為已接駁商店顯示相關旅程；購買、退訂及過期即停止，訊息資料與成效保持來源可查。"
+    }
+  ],
+  "competitor_coverage": {
+    "automatic_followup": ["B3"],
+    "segmented_broadcast_and_reports": ["B2", "C3"],
+    "social_comment_dm": ["D2"],
+    "media_and_transcription": ["D1"],
+    "ad_attribution_and_meta_feedback": ["C3", "C4"],
+    "supervisor_analytics": ["C1", "C2", "C3"],
+    "whatsapp_native_forms": ["D4"],
+    "whatsapp_coexistence": ["D3"],
+    "controlled_ai_actions": ["E2"],
+    "calling_and_voice_ai": ["F1"],
+    "website_widget": ["E3"],
+    "loyalty_coupons": ["F2"],
+    "cart_recovery": ["F3"]
+  },
+  "tooling_to_review_at_implementation": [
+    {
+      "packages": ["workflow"],
+      "phase": "A",
+      "purpose": "持久延後、取消、重試及恢復；與 SQL outbox 分工。",
+      "installed": false
+    },
+    {
+      "packages": ["vitest", "@workflow/vitest"],
+      "phase": "A",
+      "purpose": "獨立測試排程、hooks、取消及恢復；不重寫現有 node:test。",
+      "installed": false
+    },
+    {
+      "packages": ["web-push"],
+      "phase": "B",
+      "purpose": "標準 Web Push／VAPID；裝置能力及訂閱按實際授權驗收。",
+      "installed": false
+    },
+    {
+      "packages": ["file-type"],
+      "phase": "D",
+      "purpose": "依檔案內容識別支援格式；不取代大小限制、掃描或存取控制。",
+      "installed": false
+    },
+    {
+      "packages": ["recharts"],
+      "phase": "C",
+      "purpose": "一致的趨勢／漏斗圖表，按報表頁延後載入。",
+      "installed": false
+    }
+  ],
+  "product_learning_entries": [
+    "2026-07-26-whatsapp-broadcast-operations-boundary.md",
+    "2026-07-29-connector-readiness-and-identity-boundary.md",
+    "2026-07-31-master-owned-member-invitation-lifecycle.md",
+    "2026-08-10-permission-aware-aggregate-brand-scope.md",
+    "2026-10-06-optional-operator-settings.md",
+    "2026-10-15-brand-owned-financial-dashboards.md"
+  ],
+  "notes": [
+    "依賴是工作包實作契約，正式啟用條件另列，沒有真實渠道不阻止獨立開發。",
+    "工作量是相對複雜度判斷，不是日數或交付日期承諾。",
+    "既有 system card 的狀態及歷史不因規劃而重設。"
+  ],
+  "activation_policy": "各渠道獨立啟用；不將 A1 的所有渠道資格視為全域 AND 條件。工作包依賴指輸出契約，非要求上批所有渠道先正式上線。",
+  "optional_integrations": {
+    "C2": ["C1"],
+    "D2": ["B3"],
+    "D4": ["B1"],
+    "E2": ["E1"],
+    "F1": ["E1", "E2"],
+    "F2": ["E1"]
+  },
+  "gates": {
+    "real-wa-text": "公司自己的 WhatsApp 已授權，真實雙向收發及可用平台回執獨立核對。",
+    "real-meta-text": "實際 Messenger／Instagram 逐渠道授權與收發驗收，不互相代替。",
+    "authorized-owner-mailbox": "Owner 寄發至已授權接收人的邀請，分開驗證提交、收件與接受。",
+    "workflow-compatibility": "驗證當期 workflow 與 Next 16.4.6／proxy／建置及持久儲存相容；不改弱使用者 API 的身分驗證。",
+    "tenant-send-policy": "公司明確開啟用途及品牌範圍，收件資格／退訂／頻率／安靜時段已驗證。",
+    "authorized-sales-handoff": "只處理 Convelta 自身銷售查詢，保留提交與公司來源權限。",
+    "approved-template": "取得目前有效的相應 WhatsApp 範本／語言／版本及必要變數。",
+    "notification-device-optin": "使用者明確授權，實際裝置／瀏覽器支援，撤銷及端點失效可恢復。",
+    "ai-budget-policy": "公司 AI 啟用、來源／知識有效、品牌／角色／工具權限與各功能預算均足夠。",
+    "populated-operational-acceptance": "用完整可核對資料集及已授權真實資料窗口核對計數、時間口徑與效能；空資料不當成效證據。",
+    "tenant-roster-policy": "公司已配置實際營業時間、更表、休假、分店與技能；沒有資料不虛構可接客人手。",
+    "verified-outcome-source": "預約／到店／付款各來自其權威事件；POS 欄位受獨立購買權與角色範圍保護。",
+    "ads-account-authority": "公司授權正確廣告帳戶及當期支援的 CAPI 目的地／事件；正式與測試收據分開。",
+    "provider-media-capability": "相應渠道支援指定格式，私有儲存、大小與內容驗證、保存／刪除及短效讀取均通過。",
+    "comment-permission": "當期 Meta 評審與貼文／帳戶權限足夠，私訊互動資格與期限按官方規則核對。",
+    "coexistence-eligibility": "公司的號碼、地區、App、帳戶及供應商能力符合當期 Meta Coexistence 條件。",
+    "native-form-publication": "原生 Flow 版本可發佈，表單 token／資料交換授權、過期及去重通過。",
+    "authorized-external-destination": "已獲授權之外部目的地及憑證；簽名、最小範圍、撤銷與失敗核對通過。",
+    "real-ai-channel": "按各渠道已授權實際收發及 AI 接待能力獨立啟用，不強制綁定 WhatsApp。",
+    "verified-widget-domain": "租戶已驗證嵌入網域、品牌／匿名訪客權限、反垃圾及真人接待路徑。",
+    "voice-provider-authority": "公司已授權相應號碼及通話能力；錄音與保存依已告知設定，真人轉接／後備實測。",
+    "verified-loyalty-source": "實際有權會員、消費與核銷來源；跨品牌及模組權限保留。",
+    "verified-commerce-events": "商店已接通，購物車／購買／過期事件與商品金額有可查來源。"
+  }
+}

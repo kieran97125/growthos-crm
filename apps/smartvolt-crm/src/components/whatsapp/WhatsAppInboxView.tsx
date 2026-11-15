@@ -33,9 +33,11 @@ import type {
   WaMessageSummary,
 } from "@/lib/whatsapp/responses";
 import { serviceWindowOpen, whatsappTime } from "./transport";
+import type { EditorState } from "@/lib/operations/editor";
 
 export type PendingSend = {
   clientId: string;
+  editorToken?: string;
   body: string;
   replyTo?: string;
   revision: number;
@@ -46,6 +48,13 @@ export type WhatsAppInboxViewProps = {
   companyName: string;
   canSend: boolean;
   canManage: boolean;
+  editor?: {
+    state: EditorState;
+    error: string;
+    busy: boolean;
+    acquire: (takeover?: boolean) => Promise<string | null>;
+  };
+  onBeginReply?: () => void;
   connections: WaConnectionSummary[];
   conversations: WaConversationSummary[];
   selected: WaConversationSummary | null;
@@ -549,7 +558,33 @@ export default function WhatsAppInboxView({
                   <label className="wa-sr-only" htmlFor="wa-draft">
                     回覆客戶
                   </label>
+                  {p.editor &&
+                    (p.editor.error ||
+                      (p.editor.state.occupied && !p.editor.state.held)) && (
+                      <div
+                        className="wa-editor-status"
+                        role={p.editor.error ? "alert" : "status"}
+                      >
+                        <span>
+                          {p.editor.error ||
+                            (p.editor.state.actorName ?? "另一位同事") +
+                              " 正在回覆，草稿會保留。"}
+                        </span>
+                        {p.editor.state.occupied &&
+                          !p.editor.state.held &&
+                          p.canSend && (
+                            <button
+                              type="button"
+                              disabled={p.editor.busy}
+                              onClick={() => void p.editor?.acquire(true)}
+                            >
+                              接手回覆
+                            </button>
+                          )}
+                      </div>
+                    )}
                   <textarea
+                    onFocus={p.onBeginReply}
                     id="wa-draft"
                     value={p.draft}
                     onChange={(e) => p.onDraft?.(e.target.value)}
@@ -588,7 +623,11 @@ export default function WhatsAppInboxView({
                       className="wa-primary"
                       onClick={p.onSend}
                       disabled={
-                        disabled || !p.draft.trim() || draftLength > 4096
+                        disabled ||
+                        !p.draft.trim() ||
+                        draftLength > 4096 ||
+                        p.editor?.busy ||
+                        (p.editor?.state.occupied && !p.editor.state.held)
                       }
                     >
                       <Send size={15} aria-hidden="true" />

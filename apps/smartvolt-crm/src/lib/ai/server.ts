@@ -29,7 +29,7 @@ function dbError(error: { message?: string } | null) {
   if (!error) return;
   const m = error.message ?? "";
   if (
-    /ai_(access_denied|product_required|brand_scope|conversation_scope)/.test(m)
+    /access_denied|product_required|brand_scope|ai_conversation_scope/.test(m)
   )
     throw new AccessError("你無權使用呢個公司或品牌嘅 AI。", 403);
   if (/ai_daily_limit/.test(m))

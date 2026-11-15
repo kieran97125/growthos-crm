@@ -1,3 +1,4 @@
+import { createEditorFixture } from "./support/editor";
 import { test, expect, type Page, type Route } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { build } from "esbuild";
@@ -20,6 +21,7 @@ const css = [
   "ai/ai.css",
   "operations/operations.css",
   "translation/translation.css",
+  "engagement/engagement.css",
 ]
   .map((f) => readFileSync("src/components/" + f, "utf8"))
   .join("\n");
@@ -35,6 +37,7 @@ test.beforeAll(async () => {
       write: false,
       platform: "browser",
       format: "iife",
+      loader: { ".css": "empty" },
       jsx: "automatic",
       define: {
         "process.env": JSON.stringify({
@@ -175,8 +178,13 @@ async function inbox(
   await page.route("**/api/translate", (r) =>
     translate(r, r.request().postDataJSON()),
   );
+  const editorFixture = createEditorFixture();
   await page.route("**/api/companies/**", async (r) => {
     const url = new URL(r.request().url());
+    if (url.pathname.endsWith("/editor")) {
+      await editorFixture(r);
+      return;
+    }
     if (r.request().method() === "POST") {
       sends.push(r.request().postDataJSON());
       await r.fulfill({ json: { saved: true } });

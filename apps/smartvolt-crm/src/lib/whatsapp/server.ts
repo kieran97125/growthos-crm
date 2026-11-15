@@ -1,3 +1,4 @@
+import { requireThreadScope, scopeBrands } from "@/lib/saas/scope-server";
 import "server-only";
 import { randomBytes, randomUUID } from "node:crypto";
 import { z } from "zod";
@@ -75,6 +76,13 @@ function queryFailure(error: { code?: string; message?: string } | null): void {
     )
   )
     throw new AccessError("你未有執行此 WhatsApp 操作嘅權限。", 403);
+  if (/editor_conflict|editor_expired/.test(error.message ?? ""))
+    throw new AccessError(
+      "回覆已由另一個視窗或同事接手。請重新核對；草稿會保留。",
+      409,
+    );
+  if (/send_unresolved/.test(error.message ?? ""))
+    throw new AccessError("上一則訊息仍待平台確認，請先核對發送結果。", 409);
   if (
     error.code === "23505" &&
     /sv_wa_connections_app_identity/i.test(error.message ?? "")
@@ -243,7 +251,13 @@ async function brandsFor(
   const scope = scopeSchema.safeParse(payload?.scope);
   if (!scope.success || scope.data.companyId !== access.company.id)
     throw new AccessError("公司品牌設定未完成。", 503);
-  return scope.data.brands.map(({ id, name }) => ({ id, name }));
+  return scope.data.brands
+    .filter(
+      (b) =>
+        access.memberScope.brandIds === null ||
+        access.memberScope.brandIds.includes(b.id),
+    )
+    .map(({ id, name }) => ({ id, name }));
 }
 export async function listConnections(
   companyId: string,
@@ -251,11 +265,13 @@ export async function listConnections(
   const access = await crmAccess(companyId);
   const [brands, result] = await Promise.all([
     brandsFor(access),
-    access.db
-      .from("sv_wa_connections")
-      .select(connectionFields)
-      .eq("company_id", companyId)
-      .order("created_at"),
+    scopeBrands(
+      access,
+      access.db
+        .from("sv_wa_connections")
+        .select(connectionFields)
+        .eq("company_id", companyId),
+    ).order("created_at"),
   ]);
   queryFailure(result.error);
   return {
@@ -356,6 +372,7 @@ export async function listInbox(
     .order("seq", { referencedTable: "sv_wa_messages", ascending: false })
     .limit(1, { referencedTable: "sv_wa_messages" })
     .limit(limit + 1);
+  query = scopeBrands(access, query);
   const rawCursor = params.get("cursor");
   if (rawCursor) {
     const cursor = decodeCursor(rawCursor);
@@ -387,6 +404,7 @@ async function readConversation(
   conversationId: string,
 ): Promise<WaConversationSummary> {
   uuid.parse(conversationId);
+  await requireThreadScope(access, "whatsapp", conversationId);
   const result = await access.db
     .from("sv_wa_conversations")
     .select(conversationFields)
@@ -503,6 +521,7 @@ export async function sendMessage(
     p_client_id: command.clientId,
     p_body: command.body,
     p_reply_to: command.replyTo ?? null,
+    p_editor_token: command.editorToken ?? null,
   });
   queryFailure(claimResult.error);
   const claim = mandatoryRow(claimResult.data);
@@ -663,6 +682,7 @@ export async function webhookIngest(
   connectionId: string,
   raw: Uint8Array,
   signature: string | null,
+  onAccepted?: (company: string) => void,
 ): Promise<{
   received: true;
   inserted: number;
@@ -692,6 +712,7 @@ export async function webhookIngest(
   });
   queryFailure(result.error);
   const summary = mandatoryRow(result.data);
+  onAccepted?.(connection.company_id as string);
   return {
     received: true,
     inserted: integer(summary.inserted)!,

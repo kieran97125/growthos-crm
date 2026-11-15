@@ -3,6 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
 import { Bell, Check, Clock3, Smartphone } from "lucide-react";
+import { formatHongKongDateTime } from "@/lib/datetime";
 import type { NotificationPage } from "@/lib/notifications/model";
 import { engagementFetcher } from "@/components/engagement/fetcher";
 import { useRecordedCommand } from "@/components/engagement/useRecordedCommand";
@@ -128,11 +129,7 @@ export default function NotificationWorkspace({
             </div>
             <div className="eng-campaign-main">
               <h2>{n.title}</h2>
-              <p>
-                {new Date(n.created_at).toLocaleString("zh-HK", {
-                  timeZone: "Asia/Hong_Kong",
-                })}
-              </p>
+              <p>{formatHongKongDateTime(n.created_at, "second")}</p>
               <Link href={n.href}>開啟跟進 →</Link>
               {n.evidence && (
                 <details className="eng-step-details">
@@ -145,9 +142,7 @@ export default function NotificationWorkspace({
                   </ul>
                   <p>
                     核對時間：
-                    {new Date(n.evidence.checkedAt).toLocaleString("zh-HK", {
-                      timeZone: "Asia/Hong_Kong",
-                    })}
+                    {formatHongKongDateTime(n.evidence.checkedAt, "second")}
                     （香港）
                   </p>
                   {n.evidence.facts.map((f) => (

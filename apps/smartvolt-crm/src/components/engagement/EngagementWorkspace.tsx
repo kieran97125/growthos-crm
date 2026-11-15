@@ -22,14 +22,9 @@ import {
 } from "@/lib/engagement/model";
 import "./engagement.css";
 import { engagementFetcher } from "./fetcher";
+import { formatHongKongDateTime } from "@/lib/datetime";
 export function displayDate(d: string) {
-  return new Intl.DateTimeFormat("zh-HK", {
-    timeZone: "Asia/Hong_Kong",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(d));
+  return formatHongKongDateTime(d);
 }
 type Command = Record<string, unknown>;
 export default function EngagementWorkspace({

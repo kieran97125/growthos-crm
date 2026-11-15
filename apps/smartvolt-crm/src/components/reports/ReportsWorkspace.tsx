@@ -5,6 +5,7 @@ import OperationsNavigation from "@/components/operations/OperationsNavigation";
 import dynamic from "next/dynamic";
 import useSWR from "swr";
 import { BarChart3, RefreshCw } from "lucide-react";
+import { formatHongKongDateTime } from "@/lib/datetime";
 import {
   outcomeNames,
   reportMoney,
@@ -19,8 +20,7 @@ const Chart = dynamic(() => import("./ReportChart"), {
   ssr: false,
   loading: () => <p role="status">載入趨勢圖…</p>,
 });
-const at = (s: string) =>
-  new Date(s).toLocaleString("zh-HK", { timeZone: "Asia/Hong_Kong" });
+const at = (s: string) => formatHongKongDateTime(s, "second");
 export default function ReportsWorkspace({
   companyId,
   initial,

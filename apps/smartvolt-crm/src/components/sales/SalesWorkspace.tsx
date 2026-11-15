@@ -6,6 +6,7 @@ import useSWR from "swr";
 import type { SalesPage } from "@/lib/sales/model";
 import { engagementFetcher } from "@/components/engagement/fetcher";
 import { useRecordedCommand } from "@/components/engagement/useRecordedCommand";
+import { formatHongKongDateTime } from "@/lib/datetime";
 import "../engagement/engagement.css";
 const labels: Record<string, string> = {
   new: "新查詢",
@@ -231,10 +232,8 @@ export default function SalesWorkspace({
                     </form>
                     <p className="eng-hint">
                       收到時間：
-                      {new Date(e.source_created_at).toLocaleString("zh-HK", {
-                        timeZone: "Asia/Hong_Kong",
-                      })}{" "}
-                      · 來源同意版本：{e.source_snapshot.consent_version}
+                      {formatHongKongDateTime(e.source_created_at, "second")} ·
+                      來源同意版本：{e.source_snapshot.consent_version}
                     </p>
                   </details>
                 </div>

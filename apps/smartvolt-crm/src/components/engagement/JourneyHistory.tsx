@@ -8,6 +8,7 @@ import {
   type DeliveryState,
 } from "@/lib/engagement/model";
 import { engagementFetcher } from "./fetcher";
+import { formatHongKongDateTime } from "@/lib/datetime";
 const reasons: Record<string, string> = {
   customer_replied: "客人已回覆",
   human_replied: "同事已回覆",
@@ -35,12 +36,7 @@ type History = {
     }[];
   }[];
 };
-const date = (v: string) =>
-  new Intl.DateTimeFormat("zh-HK", {
-    timeZone: "Asia/Hong_Kong",
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(new Date(v));
+const date = formatHongKongDateTime;
 export default function JourneyHistory({
   companyId,
   journey,

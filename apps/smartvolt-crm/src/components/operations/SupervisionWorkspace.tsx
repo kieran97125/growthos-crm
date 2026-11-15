@@ -4,6 +4,7 @@ import Link from "next/link";
 import OperationsNavigation from "@/components/operations/OperationsNavigation";
 import useSWR from "swr";
 import { ArrowUpRight, Clock3, Settings2, X } from "lucide-react";
+import { formatHongKongDateTime } from "@/lib/datetime";
 import type {
   OfficePolicy,
   SupervisionPage,
@@ -12,14 +13,7 @@ import { engagementFetcher } from "@/components/engagement/fetcher";
 import OfficePolicyForm from "./OfficePolicyForm";
 import "../engagement/engagement.css";
 import "./supervision.css";
-const date = (s: string) =>
-  new Intl.DateTimeFormat("zh-HK", {
-    timeZone: "Asia/Hong_Kong",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(s));
+const date = formatHongKongDateTime;
 export default function SupervisionWorkspace({
   companyId,
   initial,

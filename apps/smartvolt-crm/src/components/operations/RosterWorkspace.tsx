@@ -10,6 +10,7 @@ import {
 } from "@/lib/operations/roster";
 import { engagementFetcher } from "@/components/engagement/fetcher";
 import { useRecordedCommand } from "@/components/engagement/useRecordedCommand";
+import { formatHongKongDateTime } from "@/lib/datetime";
 import "../engagement/engagement.css";
 const time = (n: number) =>
     String(Math.floor(n / 60)).padStart(2, "0") +
@@ -355,13 +356,8 @@ function RosterForm({
           {p.leavePeriods.map((l, i) => (
             <div className="eng-two" key={i}>
               <span>
-                {new Date(l.from).toLocaleString("zh-HK", {
-                  timeZone: "Asia/Hong_Kong",
-                })}{" "}
-                至{" "}
-                {new Date(l.to).toLocaleString("zh-HK", {
-                  timeZone: "Asia/Hong_Kong",
-                })}
+                {formatHongKongDateTime(l.from)} 至{" "}
+                {formatHongKongDateTime(l.to)}
               </span>
               <button
                 type="button"

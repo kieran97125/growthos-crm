@@ -420,6 +420,9 @@ test("reports show full source totals, real refunds, missing costs and query coh
   page,
 }) => {
   await mount(page, "reports");
+  await expect(
+    page.getByText(/截止 2026-11-14 20:00:00（香港）。/),
+  ).toBeVisible();
   await expect(page.getByText("173", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("73 個推播")).toBeVisible();
   await expect(page.getByText("未記錄", { exact: true })).toBeVisible();

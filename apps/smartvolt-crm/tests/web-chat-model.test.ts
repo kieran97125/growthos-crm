@@ -93,7 +93,11 @@ test("per-widget frame CSP permits only verified exact ancestors and nonce scrip
   assert.throws(() => chatFramePolicy(["https://*.example.org"], "nonce"));
   const script = chatEmbedScript("https://app.example.org");
   assert.ok(script.includes("e.origin!==base||e.source!==frame.contentWindow"));
-  assert.ok(script.includes("frame.sandbox='allow-scripts allow-same-origin'"));
+  assert.ok(
+    script.includes(
+      "frame.sandbox='allow-scripts allow-same-origin allow-forms'",
+    ),
+  );
 });
 
 test("actual embed and nonce-frame programs parse as standalone browser scripts", () => {
@@ -112,4 +116,28 @@ test("actual embed and nonce-frame programs parse as standalone browser scripts"
   const code = html.match(/<script nonce="nonce">([\s\S]*?)<\/script>/)?.[1];
   assert.ok(code);
   assert.doesNotThrow(() => new Script(code));
+});
+
+test("visitor composer can submit inside the sandbox while native form navigation remains blocked", () => {
+  const script = chatEmbedScript("https://app.example.org");
+  const sandbox = script.match(/frame\.sandbox='([^']+)'/)?.[1].split(/\s+/);
+  assert.ok(sandbox);
+  assert.deepEqual(
+    new Set(sandbox),
+    new Set(["allow-scripts", "allow-same-origin", "allow-forms"]),
+  );
+  assert.ok(!sandbox.includes("allow-top-navigation"));
+  assert.ok(!sandbox.includes("allow-popups"));
+  const policy = chatFramePolicy(["https://example.org"], "nonce");
+  assert.ok(policy.includes("form-action 'none'"));
+  const html = chatFrameHtml(
+    {
+      id: randomUUID(),
+      name: "Store",
+      greeting: "Hello",
+      origin: "https://example.org",
+    },
+    "nonce",
+  );
+  assert.ok(html.includes("event.preventDefault();send()"));
 });

@@ -260,7 +260,7 @@ test("mobile publication controls remain accessible and fit the viewport", async
   ).toBe(true);
   expect(commands).toEqual([]);
   await page.screenshot({
-    path: "test-results/flow-runtime-mobile.png",
+    path: test.info().outputPath("flow-runtime-mobile.png"),
     fullPage: true,
   });
 });

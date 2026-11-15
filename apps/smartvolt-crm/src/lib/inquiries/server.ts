@@ -359,6 +359,7 @@ export async function readInquiry(
     nextBefore: number | null,
     thread: Record<string, unknown>,
     activity: InquiryDetail["activity"] = [],
+    commentSources: InquiryDetail["commentSources"] = [],
     channel = "whatsapp";
   if (p === "meta") {
     const d = await readMeta(companyId, threadId, before);
@@ -386,9 +387,11 @@ export async function readInquiry(
       state: m.state,
       at: m.provider_at ?? Date.parse(m.created_at),
       author: null,
+      hasMedia: m.hasMedia,
     }));
     nextBefore = d.hasMore ? (d.messages[0]?.seq ?? null) : null;
     activity = d.activity ?? [];
+    commentSources = d.commentSources ?? [];
   } else {
     const params = new URLSearchParams({ limit: "60" });
     if (before) params.set("before", before);
@@ -421,6 +424,9 @@ export async function readInquiry(
       state: m.state,
       at: m.providerAt ?? Date.parse(m.createdAt),
       author: m.authorName,
+      hasMedia: ["image", "video", "audio", "document", "sticker"].includes(
+        m.messageType,
+      ),
     }));
     nextBefore = d.nextBefore;
     activity = act.data ?? [];
@@ -440,7 +446,14 @@ export async function readInquiry(
     updated_at: thread.updated_at ?? new Date().toISOString(),
     assignee_active: true,
   });
-  return { ...customer, thread: row, messages, nextBefore, activity };
+  return {
+    ...customer,
+    thread: row,
+    messages,
+    nextBefore,
+    activity,
+    commentSources,
+  };
 }
 async function bookingContext(companyId: string, requestId: string) {
   // Reduce the authoritative aggregate on the server; a scoped UI document must

@@ -5,6 +5,8 @@ import {
   DraftTranslation,
 } from "@/components/translation/Translation";
 import VoiceMessage from "@/components/voice/VoiceMessage";
+import MediaMessage from "@/components/media/MediaMessage";
+import MediaComposer from "@/components/media/MediaComposer";
 import { useWorkspaceChrome } from "@/components/workspace/context";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -41,6 +43,7 @@ type Thread = ThreadOperations & {
   assignee_active?: boolean;
 };
 type Message = {
+  hasMedia?: boolean;
   id: string;
   seq: number;
   direction: string;
@@ -71,6 +74,13 @@ type Overview = {
   };
 };
 type Detail = {
+  commentSources?: {
+    at: number;
+    postId: string;
+    commentId: string;
+    permalink?: string | null;
+    body: string;
+  }[];
   activity?: ThreadActivity[];
   sources?: { at: number; adId: string | null }[];
   thread: Thread;
@@ -804,6 +814,26 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
                     </details>
                   )}
                   <div className="meta-messages">
+                    {!!detail.commentSources?.length && (
+                      <div className="meta-source-evidence">
+                        {detail.commentSources.map((s) => (
+                          <p key={s.commentId}>
+                            {s.permalink ? (
+                              <a
+                                href={s.permalink}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                由貼文留言開始
+                              </a>
+                            ) : (
+                              "由貼文留言開始"
+                            )}{" "}
+                            · {s.body}
+                          </p>
+                        ))}
+                      </div>
+                    )}
                     {!!detail.sources?.length && (
                       <p className="meta-source-evidence">
                         平台推薦來源：
@@ -845,7 +875,17 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
                         key={m.id}
                         className={`meta-message ${m.direction}`}
                       >
-                        <p>{m.body}</p>
+                        {connection &&
+                          (m.hasMedia || m.body.startsWith("[附件")) && (
+                            <MediaMessage
+                              companyId={companyId}
+                              brandId={connection.brand_id}
+                              source="meta"
+                              sourceId={detail.thread.id}
+                              messageId={m.id}
+                            />
+                          )}
+                        {!m.body.startsWith("[附件") && <p>{m.body}</p>}
                         {m.direction === "inbound" && connection && (
                           <MessageTranslation
                             key={detail.thread.id + m.id + m.body}
@@ -970,6 +1010,29 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
                       />
                     )}
                     <footer>
+                      {!note && connection && overview && (
+                        <MediaComposer
+                          companyId={companyId}
+                          actorId={overview.actorId}
+                          brandId={connection.brand_id}
+                          source="meta"
+                          sourceId={detail.thread.id}
+                          channel={connection.channel}
+                          revision={detail.thread.revision}
+                          canSend={!!overview?.canSend}
+                          disabled={
+                            busy ||
+                            !windowOpen ||
+                            !!unresolved ||
+                            pendingThread === selected ||
+                            replyLease.busy ||
+                            (replyLease.state.occupied &&
+                              !replyLease.state.held)
+                          }
+                          acquireEditor={() => replyLease.acquire()}
+                          onSent={() => refresh()}
+                        />
+                      )}
                       <small>
                         {Array.from(draft).length}/{max}
                         {!note && unresolved ? " · 有發送結果待核對" : ""}

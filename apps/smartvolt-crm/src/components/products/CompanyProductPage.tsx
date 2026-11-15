@@ -1,5 +1,5 @@
 import Link from "next/link";
-import UnifiedInbox from "@/components/inquiries/UnifiedInbox";
+import InboxChannels from "@/components/inquiries/InboxChannels";
 import { redirect } from "next/navigation";
 import { loadCompany, requireCompany } from "@/lib/saas/server";
 import { AccessError } from "@/lib/saas/identity";
@@ -54,7 +54,9 @@ export async function CompanyProductPage({
   }
   if (!company)
     return (
-      <UnifiedInbox
+      <InboxChannels
+        key={`${companyId}:${access.user.id}`}
+        actorId={access.user.id}
         companyId={companyId}
         companyName={access.company.name}
         hasPos={access.products.includes("pos")}
@@ -67,7 +69,9 @@ export async function CompanyProductPage({
   const selected = product ?? defaultProduct(company.products)!;
   if (selected === "crm" && view === "inbox")
     return (
-      <UnifiedInbox
+      <InboxChannels
+        key={`${companyId}:${access.user.id}`}
+        actorId={access.user.id}
         companyId={companyId}
         companyName={company.company.name}
         hasPos={company.products.includes("pos")}

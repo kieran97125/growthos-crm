@@ -60,6 +60,7 @@ import {
   type Kind,
 } from "./model";
 import { NodeGlyph, StudioStatus } from "./StudioUI";
+import FlowExecutionPanel from "./FlowExecutionPanel";
 import type { StudioController } from "./useStudioStore";
 import "@xyflow/react/dist/style.css";
 import "./studio.css";
@@ -76,8 +77,8 @@ function BusinessNode({ data, selected }: NodeProps<CanvasNode>) {
         ]
       : n.kind === "condition"
         ? [
-            { id: "new", label: "新客" },
-            { id: "existing", label: "現客" },
+            { id: "new", label: "未有預約" },
+            { id: "existing", label: "已有預約" },
           ]
         : null;
   return (
@@ -132,8 +133,8 @@ const branchLabels: Record<string, string> = {
   faq: "一般查詢",
   booking: "預約意向",
   handoff: "真人協助",
-  new: "新客",
-  existing: "現客",
+  new: "未有核實預約",
+  existing: "已有核實預約",
 };
 
 export default function FlowStudio({
@@ -450,6 +451,13 @@ export default function FlowStudio({
         </footer>
       </aside>
       <div className="st-canvas-column">
+        {identity.connected && (
+          <FlowExecutionPanel
+            key={flow.id}
+            companyId={identity.scope.companyId}
+            flow={flow}
+          />
+        )}
         <div className="st-canvas-toolbar">
           <div>
             <strong>{flow.name}</strong>
@@ -460,17 +468,19 @@ export default function FlowStudio({
               <LayoutGrid size={13} />
               自動排版
             </button>
-            <button
-              className="st-text-button"
-              onClick={() => {
-                setPhoneStep(0);
-                setPhoneError("");
-                setModal("phone");
-              }}
-            >
-              <Smartphone size={14} />
-              表單預覽
-            </button>
+            {!identity.connected && (
+              <button
+                className="st-text-button"
+                onClick={() => {
+                  setPhoneStep(0);
+                  setPhoneError("");
+                  setModal("phone");
+                }}
+              >
+                <Smartphone size={14} />
+                表單預覽
+              </button>
+            )}
             <button
               className="st-button st-save-button"
               disabled={issues.length > 0}
@@ -481,7 +491,11 @@ export default function FlowStudio({
                   at: actionTime(),
                   id: uid(),
                 });
-                setNotice("示範版本已儲存，真實流程未啟用。");
+                setNotice(
+                  identity.connected
+                    ? "畫布版本已儲存；正式流程請使用發布設定。"
+                    : "示範版本已儲存，真實流程未啟用。",
+                );
               }}
             >
               <Save size={13} />
@@ -574,7 +588,9 @@ export default function FlowStudio({
           <span>
             {studio.storageError
               ? "本機儲存失敗，請保留此頁面"
-              : "變更自動保留於此瀏覽器"}
+              : identity.connected
+                ? "變更自動儲存至公司工作空間"
+                : "變更自動保留於此瀏覽器"}
           </span>
         </footer>
       </div>
@@ -764,6 +780,46 @@ export default function FlowStudio({
                     />
                   </label>
                 )}
+                {selected.kind === "intent" && (
+                  <>
+                    <p className="st-rule-box">
+                      符合多個分支或未有關鍵字，就交畀真人。呢一步係規則分流，唔會確認預約或成交。
+                    </p>
+                    {(["faq", "booking", "handoff"] as const).map((branch) => (
+                      <label key={branch}>
+                        {branchLabels[branch]}關鍵字（逗號分隔）
+                        <textarea
+                          aria-label={`${branchLabels[branch]}關鍵字`}
+                          rows={2}
+                          maxLength={1000}
+                          key={`${selected.id}:${branch}`}
+                          defaultValue={(
+                            selected.config.routing?.[branch] ?? []
+                          ).join(", ")}
+                          onBlur={(e) =>
+                            patchNode({
+                              config: {
+                                ...selected.config,
+                                routing: {
+                                  faq: [],
+                                  booking: [],
+                                  handoff: [],
+                                  ...selected.config.routing,
+                                  [branch]: e.target.value
+                                    .split(/[,，\n]/)
+                                    .map((s) => s.trim())
+                                    .filter(Boolean)
+                                    .slice(0, 20)
+                                    .map((s) => s.slice(0, 50)),
+                                },
+                              },
+                            })
+                          }
+                        />
+                      </label>
+                    ))}
+                  </>
+                )}
                 {selected.kind === "delay" && (
                   <label>
                     等待小時
@@ -810,19 +866,22 @@ export default function FlowStudio({
                   <div className="st-rule-box">
                     <ListChecks size={16} />
                     <p>
-                      表單只收集預約意向：服務、分店、日期時間。提交後建立跟進卡，等候
-                      CS 核實。
+                      {identity.connected
+                        ? "執行到呢一步會建立跟進卡，等候同事按來源對話補入意向資料。預約仍須獨立核實。"
+                        : "表單只收集預約意向：服務、分店、日期時間。提交後建立跟進卡，等候 CS 核實。"}
                     </p>
-                    <button
-                      onClick={() => {
-                        setPhoneStep(0);
-                        setPhoneError("");
-                        setModal("phone");
-                      }}
-                    >
-                      預覽客戶畫面
-                      <ArrowRight size={12} />
-                    </button>
+                    {!identity.connected && (
+                      <button
+                        onClick={() => {
+                          setPhoneStep(0);
+                          setPhoneError("");
+                          setModal("phone");
+                        }}
+                      >
+                        預覽客戶畫面
+                        <ArrowRight size={12} />
+                      </button>
+                    )}
                   </div>
                 )}
                 {selected.kind === "review" && (
@@ -1036,9 +1095,9 @@ export default function FlowStudio({
                 </select>
               </label>
               <label>
-                客戶類型
+                核實預約紀錄
                 <select
-                  aria-label="試跑客戶類型"
+                  aria-label="試跑預約紀錄"
                   value={simulation.customerType}
                   onChange={(e) =>
                     setSimulation({
@@ -1047,8 +1106,8 @@ export default function FlowStudio({
                     })
                   }
                 >
-                  <option value="new">新客</option>
-                  <option value="existing">現有客戶</option>
+                  <option value="new">未有核實預約</option>
+                  <option value="existing">已有核實預約</option>
                 </select>
               </label>
             </div>
@@ -1326,6 +1385,12 @@ export default function FlowStudio({
                         !simulation.fields.date || !simulation.fields.time
                       }
                       onClick={() => {
+                        if (identity.connected) {
+                          setPhoneError(
+                            "預覽不會建立實際客戶或預約。請使用正式執行紀錄處理真實意向。",
+                          );
+                          return;
+                        }
                         const cv = demo.state.inbox.conversations.find(
                           (c) => c.brandId === flow.brandId,
                         );

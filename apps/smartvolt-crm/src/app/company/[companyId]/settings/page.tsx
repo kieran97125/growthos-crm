@@ -72,6 +72,22 @@ export default async function CompanySettings({
             日常覆客統一喺收件匣處理；喺呢度管理授權、接駁及個別渠道收發記錄。
           </p>
           <div className="sv-settings-plan">
+            {canManage(access.actor.role) && (
+              <>
+                <Link
+                  className="sv-secondary"
+                  href={`/company/${companyId}/settings/social-comments`}
+                >
+                  IG／FB 留言轉私訊 →
+                </Link>
+                <Link
+                  className="sv-secondary"
+                  href={`/company/${companyId}/settings/website-chat`}
+                >
+                  官網聊天窗 →
+                </Link>
+              </>
+            )}
             <Link
               className="sv-secondary"
               href={`/company/${companyId}/crm/meta`}

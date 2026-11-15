@@ -43,6 +43,7 @@ const message = {
 };
 const props: WhatsAppInboxViewProps = {
   companyId: "isolated-presentation",
+  actorId: "isolated-presentation-actor",
   companyName: "Aurora Studio · 測試資料",
   canSend: true,
   canManage: true,

@@ -4,6 +4,7 @@ import { database } from "@/lib/saas/database";
 import { decryptCredentials, readMasterKey } from "@/lib/whatsapp/crypto";
 import { sendTemplate, sendText } from "@/lib/whatsapp/graph";
 import { sendMetaText } from "@/lib/meta/graph";
+import { catchUpFlows } from "@/lib/flow-runtime/runtime";
 import { definitionSchema } from "./model";
 import { fetchTemplates, templateComponents } from "./templates";
 import type { WaIdentity, WaSendResult } from "@/lib/whatsapp/types";
@@ -56,7 +57,7 @@ export async function processDelivery(company: string, id: string) {
   const db = database();
   const peek = await db
     .from("sv_delivery_jobs")
-    .select("provider,connection_id,payload,state")
+    .select("provider,connection_id,payload,state,origin")
     .eq("company_id", company)
     .eq("id", id)
     .single();
@@ -80,7 +81,10 @@ export async function processDelivery(company: string, id: string) {
     p_id: id,
   });
   checked(claim.error);
-  if (!claim.data?.dispatch) return { dispatched: false };
+  if (!claim.data?.dispatch) {
+    if (peek.data!.origin === "flow") await catchUpFlows(company);
+    return { dispatched: false };
+  }
   const { job, messageId, remoteId, remoteKind } = claim.data;
   let outcome: WaSendResult;
   // Validate/decrypt all local configuration before entering the provider attempt.
@@ -193,6 +197,7 @@ export async function processDelivery(company: string, id: string) {
       p_error: outcome.code,
     });
     checked(r.error);
+    if (peek.data!.origin === "flow") await catchUpFlows(company);
     return { dispatched: false };
   }
   try {
@@ -208,5 +213,6 @@ export async function processDelivery(company: string, id: string) {
     p_error: outcome.ok ? null : outcome.code,
   });
   checked(finish.error);
+  if (peek.data!.origin === "flow") await catchUpFlows(company);
   return { dispatched: true };
 }

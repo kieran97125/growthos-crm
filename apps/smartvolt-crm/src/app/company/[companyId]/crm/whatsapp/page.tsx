@@ -32,6 +32,7 @@ export default async function WhatsAppInboxPage({
     <WhatsAppInbox
       key={companyId}
       companyId={companyId}
+      actorId={access.user.id}
       companyName={access.company.name}
       canSend={access.actor.role !== "viewer"}
       canManage={access.actor.role === "owner"}

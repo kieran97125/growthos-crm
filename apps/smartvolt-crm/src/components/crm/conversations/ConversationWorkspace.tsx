@@ -1300,6 +1300,7 @@ export function ConversationWorkspace({
           conversation={selected}
           messages={messages}
           now={now}
+          currentDraft={draft.reply}
           onClose={() => setAssistantOpen(false)}
           onInsert={(text) => {
             insertReply(text);

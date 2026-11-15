@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useCallback, useState } from "react";
 import { Sparkles, ArrowUpRight, BookOpen } from "lucide-react";
 import AIDraft from "./AIDraft";
+import CoachingWorkroom from "@/components/coaching/CoachingWorkroom";
+import type { CoachingSource } from "@/lib/coaching/model";
 export type AIStatus = {
   companyName: string;
   model: string | null;
@@ -28,14 +30,22 @@ export type AIStatus = {
 export default function AIStudio({
   companyId,
   initialStatus,
+  initialBrand,
+  initialCoaching,
 }: {
   companyId: string;
   initialStatus: AIStatus;
+  initialBrand?: string;
+  initialCoaching?: { source: CoachingSource; sourceId: string };
 }) {
   const chrome = useWorkspaceChrome();
   const [status, setStatus] = useState<AIStatus | null>(initialStatus),
     [error, setError] = useState(""),
-    [brand, setBrand] = useState(initialStatus.brands[0]?.id ?? ""),
+    [brand, setBrand] = useState(
+      initialStatus.brands.some((item) => item.id === initialBrand)
+        ? initialBrand!
+        : (initialStatus.brands[0]?.id ?? ""),
+    ),
     [message, setMessage] = useState(""),
     [busy, setBusy] = useState(false),
     [locked, setLocked] = useState(false);
@@ -196,7 +206,9 @@ export default function AIStudio({
                 <article key={a.id}>
                   <div>
                     <b>{a.title}</b>
-                    <span>{a.status === "approved" ? "可使用" : "暫停使用"}</span>
+                    <span>
+                      {a.status === "approved" ? "可使用" : "暫停使用"}
+                    </span>
                   </div>
                   <small>
                     v{a.revision} · 有效至 {a.validUntil}
@@ -216,6 +228,21 @@ export default function AIStudio({
             </Link>
           </aside>
         </div>
+        <CoachingWorkroom
+          key={brand}
+          companyId={companyId}
+          brandId={brand}
+          initialSource={
+            !initialBrand || brand === initialBrand
+              ? initialCoaching
+              : undefined
+          }
+          disabled={locked}
+          canAnalyze={!!status?.enabled && status.canGenerate && !!status.model}
+          onKnowledgeChanged={() =>
+            void refresh().catch((e) => setError(e.message))
+          }
+        />
       </div>
     </main>
   );

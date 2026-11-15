@@ -39,15 +39,17 @@ jobs:
         run: npm run test:paint
       - name: Verify campaign composer and explicit delivery intent
         run: npm run test:e2e -- e2e/engagement.spec.ts --output=campaign-test-results
+      - name: Verify evidence-grounded CS coaching and AI workspace
+        run: npm run test:e2e -- e2e/coaching.spec.ts e2e/company-ai.spec.ts --output=coaching-test-results
       - name: Verify remaining CRM browser flows
-        # Together these invocations run all 126 scenarios exactly once. Test
+        # Together these invocations run every browser scenario exactly once. Test
         # delivery intent first so its failures are visible before long flows.
         run: |
           node --input-type=module - <<'JS'
           import { readdirSync } from 'node:fs';
           import { spawnSync } from 'node:child_process';
           const files = readdirSync('e2e')
-            .filter(name => name.endsWith('.spec.ts') && !['engagement.spec.ts', 'initial-paint.spec.ts'].includes(name))
+            .filter(name => name.endsWith('.spec.ts') && !['engagement.spec.ts', 'initial-paint.spec.ts', 'coaching.spec.ts', 'company-ai.spec.ts'].includes(name))
             .map(name => 'e2e/' + name);
           const result = spawnSync('npm', ['run', 'test:e2e', '--', ...files], { stdio: 'inherit' });
           process.exit(result.status ?? 1);
@@ -59,6 +61,7 @@ jobs:
           path: |
             apps/smartvolt-crm/test-results/
             apps/smartvolt-crm/campaign-test-results/
+            apps/smartvolt-crm/coaching-test-results/
             apps/smartvolt-crm/paint-test-results/
           retention-days: 7
 

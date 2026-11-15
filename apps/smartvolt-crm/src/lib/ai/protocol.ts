@@ -92,11 +92,30 @@ export function approvedKnowledge(
       a.clientId === companyId &&
       a.brandId === brandId &&
       a.status === "approved" &&
+      a.coaching?.kind !== "pattern" &&
       a.validUntil >= hongKongDay(now) &&
       Number.isFinite(Date.parse(a.validUntil + "T00:00:00Z")) &&
       new Date(a.validUntil + "T00:00:00Z").toISOString().slice(0, 10) ===
         a.validUntil,
   );
+}
+export function approvedStyleGuidance(
+  articles: z.infer<typeof articleSchema>[],
+  companyId: string,
+  brandId: string,
+  now: number,
+) {
+  // Reuse the same company, brand, approval and real-calendar expiration rules;
+  // a learned communication pattern never becomes evidence for business facts.
+  const patterns = articles.filter((a) => a.coaching?.kind === "pattern");
+  return approvedKnowledge(
+    patterns.map((a) => ({ ...a, coaching: undefined })),
+    companyId,
+    brandId,
+    now,
+  )
+    .slice(0, 6)
+    .map((a) => a.content.slice(0, 500));
 }
 export function retrieveKnowledge(
   articles: z.infer<typeof articleSchema>[],

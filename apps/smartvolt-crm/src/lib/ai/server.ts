@@ -6,6 +6,7 @@ import { AccessError } from "@/lib/saas/identity";
 import type { AssistantInput } from "@/lib/demo/ai-contract";
 import {
   approvedKnowledge,
+  approvedStyleGuidance,
   companyAIRequest,
   hongKongDay,
   retrieveKnowledge,
@@ -303,6 +304,12 @@ export async function prepareCompanyAnswer(raw: unknown) {
     profile,
     articles,
     history,
+    styleGuidance: approvedStyleGuidance(
+      a.state.studio.articles,
+      request.companyId,
+      request.brandId,
+      now,
+    ),
     assist: true,
     withinWindow: false,
     humanOwned: true,

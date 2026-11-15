@@ -175,6 +175,11 @@ export function applyCompanyCommand(
         "網站來源由掃描流程保存，不能以手動編輯改寫。",
         409,
       );
+    if (JSON.stringify(article.coaching) !== JSON.stringify(previous?.coaching))
+      throw new AccessError(
+        "對話學習來源由客服教練保存，不能以手動編輯改寫。",
+        409,
+      );
   }
   if (command.type === "pos") {
     const pos = applyPosCommand(state.pos, command.command, {

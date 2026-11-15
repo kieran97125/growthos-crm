@@ -6,10 +6,11 @@ import { loadCompany } from "@/lib/saas/server";
 import { AccessError, canManage } from "@/lib/saas/identity";
 import { requireThreadScope } from "@/lib/saas/scope-server";
 import { aiModel } from "@/lib/ai/server";
-import { aiErrors, classifyAIError, type AIErrorCode } from "@/lib/ai/errors";
+import { classifyAIError } from "@/lib/ai/errors";
 import { approvedKnowledge, retrieveKnowledge } from "@/lib/ai/protocol";
 import { generateCoaching } from "./generate";
 import { validateAdoption } from "./protocol";
+import { coachingReceipt } from "./receipt";
 import {
   commandSchema,
   querySchema,
@@ -184,14 +185,12 @@ async function sourceInput(
         .limit(41);
       checked(r.error);
       truncated = (r.count ?? 0) > 40;
-      messages = (r.data ?? [])
-        .reverse()
-        .map((m) => ({
-          id: m.id,
-          direction: m.direction as "incoming" | "outgoing",
-          body: m.body,
-          at: m.provider_at,
-        }));
+      messages = (r.data ?? []).reverse().map((m) => ({
+        id: m.id,
+        direction: m.direction as "incoming" | "outgoing",
+        body: m.body,
+        at: m.provider_at,
+      }));
     }
   }
   truncated ||=
@@ -223,28 +222,6 @@ async function sourceInput(
       a.actor.name,
     ],
   };
-}
-function result(row: {
-  status: string;
-  result?: unknown;
-  error_code?: string;
-}): { state: "running" } | { analysis: CoachingAnalysis } {
-  if (row.status === "running") return { state: "running" as const };
-  if (row.status === "completed" && row.result)
-    return { analysis: row.result as CoachingAnalysis };
-  if (
-    ["context_changed", "source_changed", "interrupted", "disabled"].includes(
-      row.error_code ?? "",
-    )
-  )
-    throw new AccessError(
-      "分析期間資料或設定有變，未有套用；請重新讀取後再分析。",
-      409,
-    );
-  throw new AccessError(
-    aiErrors[row.error_code as AIErrorCode] ?? aiErrors.unavailable,
-    503,
-  );
 }
 function knowledgeFresh(a: Access, analysis: CoachingAnalysis) {
   const current = approvedKnowledge(
@@ -470,7 +447,7 @@ export async function actCoaching(companyId: string, raw: unknown) {
     });
     checked(claim.error);
     if (!claim.data.dispatch) {
-      const receipt = result(claim.data);
+      const receipt = coachingReceipt(claim.data);
       if ("analysis" in receipt) {
         const stored = await a.db
           .from("sv_coaching_analyses")
@@ -554,7 +531,7 @@ export async function actCoaching(companyId: string, raw: unknown) {
       p_output: outTokens,
     });
     checked(finish.error);
-    return result(finish.data);
+    return coachingReceipt(finish.data);
   }
   if (!canManage(a.actor.role))
     throw new AccessError("此操作需要公司管理員權限。", 403);

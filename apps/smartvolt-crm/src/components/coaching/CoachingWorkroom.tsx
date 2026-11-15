@@ -117,7 +117,7 @@ export default function CoachingWorkroom({
               source={selected.source}
               sourceId={selected.sourceId}
               disabled={disabled || !canAnalyze}
-              onGenerated={onKnowledgeChanged}
+              onGenerated={() => void saved().catch(() => undefined)}
             />
           </>
         ) : (

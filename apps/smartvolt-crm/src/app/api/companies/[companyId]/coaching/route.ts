@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { json, failure, sameOrigin } from "@/lib/saas/http";
 import { boundedJson } from "@/lib/whatsapp/http";
 import { actCoaching, readCoaching } from "@/lib/coaching/server";
+import { terminalCoachingFailure } from "@/lib/coaching/receipt";
 type Context = { params: Promise<{ companyId: string }> };
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -14,6 +15,8 @@ export async function GET(req: NextRequest, { params }: Context) {
       ),
     );
   } catch (e) {
+    const terminal = terminalCoachingFailure(e);
+    if (terminal) return json(terminal.body, terminal.status);
     return failure(e);
   }
 }
@@ -29,6 +32,8 @@ export async function POST(req: NextRequest, { params }: Context) {
       "state" in response && response.state === "running" ? 202 : 200,
     );
   } catch (e) {
+    const terminal = terminalCoachingFailure(e);
+    if (terminal) return json(terminal.body, terminal.status);
     return failure(e);
   }
 }

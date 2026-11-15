@@ -1,6 +1,6 @@
 "use client";
-import { useEffect } from "react";
-import useSWR from "swr";
+import { useCallback, useEffect } from "react";
+import useSWR, { useSWRConfig } from "swr";
 import type {
   CoachingCommand,
   CoachingPage,
@@ -12,6 +12,7 @@ export class CoachingRequestError extends Error {
     message: string,
     public status: number,
     public code?: string,
+    public terminalFailure = false,
   ) {
     super(message);
   }
@@ -48,6 +49,7 @@ export function useCoachingPage({
     ...(source && sourceId ? { source, sourceId } : {}),
   });
   const url = coachingEndpoint(companyId) + "?" + query;
+  const { mutate: mutateCache } = useSWRConfig();
   const result = useSWR<CoachingPage>(
     companyId && brandId ? [url, sourceRevision ?? 0] : null,
     ([endpoint]: [string, number]) => readCoaching(endpoint),
@@ -57,13 +59,21 @@ export function useCoachingPage({
       shouldRetryOnError: false,
     },
   );
-  const { mutate } = result;
+  // SWR's bound mutate follows the hook's latest key. Async commands must
+  // instead retain the exact company/brand/source key they started with.
+  const mutate = useCallback(
+    () =>
+      companyId && brandId
+        ? mutateCache<CoachingPage>([url, sourceRevision ?? 0])
+        : Promise.resolve(undefined),
+    [mutateCache, companyId, brandId, url, sourceRevision],
+  );
   useEffect(() => {
     const changed = () => void mutate().catch(() => undefined);
     window.addEventListener("convelta:data-changed", changed);
     return () => window.removeEventListener("convelta:data-changed", changed);
   }, [mutate]);
-  return { ...result, scopeKey: `${url}#${sourceRevision ?? 0}` };
+  return { ...result, mutate, scopeKey: `${url}#${sourceRevision ?? 0}` };
 }
 export async function coachingCommand<T>(
   companyId: string,
@@ -80,8 +90,10 @@ export async function coachingCommand<T>(
       data.error ?? "結果未能確認，請核對同一操作。",
       response.status,
       data.code,
+      data.terminalFailure === true,
     );
   return data;
 }
 export const knownFailure = (error: unknown) =>
-  error instanceof CoachingRequestError && error.status < 500;
+  error instanceof CoachingRequestError &&
+  (error.status < 500 || error.terminalFailure);

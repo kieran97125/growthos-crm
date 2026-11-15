@@ -106,11 +106,30 @@ function resultPage(
 }
 
 let bundle = "";
+let workroomBundle = "";
 test.beforeAll(async () => {
   bundle = (
     await build({
       stdin: {
         contents: `import React,{useState}from'react';import{createRoot}from'react-dom/client';import CoachPanel from './src/components/coaching/CoachPanel';function Fixture(){const[source,setSource]=useState({source:'meta',sourceId:'${firstSource}',revision:1});const[draft,setDraft]=useState(window.__initialDraft||'');return <main><h1>客服教練驗收</h1><nav aria-label="合成對話切換"><button onClick={()=>setSource({source:'meta',sourceId:'${firstSource}',revision:1})}>切換至第一段對話</button><button onClick={()=>setSource({source:'whatsapp',sourceId:'${secondSource}',revision:1})}>切換至第二段對話</button><button onClick={()=>setSource(s=>({...s,revision:s.revision+1}))}>重新載入對話</button></nav><label>回覆草稿<textarea aria-label="回覆草稿" value={draft} onChange={e=>setDraft(e.target.value)}/></label><CoachPanel companyId='${companyId}' brandId='main' source={source.source} sourceId={source.sourceId} sourceRevision={source.revision} currentDraft={draft} onInsert={setDraft}/></main>}createRoot(document.getElementById('fixture')).render(<Fixture/>);`,
+        loader: "tsx",
+        resolveDir: process.cwd(),
+      },
+      bundle: true,
+      write: false,
+      platform: "browser",
+      format: "iife",
+      loader: { ".css": "empty" },
+      jsx: "automatic",
+      define: {
+        "process.env": JSON.stringify({ NODE_ENV: "test" }),
+      },
+    })
+  ).outputFiles[0].text;
+  workroomBundle = (
+    await build({
+      stdin: {
+        contents: `import React from'react';import{createRoot}from'react-dom/client';import CoachingWorkroom from './src/components/coaching/CoachingWorkroom';createRoot(document.getElementById('fixture')).render(<main><h1>對話學習驗收</h1><CoachingWorkroom companyId='${companyId}' brandId='main'/></main>);`,
         loader: "tsx",
         resolveDir: process.cwd(),
       },
@@ -134,6 +153,7 @@ async function mount(
     post?: Post;
     get?: (sourceId: string | null) => CoachingPage | Promise<CoachingPage>;
     draft?: string;
+    workroom?: boolean;
   } = {},
 ) {
   const posts: Record<string, unknown>[] = [];
@@ -182,7 +202,9 @@ async function mount(
   await page.setContent(
     `<!doctype html><html lang="zh-HK"><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Synthetic coaching acceptance</title><style>:root{${vars}}*{box-sizing:border-box}body{margin:0;font-family:Arial,'Noto Sans CJK TC',sans-serif}main{max-width:600px;margin:auto;padding:16px}nav{display:flex;flex-wrap:wrap;gap:8px}label{display:block}textarea{display:block;width:100%;min-height:80px}${css}</style></head><body><div id="fixture"></div><script>window.__initialDraft=${JSON.stringify(options.draft ?? "")}</script></body></html>`,
   );
-  await page.addScriptTag({ content: bundle });
+  await page.addScriptTag({
+    content: options.workroom ? workroomBundle : bundle,
+  });
   return { posts, outsidePosts };
 }
 
@@ -234,6 +256,90 @@ test("an ambiguous model response is reconciled with the same immutable request"
   ).toBeVisible();
   expect(posts).toHaveLength(2);
   expect(posts[1]).toEqual(posts[0]);
+  expect(outsidePosts).toEqual([]);
+});
+
+test("a confirmed persisted failure unlocks a fresh analysis without replaying its failed receipt", async ({
+  page,
+}) => {
+  let current: CoachingAnalysis | null = null;
+  let attempts = 0;
+  const { posts, outsidePosts } = await mount(page, {
+    get: () => resultPage({}, current),
+    post: async (route, body) => {
+      attempts++;
+      if (attempts === 1) {
+        await route.fulfill({
+          status: 503,
+          json: {
+            error: "已核實呢次分析失敗，可以重新分析。",
+            code: "unavailable",
+            terminalFailure: true,
+          },
+        });
+        return;
+      }
+      current = { ...structuredClone(analysis), id: String(body.requestId) };
+      await route.fulfill({ json: { analysis: current } });
+    },
+  });
+  await page.getByRole("button", { name: "分析呢段對話", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("已核實呢次分析失敗");
+  await expect(
+    page.getByRole("button", { name: "核對同一分析", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "分析呢段對話", exact: true }),
+  ).toBeEnabled();
+  await page.getByRole("button", { name: "分析呢段對話", exact: true }).click();
+  await expect(
+    page.getByText(analysis.nextAction.title, { exact: true }),
+  ).toBeVisible();
+  expect(posts).toHaveLength(2);
+  expect(posts[1].requestId).not.toBe(posts[0].requestId);
+  expect({ ...posts[1], requestId: posts[0].requestId }).toEqual(posts[0]);
+  expect(outsidePosts).toEqual([]);
+});
+
+test("a newly saved conversation analysis appears in the brand learning list without a page reload", async ({
+  page,
+}) => {
+  let current: CoachingAnalysis | null = null;
+  let brandReads = 0;
+  const { posts, outsidePosts } = await mount(page, {
+    workroom: true,
+    get: (sourceId) => {
+      if (!sourceId) brandReads++;
+      return resultPage({}, current);
+    },
+    post: async (route, body) => {
+      current = { ...structuredClone(analysis), id: String(body.requestId) };
+      await route.fulfill({ json: { analysis: current } });
+    },
+  });
+  await expect(
+    page.getByLabel("選擇已儲存對話", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "分析呢段對話", exact: true }),
+  ).toBeEnabled();
+  expect(brandReads).toBe(1);
+  await page.getByRole("button", { name: "分析呢段對話", exact: true }).click();
+  await expect(
+    page.getByText(analysis.nextAction.title, { exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "品牌話術", exact: true }).click();
+  await expect(
+    page.getByRole("heading", {
+      name: analysis.learning[0].title,
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("最近 1 項建議與已採納話術", { exact: true }),
+  ).toBeVisible();
+  expect(brandReads).toBeGreaterThan(1);
+  expect(posts).toHaveLength(1);
   expect(outsidePosts).toEqual([]);
 });
 

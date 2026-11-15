@@ -154,8 +154,10 @@ export default function CoachPanel({
           scope: startedScope,
           text: "分析已儲存，建議未向客戶發送。",
         });
-        onGenerated?.();
       }
+      // Notify the callback captured for this request's scope even if another
+      // thread is now visible. Its bound cache refresh cannot fill that thread.
+      onGenerated?.();
     } catch (e) {
       recordOperation(startedOperation, {
         command: knownFailure(e) ? null : command,

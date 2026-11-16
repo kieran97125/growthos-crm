@@ -9,7 +9,7 @@ import MediaMessage from "@/components/media/MediaMessage";
 import MediaComposer from "@/components/media/MediaComposer";
 import { useWorkspaceChrome } from "@/components/workspace/context";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { BRAND } from "@/lib/brand";
 import type { MetaChannel } from "@/lib/meta/protocol";
 import {
@@ -109,6 +109,8 @@ const date = (value: number | string) =>
   }).format(new Date(value));
 export default function MetaInbox({ companyId }: { companyId: string }) {
   const chrome = useWorkspaceChrome();
+  const verifyTokenInputId = useId();
+  const [verifyTokenVisible, setVerifyTokenVisible] = useState(false);
   const endpoint = `/api/companies/${encodeURIComponent(companyId)}/meta`;
   const [overview, setOverview] = useState<Overview | null>(null),
     [detail, setDetail] = useState<Detail | null>(null),
@@ -476,7 +478,7 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
                       {overview.readiness.blockers.join("；")}
                     </p>
                   )}
-                  <form onSubmit={connect}>
+                  <form onSubmit={connect} autoComplete="off">
                     <label>
                       渠道
                       <select name="channel">
@@ -504,6 +506,8 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
                         inputMode="numeric"
                         pattern="[1-9][0-9]{1,49}"
                         autoComplete="off"
+                        data-1p-ignore="true"
+                        data-lpignore="true"
                       />
                     </label>
                     <label>
@@ -512,7 +516,11 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
                         name="token"
                         type="password"
                         required
-                        autoComplete="off"
+                        autoComplete="new-password"
+                        data-1p-ignore="true"
+                        data-lpignore="true"
+                        autoCapitalize="none"
+                        spellCheck={false}
                         minLength={20}
                         maxLength={8192}
                       />
@@ -545,28 +553,45 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
                     />
                   </label>
                   {overview.readiness.verifyToken && (
-                    <label>
-                      Verify Token
+                    <div className="meta-verify-token">
+                      <label htmlFor={verifyTokenInputId}>Verify Token</label>
                       <input
-                        type="password"
+                        id={verifyTokenInputId}
+                        type={verifyTokenVisible ? "text" : "password"}
                         readOnly
+                        autoComplete="new-password"
+                        data-1p-ignore="true"
+                        data-lpignore="true"
+                        spellCheck={false}
                         value={overview.readiness.verifyToken}
                         onFocus={(e) => e.currentTarget.select()}
                       />
-                      <button
-                        type="button"
-                        onClick={() =>
-                          void navigator.clipboard
-                            .writeText(overview.readiness.verifyToken!)
-                            .then(
-                              () => setNotice("Verify Token 已複製。"),
-                              () => setError("請選取並複製 Verify Token。"),
-                            )
-                        }
-                      >
-                        複製 Verify Token
-                      </button>
-                    </label>
+                      <div className="meta-token-actions">
+                        <button
+                          type="button"
+                          aria-controls={verifyTokenInputId}
+                          aria-pressed={verifyTokenVisible}
+                          onClick={() =>
+                            setVerifyTokenVisible((shown) => !shown)
+                          }
+                        >
+                          {verifyTokenVisible ? "隱藏" : "顯示"} Verify Token
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            void navigator.clipboard
+                              .writeText(overview.readiness.verifyToken!)
+                              .then(
+                                () => setNotice("Verify Token 已複製。"),
+                                () => setError("請選取並複製 Verify Token。"),
+                              )
+                          }
+                        >
+                          複製 Verify Token
+                        </button>
+                      </div>
+                    </div>
                   )}
                   <ol>
                     <li>完成 Meta App 發佈及所需訊息權限。</li>

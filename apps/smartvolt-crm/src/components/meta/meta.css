@@ -141,6 +141,24 @@
 .meta-setup .meta-alert {
   margin: 10px 0;
 }
+.meta-verify-token {
+  display: grid;
+  gap: 7px;
+  margin: 13px 0;
+}
+.meta-verify-token label {
+  margin: 0;
+}
+.meta-token-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.meta-token-actions button {
+  flex: 1 1 160px;
+  min-height: 44px;
+  font-size: 12px;
+}
 .meta-connections {
   display: flex;
   flex-wrap: wrap;

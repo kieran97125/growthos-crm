@@ -118,7 +118,7 @@ function fixture(expired = false) {
       ready: true,
       blockers: [] as string[],
       webhookUrl: "https://example.invalid/webhook" as string | null,
-      verifyToken: null,
+      verifyToken: null as string | null,
     },
   };
   const messages = [
@@ -177,6 +177,37 @@ async function openThread(page: Page) {
     page.getByRole("textbox", { name: "回覆內容", exact: true }),
   ).toBeVisible();
 }
+test("owner retrieves and remasks the webhook code without connecting or sending", async ({
+  page,
+}) => {
+  const f = fixture();
+  f.overview.connections = [];
+  f.overview.threads = [];
+  f.overview.readiness.verifyToken = "synthetic-webhook-verification-code";
+  const attempts: Record<string, unknown>[] = [];
+  await intercept(page, f, async (route, body) => {
+    attempts.push(body);
+    await route.fulfill({ status: 400, json: { error: "Unexpected write" } });
+  });
+  await mount(page);
+  const token = page.getByLabel("Verify Token", { exact: true });
+  await expect(token).toHaveAttribute("type", "password");
+  await expect(
+    page.getByLabel("Page Access Token", { exact: true }),
+  ).toHaveValue("");
+  await page
+    .getByRole("button", { name: "顯示 Verify Token", exact: true })
+    .click();
+  await expect(token).toHaveAttribute("type", "text");
+  await expect(token).toHaveValue("synthetic-webhook-verification-code");
+  await page
+    .getByRole("button", { name: "隱藏 Verify Token", exact: true })
+    .click();
+  await expect(token).toHaveAttribute("type", "password");
+  await mount(page);
+  await expect(token).toHaveAttribute("type", "password");
+  expect(attempts).toHaveLength(0);
+});
 for (const [name, width, height] of [
   ["desktop", 1440, 1000],
   ["mobile", 390, 844],

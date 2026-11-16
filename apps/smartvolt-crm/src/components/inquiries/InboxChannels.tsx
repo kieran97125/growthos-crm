@@ -78,6 +78,7 @@ export default function InboxChannels(
         <button
           type="button"
           aria-pressed={channel === "website"}
+          aria-label={!websiteReady ? (props.websiteReadiness === "pending" ? "網站訊息，準備中" : "網站訊息，暫未開放") : undefined}
           disabled={!websiteReady}
           title={!websiteReady ? (props.websiteReadiness === "pending" ? "網站聊天準備中" : "網站聊天暫時未能使用") : undefined}
           onClick={() => choose("website")}

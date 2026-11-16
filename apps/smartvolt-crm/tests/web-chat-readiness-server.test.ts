@@ -64,7 +64,7 @@ before(async () => {
         b.onResolve({filter: /.*/}, (args) => args.path in stubs
           ? {path:args.path,namespace:"readiness-stub"} : undefined);
         b.onLoad({filter: /.*/,namespace:"readiness-stub"}, (args) => ({
-          contents:stubs[args.path],loader:"js",
+          contents:stubs[args.path],loader:"js",resolveDir:process.cwd(),
         }));
       },
     }],

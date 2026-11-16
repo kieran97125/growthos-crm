@@ -60,16 +60,41 @@ export async function integrationBundle() {
         loader: "tsx",
         resolveDir: process.cwd(),
         contents: `
-          import React from 'react';
+          import React, {useSyncExternalStore} from 'react';
           import {createRoot} from 'react-dom/client';
           import {CompanyWorkspaceChrome} from './src/components/workspace/CompanyWorkspace';
           import InboxChannels from './src/components/inquiries/InboxChannels';
+          // Capture raw inbox props once, as server-provided initial props are.
           const url = new URL(location.href);
-          createRoot(document.getElementById('fixture')).render(
-            <CompanyWorkspaceChrome companyId='${company}' companyName='${companyName}' actorId='${actor}' actorName='Synthetic owner' products={['crm','pos']} location={{pathname:'/company/${company}/crm',search:url.search}}>
+          // This document-only adapter mirrors Next's history subscriptions.
+          // Install before render so a child effect's URL cleanup is observable.
+          const historyEvent = 'convelta-inbox-fixture-history';
+          for (const method of ['replaceState', 'pushState']) {
+            const original = window.history[method].bind(window.history);
+            window.history[method] = (...args) => {
+              const result = original(...args);
+              window.dispatchEvent(new Event(historyEvent));
+              return result;
+            };
+          }
+          const subscribeLocation = (onChange) => {
+            window.addEventListener(historyEvent, onChange);
+            window.addEventListener('popstate', onChange);
+            return () => {
+              window.removeEventListener(historyEvent, onChange);
+              window.removeEventListener('popstate', onChange);
+            };
+          };
+          const locationSearch = () => window.location.search;
+          function Fixture() {
+            const search = useSyncExternalStore(subscribeLocation, locationSearch, locationSearch);
+            return (
+            <CompanyWorkspaceChrome companyId='${company}' companyName='${companyName}' actorId='${actor}' actorName='Synthetic owner' products={['crm','pos']} location={{pathname:'/company/${company}/crm',search}}>
               <InboxChannels companyId='${company}' companyName='${companyName}' actorId='${actor}' hasPos={true} websiteReadiness={url.searchParams.get('websiteSchema') === 'missing' ? 'pending' : 'ready'} initialProvider={url.searchParams.get('provider') ?? undefined} initialThread={url.searchParams.get('thread') ?? undefined} initialCustomer={url.searchParams.get('contact') ?? undefined} initialQueue={url.searchParams.get('queue') ?? undefined}/>
             </CompanyWorkspaceChrome>
-          );`,
+            );
+          }
+          createRoot(document.getElementById('fixture')).render(<Fixture/>);`,
       },
       bundle: true,
       write: false,

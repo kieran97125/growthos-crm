@@ -1,5 +1,41 @@
 # Convelta 收件匣與流程擴充
 
+[release-a9b-dpl_DMWpknnzT7eNwKnYhgcXyPXwRbeX]
+
+## 最新正式發布：三項程式已上線，網站聊天仍受阻
+
+2026-11-16 **13:20:24 HKT**，production deployment `dpl_DMWpknnzT7eNwKnYhgcXyPXwRbeX` 已達 READY；正式 [app.convelta.io](https://app.convelta.io) alias 指向此部署。runtime 來源為 [`a9b164f86a46ddbcc1aa1c7dc76b9e350a20959b`](https://github.com/kieran97125/growthos-crm/commit/a9b164f86a46ddbcc1aa1c7dc76b9e350a20959b)，app/src tree `7e9e794d4f7c59fe76ca6d5ea24e17b1800a710a`。本段發布範圍以此已部署來源及以下證據為準；後續純文件 head 不代表另一個 runtime，也不延伸為全輪完成。
+
+| 範圍 | 正式狀態 | 驗收邊界 |
+|---|---|---|
+| 私人 WA／Meta 附件 | 程式已正式發布；媒體 schema 已安裝 | 圖片／影片／原音／文件、私人預覽及不可變派送／未知結果核對；公司真實收發、裝置、原音及平台回執仍待驗收 |
+| FB／IG 留言轉一次合資格私訊 | 程式已正式發布，規則預設停用 | 公司資產／貼文權威、真人觸發／回覆及實際回執仍待驗收；留言不等於營銷同意 |
+| 自由 Flow 執行 | 程式已正式發布 | 任意有效圖、不可變版本與持久執行；既有三套標準旅程保留。真實來源／渠道執行仍需證據 |
+| 網站聊天 | **仍 blocked，尚未開放** | 13個網站函數及4表仍缺失；原生確認累計7次逾時，沒有第8次嘗試或替代 DDL／確認繞過 |
+| Owner／正式 UI | **仍 pending** | 新版 Owner 正式登入畫面及 reload 讀回未取得，不宣稱通過 |
+| 第5／付款接駁 | planned，繼續押後 | 通用公司 API／Webhook／n8n／Make及網上收款不在本次發布；付款只作人工核實紀錄 |
+
+[完整 CI 43807976351](https://github.com/kieran97125/growthos-crm/actions/runs/43807976351) attempt1 在上述 exact source 全部成功，13:17:37 HKT 完成：**514項程式／資料庫、2項 Workflow、225項 browser、4項首屏及8組 native PostgreSQL 並行驗收**。225為181項主驗收及44項擴充（原42項加2項缺網站 schema 的桌面／手機深連結、reload及附件隔離情境）。新增8項 server readiness 測試均實際通過；[原 CRM 43807976355](https://github.com/kieran97125/growthos-crm/actions/runs/43807976355)另有60項程式及25項 browser 通過。remaining120及expansion44的JSON均為skip／unexpected／flaky／global errors 0；其他61項及4項首屏由完整成功 logs 支持，不假稱每組都有JSON。
+
+較早 head `24b1eddd4d7447d4e7b3142a7d2d8ec062fe35cd` 的 [CI 43807191997](https://github.com/kieran97125/growthos-crm/actions/runs/43807191997)失敗保留：新增狀態文字未加入按鈕 accessible name，以及 server harness 缺少 esbuild resolveDir。a9b164f 的修正補明確名稱、正確解析目錄及模擬 Next URL 的 reactive fixture；沒有刪除案例、跳過測試、放寬斷言／時限／重試。該次失敗不標作 flaky。
+
+發布前正式 catalog 已成功讀回：37/50函數來源相符、全為 invoker／service-only；13/17表RLS及browser grants0，私人附件bucket 25 MiB及browser storage policies0。未改動的rollback-only功能驗收為fixture／social／Flow／media共4 PASS，網站仍FAIL（缺少 sv_web_chat_configure），合成公司及Auth行數0。完整50函數／17表／5項hosted成功仍未成立；不可把四個PASS說成四項功能全驗收。
+
+網站入口以現有公司／actor／品牌範圍內 SELECT-only staff-read RPC 檢查可用性，最多等3秒、只用React request cache；缺schema與暫時故障分開，權限錯誤維持403。未就緒的網站tab及設定入口顯示準備／未開放，網站深連結清除thread／contact／queue後返回社交收件匣。未加環境旗標、未降低權限、未改SQL；之後正式schema安裝成功可在下一次頁面請求重新檢查，完整catalog與正式驗收仍須獨立完成。
+
+新deployment早期runtime掃描 **13:08:49–13:23:49 HKT**，只限上述deployment／project／team／production，error0／fatal0；這是早期log觀察，不是Owner或真實渠道驗收。部署、CI、正式DB及真人操作四類證據保持分開。
+
+沿用 wa-media、meta-media、social-comment-to-dm、round-two-journeys及convelta-expansion-program，狀態in_progress；website-chat-widget保持blocked。Owner讀回及公司外部驗收繼續pending，既有[#10](https://github.com/kieran97125/growthos-crm/issues/10)／[#12](https://github.com/kieran97125/growthos-crm/issues/12)保留。沒有發真實渠道訊息、邀請、推播、Meta事件、付費模型探測或啟用外部帳戶；沒有合併PR或變更automations。
+
+Product Learning Sync checked：protocol6a80846、最新index a851d07、checkpoint e52e473；原六篇相關中立契約及新增11月16日完整讀取／durable capture entry 1b448c1已考慮。新增entry仍Observed，沒有採納其實作、移入pilot資料或改分類；canonical proposal#88由原工作另行維護。
+
+---
+
+## 歷史驗收及發布閘門（保留原文）
+
+以下「尚未部署」及較早逾時次數屬當時記錄；最新正式狀態以本節以上為準。Owner／網站與真實外部驗收仍未完成。
+
+
 日期：2026-11-16（香港時間）。使用者已直接授權1–4實作；四項程式及完整CI驗收通過。正式資料庫只完成社交留言、Flow及附件三項schema；網站schema仍受平台確認阻塞。本輪App未部署，Owner／真實外部驗收未完成。
 
 工作分支：`feat/convelta-media-social-widget-flow-20261116`；基底`59cdb1c`。最終程式來源[`e6078da09b5b11e37eb7c0bcd49e9ff73c4d4f5e`](https://github.com/kieran97125/growthos-crm/commit/e6078da09b5b11e37eb7c0bcd49e9ff73c4d4f5e)，`app/src` tree為`bb2d8d2a5fdf3d116ae350c6bc41b4b4b01be17e`；正式runtime另見下方發布閘門。

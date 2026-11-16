@@ -1,6 +1,6 @@
 # Convelta 私人附件收發
 
-日期：2026-11-16 HKT。程式實作及本機合成驗收完成；正式部署、真實渠道／原音及真實裝置結果由本輪總發布記錄追蹤，本文不宣稱已完成外部帳戶驗收。
+日期：2026-11-16 HKT。程式及雲端CI驗收已通過；附件正式schema已安裝並完成合成資料庫驗收。本輪App仍未部署，真實渠道、原音、裝置及Owner驗收未完成；完整閘門見[本輪發布記錄](convelta-inbox-expansion-20261116.md)。
 
 ## 使用體驗
 
@@ -38,8 +38,9 @@
 ## 驗收紀錄
 
 - `tests/media.test.ts`及`tests/media-database.test.ts`：23項通過，包含權限、私有grants、未核實／過期／已取消拒絕、不可變內容、租約／revision、一次claim、unknown replay、來源真確性、原signed-upload窗口後清理及公司上載配額。
-- `e2e/media.spec.ts`：9項已可列出，涵蓋明確預覽、私人上載後真實byte inspector、偽PDF拒絕、取消及遲到結果隔離、未知結果核對、用戶切換隔離及舊紀錄清理、桌面／手機可及性及截圖。雲端Chromium結果待本輪CI，不把本機列出測試當通過。
-- 實際統一收件匣另由本輪integration spec驗證；不是只有孤立元件fixture。
-- 本輪未呼叫真實provider、未發客戶訊息、未讀取公司客戶原音、未產生模型用量、未部署或更改正式憑證。
+- `e2e/media.spec.ts`：9項已於[完整CI 43747223406](https://github.com/kieran97125/growthos-crm/actions/runs/43747223406)的雲端Chromium實際通過，涵蓋明確預覽、私人上載後真實byte inspector、偽PDF拒絕、取消及遲到結果隔離、未知結果核對、用戶切換隔離及舊紀錄清理、桌面／手機可及性及截圖。來源為`e6078da09b5b11e37eb7c0bcd49e9ff73c4d4f5e`。
+- 實際統一收件匣另由同一CI的14項integration browser情境驗證；native PostgreSQL亦通過附件競爭admission、同一收據及unknown replay。這些均為合成驗收，未發真實客戶訊息。
+- 正式migration為`20261115184217_convelta_private_media`，SQL MD5 `c5d22e536a4db8abe3f7f38425a6cc2e`。hosted合成附件階段PASS，回滾後公司／Auth合成行數為0；bucket實際核實`public=false`、上限25 MiB，兩張附件表包含於13張已安裝表的RLS／零browser grants核對。
+- 本輪沒有真實provider收發、公司客戶原音或付費模型品質驗收；新App未部署，正式憑證未變。網站schema仍受阻，不能以附件schema及CI成功宣告整輪已完成。
 
 Product Learning Sync checked：fresh canonical protocol／index／checkpoint，以及07-17 regression、07-26 broadcast boundary、07-29 connector readiness、08-10 permission-aware scopes及10-06 description density。只採中立契約；未匯入Enterprise Pilot程式、身份、資料、價格、網域或憑證。

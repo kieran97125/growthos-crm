@@ -1,12 +1,12 @@
 # Convelta 網站聊天窗
 
-日期：2026-11-16 HKT。程式／本機合成驗收已完成；正式 migration、部署與公司實際網站驗證／訪客雙向接待由本輪發布紀錄核實，本文不聲稱已上線或真人驗收完成。
+日期：2026-11-16 HKT。程式及完整雲端CI已通過；正式網站migration的原生平台確認累計4次逾時，仍未安裝。本輪App未部署，公司實際網站驗證／訪客雙向接待及Owner驗收未完成；完整狀態見[本輪發布記錄](convelta-inbox-expansion-20261116.md)。
 
 ## 已實作
 
 - 每間公司／品牌獨立網站聊天設定；預設停用。名稱、問候、精確 HTTPS 網站及聊天窗代碼由管理員設定。
 - 網站所有權可用首頁 meta 標記或 DNS TXT 驗證。首頁讀取沿用既有公開地址驗證及 DNS pinning transport，8 秒／512KB 上限，跨 origin redirect 不作成功；DNS 有短逾時及有限重試。
-- 每個聊天窗由獨立 iframe 呈現；CSP nonce script/style、精確 frame-ancestors、固定 postMessage origin/source、無 provider 憑證或訪客 bearer 放在 URL。
+- 每個聊天窗由獨立 iframe 呈現；CSP nonce script/style、精確 frame-ancestors、固定 postMessage origin/source、無 provider 憑證或訪客 bearer 放在 URL。sandbox允許scripts、same-origin及forms，令composer可經攔截submit後以fetch送出；仍不允許頂層導覽或popups，CSP `form-action 'none'`及`preventDefault`阻止原生表單導航。
 - 訪客 session 使用瀏覽器密碼學隨機 token，服務端只保存 SHA256；token 只走 Authorization header，不依賴第三方 cookie。sessionStorage 不可用時，同頁仍可對話；不聲稱該情況下重載可恢復 session。
 - 留言及同事回覆寫入正式資料表，原訊息不可由 runtime UPDATE／DELETE；未知發送結果用相同 command 核對，不能改 UUID 重覆派送。
 - 真人網站收件匣與原有社交收件匣同一 CRM 入口，由來源切換；保留各對話草稿，手機返回清單、深連結及重載可用。隱藏來源停止輪詢。
@@ -28,14 +28,16 @@
 | 訪客受 session 限制的 API | `/api/chat/[publicId]`，token 僅由 Authorization header 傳入 |
 | CRM 真實 component        | `WebChatInbox({companyId,actorId,initialThreadId?,active?})` |
 
-新增四張 server-only 表 `sv_web_chat_configs`、`sv_web_chat_threads`、`sv_web_chat_messages`、`sv_web_chat_limits`；RLS=true，anon／authenticated 原表及 RPC grants=0。所有 RPC 為 security invoker；service_role 原表權限先撤銷再按需列舉，訊息只有 SELECT／INSERT。
+設計新增四張 server-only 表 `sv_web_chat_configs`、`sv_web_chat_threads`、`sv_web_chat_messages`、`sv_web_chat_limits`；RLS=true，anon／authenticated 原表及 RPC grants=0。所有 RPC 為 security invoker；service_role 原表權限先撤銷再按需列舉，訊息只有 SELECT／INSERT。
 
 本功能專用 endpoints 不構成通用公司 API／外發 Webhook 產品。第 5 項維持押後；付款接駁維持押後及人工核實紀錄。沒有自動啟用 AI、真實外發、付款或其他租戶的網站。
 
 ## 驗收
 
-本機 18 個實質 node／PGlite 案例通過：來源驗證、預設停用、token／公司／品牌隔離、權限收窄後歷史、未知結果防重、viewer 拒絕、編輯 revision、防垃圾、過期／停用、明確身份連結、較早分頁、原表權限、nonce／XSS、真實 embed script 語法、actor journal 隔離及 storage 拒絕 fallback。
+19個實質node／PGlite案例已於[完整CI 43747223406](https://github.com/kieran97125/growthos-crm/actions/runs/43747223406)通過：來源驗證、預設停用、token／公司／品牌隔離、權限收窄後歷史、未知結果防重、viewer 拒絕、編輯 revision、防垃圾、過期／停用、明確身份連結、較早分頁、原表權限、nonce／XSS、真實 embed script 語法、actor journal隔離、storage拒絕fallback、相同設定命令只保留一行／一次revision／原網域proof，以及sandbox內composer可提交但原生導航仍受阻。
 
-`e2e/web-chat-widget.spec.ts` 三個 browser 案例使用實際 embed／iframe 程式，覆蓋真人回覆、lost-response 相同命令及手機 composer；收件匣實際 wrapper 的切換／權限／reload journal／延遲歷史回應／axe／版面則由 `e2e/inbox-expansion-integration.spec.ts` 保留。此處僅記錄已建立及可列出，雲端 browser 成功與否以發布 CI 為準；未啟動受環境限制的本機 Chromium。
+`e2e/web-chat-widget.spec.ts` 三個 browser 案例使用實際 embed／iframe 程式，覆蓋真人回覆、lost-response 相同命令及手機 composer；收件匣實際 wrapper 的切換／權限／reload journal／延遲歷史回應／axe／版面則由 `e2e/inbox-expansion-integration.spec.ts` 保留。三項widget及14項整合browser情境均已於上述CI實際通過；來源為`e6078da09b5b11e37eb7c0bcd49e9ff73c4d4f5e`。native PostgreSQL設定命令競爭、訪客／同事相同請求及來源隔離亦通過；沒有啟動受環境限制的本機Chromium。
+
+正式hosted驗收仍明確FAIL：`sv_web_chat_configure`不存在，並非測試被跳過。較窄的原生唯讀catalog查詢核實13個網站函數及4張網站表均未安裝；社交留言、Flow、附件通過不代表網站已可用。下一步須完成有效平台確認、套用migration、重跑完整hosted驗收及部署，再進行真實網域／訪客／同事驗收。沒有繞過平台確認或宣稱網站已發布。
 
 Product Learning Sync checked：fresh canonical protocol／index／checkpoint `6a80846`／`1080e95`／`e52e473`；已核對 07-17 regression、07-26 broadcast authority、07-29 readiness／identity、08-10 permission-aware brand scope、10-06 description density。只沿用中立驗收及隔離契約，沒有匯入 pilot 資料、實作、身份、價格、網域或憑證；checkpoint 經既有 reviewed proposal 由本輪整合處理。

@@ -1,7 +1,7 @@
--- READ ONLY. Run separately after all four migrations; no customer/config/credential content.
--- Fingerprints compare pg_proc.prosrc to the locally applied exact SQL source.
-BEGIN READ ONLY;
-WITH expected(schema_name,function_name,identity_arguments,expected_md5)AS(VALUES
+-- READ ONLY: one catalog SELECT returning one JSON result; no customer/config/secret content.
+-- Missing expected functions/tables remain explicit entries, with no missing-RPC calls.
+-- Expected fingerprints come from the exact locally applied four-module SQL sources.
+WITH expected_functions(schema_name,function_name,identity_arguments,expected_md5)AS(VALUES
 ('smartvolt_private','delivery_editor_admit','p_job sv_delivery_jobs','d25410f8494e2369acf03a398eb079db'),
 ('public','sv_flow_action','p_company uuid, p_actor uuid, p_command uuid, p_action text, p_data jsonb, p_request jsonb','f60c834cf4fe8aec7f715cd80db0a738'),
 ('public','sv_flow_catchup','p_company uuid','d24354586f7a0c9962cb2c5897b5dcdf'),
@@ -52,17 +52,80 @@ WITH expected(schema_name,function_name,identity_arguments,expected_md5)AS(VALUE
 ('smartvolt_private','web_chat_limit','p_config uuid, p_bucket text, p_window interval, p_cap integer','092e5aa4c1e16fc2b2ebaf6f46f0ac4b'),
 ('smartvolt_private','web_chat_session','p_id uuid, p_origin text, p_thread uuid, p_hash text','e3966080bc4ca70e8e1a4049b1ffaa80'),
 ('smartvolt_private','web_chat_thread_json','t sv_web_chat_threads','e52ff1daed1b028d986e81823d70f2e3')
+),function_rows AS(
+ SELECT e.schema_name,e.function_name,e.identity_arguments,e.expected_md5,
+  p.oid IS NULL AS missing,md5(p.prosrc)AS actual_md5,
+  coalesce(md5(p.prosrc)=e.expected_md5,false)AS source_matches,p.prosecdef AS security_definer,
+  has_function_privilege('anon',p.oid,'EXECUTE')AS anon_execute,
+  has_function_privilege('authenticated',p.oid,'EXECUTE')AS authenticated_execute,
+  has_function_privilege('service_role',p.oid,'EXECUTE')AS service_execute
+ FROM expected_functions e
+ LEFT JOIN pg_namespace n ON n.nspname=e.schema_name
+ LEFT JOIN pg_proc p ON p.pronamespace=n.oid AND p.proname=e.function_name AND pg_get_function_identity_arguments(p.oid)=e.identity_arguments
+),function_summary AS(
+ SELECT count(*)AS expected,count(*)FILTER(WHERE NOT missing)AS installed,count(*)FILTER(WHERE missing)AS missing,
+ count(*)FILTER(WHERE source_matches)AS source_matches,count(*)FILTER(WHERE NOT missing AND NOT source_matches)AS source_mismatches,
+ count(*)FILTER(WHERE NOT missing AND(anon_execute OR authenticated_execute OR NOT service_execute))AS execution_grant_violations,
+ count(*)FILTER(WHERE NOT missing AND security_definer)AS security_definer_count
+ FROM function_rows
+),expected_tables(table_name)AS(VALUES
+('sv_flow_definitions'),
+('sv_flow_forms'),
+('sv_flow_runs'),
+('sv_flow_steps'),
+('sv_flow_versions'),
+('sv_media_assets'),
+('sv_media_commands'),
+('sv_social_comment_attempts'),
+('sv_social_comment_events'),
+('sv_social_comment_jobs'),
+('sv_social_comment_rules'),
+('sv_social_comments'),
+('sv_social_rule_versions'),
+('sv_web_chat_configs'),
+('sv_web_chat_limits'),
+('sv_web_chat_messages'),
+('sv_web_chat_threads')
+),table_rows AS(
+ SELECT e.table_name,c.oid IS NULL AS missing,c.relrowsecurity AS rls_enabled,c.relforcerowsecurity AS rls_forced,
+ coalesce((SELECT jsonb_agg(jsonb_build_object('role',r.role_name,'privilege',priv.privilege_name)ORDER BY r.role_name,priv.privilege_name)
+  FROM(VALUES('anon'),('authenticated'))AS r(role_name)
+  CROSS JOIN(VALUES('SELECT'),('INSERT'),('UPDATE'),('DELETE'),('TRUNCATE'),('REFERENCES'),('TRIGGER'))AS priv(privilege_name)
+  WHERE has_table_privilege(r.role_name,c.oid,priv.privilege_name)),'[]'::jsonb)AS effective_browser_grants,
+ (SELECT count(*)FROM pg_policy p WHERE p.polrelid=c.oid)AS policy_count
+ FROM expected_tables e LEFT JOIN pg_namespace n ON n.nspname='public'
+ LEFT JOIN pg_class c ON c.relnamespace=n.oid AND c.relname=e.table_name AND c.relkind='r'
+),table_summary AS(
+ SELECT count(*)AS expected,count(*)FILTER(WHERE NOT missing)AS installed,count(*)FILTER(WHERE missing)AS missing,
+ count(*)FILTER(WHERE NOT missing AND rls_enabled)AS rls_enabled,
+ count(*)FILTER(WHERE NOT missing AND NOT rls_enabled)AS rls_disabled,
+ count(*)FILTER(WHERE NOT missing AND effective_browser_grants<>'[]'::jsonb)AS browser_grant_violations
+ FROM table_rows
+),bucket AS(
+ SELECT jsonb_build_object('id',id,'public',public,'fileSizeLimit',file_size_limit,'allowedMimeCount',cardinality(allowed_mime_types))AS value
+ FROM storage.buckets WHERE id='convelta-attachments'
+),storage_policies AS(
+ SELECT policyname,roles,cmd,
+ position('convelta-attachments'in concat(qual,' ',with_check))>0 AS explicitly_mentions_attachment_bucket,
+ md5(concat(qual,' ',with_check))AS expression_md5
+ FROM pg_policies WHERE schemaname='storage'AND tablename='objects'
+),storage_browser_grants AS(
+ SELECT grantee,privilege_type FROM information_schema.role_table_grants
+ WHERE table_schema='storage'AND table_name='objects'AND grantee IN('anon','authenticated','PUBLIC')
 )
-SELECT e.schema_name,e.function_name,e.identity_arguments,e.expected_md5,md5(p.prosrc)AS actual_md5,coalesce(md5(p.prosrc)=e.expected_md5,false)AS source_matches,p.prosecdef AS security_definer,
- has_function_privilege('anon',p.oid,'EXECUTE')AS anon_execute,has_function_privilege('authenticated',p.oid,'EXECUTE')AS authenticated_execute,has_function_privilege('service_role',p.oid,'EXECUTE')AS service_execute
-FROM expected e LEFT JOIN pg_namespace n ON n.nspname=e.schema_name LEFT JOIN pg_proc p ON p.pronamespace=n.oid AND p.proname=e.function_name AND pg_get_function_identity_arguments(p.oid)=e.identity_arguments ORDER BY 1,2,3;
--- All new private tables should have RLS enabled, no browser grants/policies.
-SELECT c.relname,c.relrowsecurity,c.relforcerowsecurity,
- coalesce((SELECT jsonb_agg(jsonb_build_object('role',g.grantee,'privilege',g.privilege_type))FROM information_schema.role_table_grants g WHERE g.table_schema='public'AND g.table_name=c.relname AND g.grantee IN('anon','authenticated','PUBLIC')),'[]'::jsonb)AS browser_grants,
- (SELECT count(*)FROM pg_policy p WHERE p.polrelid=c.oid)AS policies
-FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public'AND c.relkind='r'AND(c.relname LIKE'sv_social_%'OR c.relname LIKE'sv_web_chat_%'OR c.relname LIKE'sv_flow_%'OR c.relname LIKE'sv_media_%')ORDER BY c.relname;
--- Catalog only: no signed URL, storage object listing, or file content.
-SELECT id,public,file_size_limit,cardinality(allowed_mime_types)AS allowed_mime_count FROM storage.buckets WHERE id='convelta-attachments';
-SELECT policyname,roles,cmd FROM pg_policies WHERE schemaname='storage'AND tablename='objects'AND(concat(qual,' ',with_check)LIKE'%convelta-attachments%');
-SELECT table_name,privilege_type FROM information_schema.role_table_grants WHERE table_schema='storage'AND table_name='objects'AND grantee IN('anon','authenticated')ORDER BY 1,2;
-ROLLBACK;
+SELECT jsonb_build_object(
+ 'functionSummary',(SELECT to_jsonb(s)FROM function_summary s),
+ 'functions',(SELECT jsonb_agg(to_jsonb(f)ORDER BY schema_name,function_name,identity_arguments)FROM function_rows f),
+ 'tableSummary',(SELECT to_jsonb(s)FROM table_summary s),
+ 'tables',(SELECT jsonb_agg(to_jsonb(t)ORDER BY table_name)FROM table_rows t),
+ 'privateBucket',coalesce((SELECT value FROM bucket),'null'::jsonb),
+ 'privateBucketPresent',EXISTS(SELECT 1 FROM bucket),
+ 'privateBucketIsPrivate',coalesce((SELECT NOT(value->>'public')::boolean FROM bucket),false),
+ 'storageObjectPolicies',coalesce((SELECT jsonb_agg(to_jsonb(p)ORDER BY policyname)FROM storage_policies p),'[]'::jsonb),
+ 'storageObjectBrowserGrants',coalesce((SELECT jsonb_agg(to_jsonb(g)ORDER BY grantee,privilege_type)FROM storage_browser_grants g),'[]'::jsonb),
+ 'complete',coalesce((SELECT f.installed=f.expected AND f.source_mismatches=0 AND f.execution_grant_violations=0 AND f.security_definer_count=0
+  AND t.installed=t.expected AND t.rls_disabled=0 AND t.browser_grant_violations=0
+  AND(SELECT NOT(value->>'public')::boolean FROM bucket)
+  FROM function_summary f CROSS JOIN table_summary t),false),
+ 'mode','read_only_catalog_with_explicit_missing_expected_entries'
+)AS catalog_verification;

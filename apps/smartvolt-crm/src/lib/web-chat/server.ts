@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { randomBytes } from "node:crypto";
 import { Resolver } from "node:dns/promises";
 import { loadBuffer } from "cheerio";
@@ -11,17 +12,26 @@ import {
   chatSettingsAction,
   chatStaffAction,
   type WebChatSettings,
+  type WebChatReadiness,
   type WebChatPage,
   type WebChatConversation,
   type WebChatMessage,
   type WebChatThread,
 } from "./model";
 
-export function chatFailure(error: { message?: string } | null) {
+export function missingChatSchema(error: { code?: string; message?: string } | null) {
+  return !!error &&
+    ["PGRST202", "PGRST205", "42P01", "42883"].includes(error.code ?? "") &&
+    /\b(?:sv_web_chat_|smartvolt_private\.web_chat_)/.test(error.message ?? "");
+}
+
+export function chatFailure(error: { code?: string; message?: string } | null) {
   if (!error) return;
   const message = error.message ?? "";
-  if (/access_denied|brand_scope|product_required/.test(message))
+  if (error.code === "42501" || /access_denied|brand_scope|product_required/.test(message))
     throw new AccessError("你無權查看或修改呢個網站渠道。", 403);
+  if (missingChatSchema(error))
+    throw new AccessError("網站聊天尚未準備完成，請先使用其他聯絡渠道。", 503);
   if (/revision_conflict|idempotency_conflict/.test(message))
     throw new AccessError(
       "對話或設定已有更新，請重新讀取。你嘅草稿會保留。",
@@ -50,6 +60,30 @@ async function access(companyId: string) {
   requireProduct(a.products, "crm");
   return a;
 }
+/** Request-scoped only: a later reload observes an installed schema immediately.
+ * The existing staff-read RPC only SELECTs tenant/brand-authorized rows; unlike
+ * visitor reads it does not write rate counters or mark conversations as read.
+ * A successful bounded read is availability, not release/catalog acceptance.
+ */
+export const readChatReadiness = cache(async function readChatReadiness(
+  companyId: string,
+): Promise<WebChatReadiness> {
+  const a = await access(companyId);
+  try {
+    const r = await a.db.rpc("sv_web_chat_staff_read", {
+      p_company: companyId,
+      p_actor: a.user.id,
+      p_query: {},
+    }).abortSignal(AbortSignal.timeout(3000));
+    if (r.error) return missingChatSchema(r.error) ? "pending" : "unavailable";
+    return r.data && Array.isArray(r.data.threads) &&
+      typeof r.data.canReply === "boolean" && typeof r.data.scopeStamp === "string"
+      ? "ready" : "unavailable";
+  } catch {
+    return "unavailable";
+  }
+});
+
 export async function readChatSettings(
   companyId: string,
 ): Promise<WebChatSettings> {
@@ -229,3 +263,4 @@ export async function actWebChat(companyId: string, raw: unknown) {
   chatFailure(r.error);
   return r.data;
 }
+

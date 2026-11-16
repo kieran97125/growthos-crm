@@ -623,3 +623,107 @@ test("read-only website entry keeps the same company header and prevents visitor
   expect(f.unexpected).toEqual([]);
   expect(new URL(page.url()).pathname).toBe(fixturePath);
 });
+
+
+for (const [name, viewport] of [
+  ["desktop", { width: 1440, height: 1000 }],
+  ["mobile", { width: 390, height: 844 }],
+] as const) {
+  test(`pending website schema keeps the social inbox and private attachments usable after a website deep link and reload on ${name}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewport);
+    const f = await mountIntegration(page, bundle, {
+      initialWebsite: true,
+      missingWebsiteSchema: true,
+    });
+    const pending = page.getByRole("button", {
+      name: /網站訊息.*準備中/,
+    });
+    await expect(pending).toBeVisible();
+    await expect(pending).toBeDisabled();
+    await expect(pending.getByRole("status")).toHaveText("準備中");
+    await expect(
+      page.getByRole("button", { name: "社交訊息", exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await expect(
+      page.getByRole("button", { name: /Synthetic social customer/ }),
+    ).toBeVisible();
+    await expect(page.getByLabel("回覆網站訪客", { exact: true })).toHaveCount(0);
+    await expect(
+      page.getByText("Synthetic website visitor", { exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("link", { name: "切換至 POS", exact: true }),
+    ).toHaveAttribute("href", `/company/${company}/pos`);
+    await expect
+      .poll(() => {
+        const query = new URL(page.url()).searchParams;
+        return ["provider", "thread", "contact", "queue"].map((key) =>
+          query.get(key),
+        );
+      })
+      .toEqual([null, null, null, null]);
+    expect(new URL(page.url()).searchParams.get("websiteSchema")).toBe("missing");
+    await page.clock.runFor(31000);
+    expect(socialPolls(f.captures).length).toBeGreaterThan(0);
+
+    await selectSocial(page);
+    await expect(
+      page.getByRole("link", { name: "切換至 POS", exact: true }),
+    ).toHaveAttribute("href", new RegExp(`contact=${customer}`));
+    const attach = page.getByRole("button", { name: "加入附件", exact: true });
+    await expect(attach).toBeEnabled();
+    await expect(
+      page.getByText("Synthetic reference.png", { exact: true }),
+    ).toBeVisible();
+    await attach.click();
+    await expect(
+      page.getByRole("dialog", { name: "傳送附件", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("選擇圖片、影片或文件", { exact: true }),
+    ).toBeVisible();
+
+    await page.reload();
+    await expect(pending).toBeVisible();
+    await expect(pending).toBeDisabled();
+    await expect(pending.getByRole("status")).toHaveText("準備中");
+    await expect(
+      page.getByLabel("回覆草稿", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "加入附件", exact: true }),
+    ).toBeEnabled();
+    await expect(
+      page.getByRole("link", { name: "切換至 POS", exact: true }),
+    ).toHaveAttribute("href", new RegExp(`contact=${customer}`));
+    const query = new URL(page.url()).searchParams;
+    expect(query.get("provider")).toBe("meta");
+    expect(query.get("thread")).toBe(socialThread);
+    expect(query.get("contact")).toBeNull();
+    expect(query.get("queue")).toBeNull();
+    await page.clock.runFor(16000);
+    expect(
+      f.captures.filter((request) => request.path.includes("/web-chat")),
+    ).toEqual([]);
+    expect(
+      f.captures.filter((request) => request.path.endsWith("/customers")),
+    ).toEqual([]);
+    const socialDetails = f.captures.filter(
+      (request) =>
+        request.path.endsWith("/inbox") && request.query.has("thread"),
+    );
+    expect(socialDetails.length).toBeGreaterThan(0);
+    expect(
+      socialDetails.every(
+        (request) =>
+          request.query.get("provider") === "meta" &&
+          request.query.get("thread") === socialThread,
+      ),
+    ).toBe(true);
+    expect(customerWrites(f.captures)).toEqual([]);
+    expect(f.unexpected).toEqual([]);
+  });
+}
+

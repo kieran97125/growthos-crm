@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export type WebChatReadiness = "ready" | "pending" | "unavailable";
+
 export const publicChatId = z.uuid();
 export function normalizeChatOrigin(value: string): string {
   const u = new URL(value);
@@ -162,3 +164,4 @@ export function chatFramePolicy(origins: readonly string[], nonce: string) {
   const allowed = origins.map(normalizeChatOrigin);
   return `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors ${allowed.length ? allowed.join(" ") : "'none'"}`;
 }
+

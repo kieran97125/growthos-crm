@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireCompany } from "@/lib/saas/server";
 import { AccessError, canManage } from "@/lib/saas/identity";
+import { readChatReadiness } from "@/lib/web-chat/server";
 export const dynamic = "force-dynamic";
 export default async function CompanySettings({
   params,
@@ -22,6 +23,8 @@ export default async function CompanySettings({
       </main>
     );
   }
+  const websiteReadiness = access.products.includes("crm") && canManage(access.actor.role)
+    ? await readChatReadiness(companyId) : "unavailable";
   const { data: cards } = await access.db
     .from("sv_system_cards")
     .select("id,title,category,status,detail")
@@ -80,12 +83,19 @@ export default async function CompanySettings({
                 >
                   IG／FB 留言轉私訊 →
                 </Link>
-                <Link
-                  className="sv-secondary"
-                  href={`/company/${companyId}/settings/website-chat`}
-                >
-                  官網聊天窗 →
-                </Link>
+                {websiteReadiness === "ready" ? (
+                  <Link
+                    className="sv-secondary"
+                    href={`/company/${companyId}/settings/website-chat`}
+                  >
+                    官網聊天窗 →
+                  </Link>
+                ) : (
+                  <button className="sv-secondary" disabled
+                    title={websiteReadiness === "pending" ? "網站聊天準備中" : "網站聊天暫時未能使用"}>
+                    官網聊天窗 · {websiteReadiness === "pending" ? "準備中" : "暫未開放"}
+                  </button>
+                )}
               </>
             )}
             <Link
@@ -151,3 +161,4 @@ export default async function CompanySettings({
     </main>
   );
 }
+

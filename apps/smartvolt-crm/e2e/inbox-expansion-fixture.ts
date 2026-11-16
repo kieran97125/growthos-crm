@@ -67,7 +67,7 @@ export async function integrationBundle() {
           const url = new URL(location.href);
           createRoot(document.getElementById('fixture')).render(
             <CompanyWorkspaceChrome companyId='${company}' companyName='${companyName}' actorId='${actor}' actorName='Synthetic owner' products={['crm','pos']} location={{pathname:'/company/${company}/crm',search:url.search}}>
-              <InboxChannels companyId='${company}' companyName='${companyName}' actorId='${actor}' hasPos={true} initialProvider={url.searchParams.get('provider') ?? undefined} initialThread={url.searchParams.get('thread') ?? undefined}/>
+              <InboxChannels companyId='${company}' companyName='${companyName}' actorId='${actor}' hasPos={true} websiteReadiness={url.searchParams.get('websiteSchema') === 'missing' ? 'pending' : 'ready'} initialProvider={url.searchParams.get('provider') ?? undefined} initialThread={url.searchParams.get('thread') ?? undefined} initialCustomer={url.searchParams.get('contact') ?? undefined} initialQueue={url.searchParams.get('queue') ?? undefined}/>
             </CompanyWorkspaceChrome>
           );`,
       },
@@ -92,6 +92,7 @@ export async function mountIntegration(
   bundle: string,
   options: {
     initialWebsite?: boolean;
+    missingWebsiteSchema?: boolean;
     viewer?: boolean;
     windowClosed?: boolean;
     unresolved?: boolean;
@@ -407,12 +408,17 @@ export async function mountIntegration(
     });
   });
   await page.clock.install({ time: new Date(now) });
-  await page.goto(
-    fixturePath +
-      (options.initialWebsite
-        ? `?provider=website&thread=${websiteThread}`
-        : ""),
-  );
+  const entry = new URLSearchParams();
+  if (options.initialWebsite) {
+    entry.set("provider", "website");
+    entry.set("thread", websiteThread);
+  }
+  if (options.missingWebsiteSchema) {
+    entry.set("websiteSchema", "missing");
+    entry.set("contact", "8f111111-1111-4111-8111-111111111111");
+    entry.set("queue", "resolved");
+  }
+  await page.goto(fixturePath + (entry.size ? "?" + entry.toString() : ""));
   return {
     captures,
     unexpected,
@@ -423,3 +429,4 @@ export async function mountIntegration(
     secondWebsiteConversation,
   };
 }
+

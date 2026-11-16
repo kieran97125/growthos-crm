@@ -140,6 +140,30 @@ test("invalid graph cannot execute partial steps", () => {
   assert.equal(result.steps.length, 0);
   assert.ok(result.issues.length);
 });
+test("handoff previews resolve the selected company member and never invent a demo colleague", () => {
+  const { flow, input } = setup();
+  const ownerId = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
+  const configured = {
+    ...flow,
+    nodes: flow.nodes.map((node) =>
+      node.kind === "handoff"
+        ? { ...node, config: { ...node.config, owner: ownerId } }
+        : node,
+    ),
+  };
+  const run = (team: { id: string; name: string }[]) =>
+    simulateFlow(configured, { ...input, intent: "handoff" }, team).steps.at(
+      -1,
+    );
+  assert.equal(
+    run([{ id: ownerId, name: "Company owner" }])?.detail,
+    "交接畀 Company owner，附對話摘要，BOT 暫停。",
+  );
+  assert.equal(
+    run([{ id: "another-member", name: "Other colleague" }])?.detail,
+    "交接畀 指定同事，附對話摘要，BOT 暫停。",
+  );
+});
 test("new and existing customers both wait at actual CS review before any reminder", () => {
   const { flow, input } = setup();
   for (const customerType of ["new", "existing"] as const) {

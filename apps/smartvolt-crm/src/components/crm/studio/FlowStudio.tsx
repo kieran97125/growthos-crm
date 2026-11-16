@@ -1169,7 +1169,9 @@ export default function FlowStudio({
             </details>
             <button
               className="st-button st-primary st-full"
-              onClick={() => setResult(simulateFlow(flow, simulation))}
+              onClick={() =>
+                setResult(simulateFlow(flow, simulation, identity.scope.team))
+              }
             >
               <Play size={14} />
               開始試跑
@@ -1394,16 +1396,20 @@ export default function FlowStudio({
                         const cv = demo.state.inbox.conversations.find(
                           (c) => c.brandId === flow.brandId,
                         );
-                        const check = simulateFlow(flow, {
-                          ...simulation,
-                          intent: "booking",
-                          manualVerified: false,
-                          fields: {
-                            ...simulation.fields,
-                            service: phoneService,
-                            branch: phoneBranch,
+                        const check = simulateFlow(
+                          flow,
+                          {
+                            ...simulation,
+                            intent: "booking",
+                            manualVerified: false,
+                            fields: {
+                              ...simulation.fields,
+                              service: phoneService,
+                              branch: phoneBranch,
+                            },
                           },
-                        });
+                          identity.scope.team,
+                        );
                         if (!cv || check.issues.length || !check.followup) {
                           setPhoneError(
                             check.issues[0] ?? "目前流程未到達建立跟進卡節點。",

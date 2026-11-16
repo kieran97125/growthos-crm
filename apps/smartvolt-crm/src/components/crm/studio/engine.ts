@@ -271,6 +271,7 @@ export type SimulationResult = {
 export function simulateFlow(
   flow: Flow,
   input: SimulationInput,
+  team: readonly { id: string; name: string }[] = [],
 ): SimulationResult {
   const issues = validateFlow(flow);
   if (issues.length)
@@ -309,7 +310,8 @@ export function simulateFlow(
     }
     if (n.kind === "handoff") {
       state = "waiting";
-      detail = `交接畀 ${n.config.owner === "me" ? "Mia" : n.config.owner === "ken" ? "Ken" : "Iris"}，附對話摘要，BOT 暫停。`;
+      const owner = team.find((member) => member.id === n.config.owner);
+      detail = `交接畀 ${owner?.name ?? "指定同事"}，附對話摘要，BOT 暫停。`;
     }
     if (n.kind === "delay") {
       state = "waiting";

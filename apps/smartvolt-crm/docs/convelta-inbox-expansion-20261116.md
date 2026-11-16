@@ -10,9 +10,9 @@
 |---|---|---|
 | 私人 WA／Meta 附件 | 程式已正式發布；媒體 schema 已安裝 | 圖片／影片／原音／文件、私人預覽及不可變派送／未知結果核對；公司真實收發、裝置、原音及平台回執仍待驗收 |
 | FB／IG 留言轉一次合資格私訊 | 程式已正式發布，規則預設停用 | 公司資產／貼文權威、真人觸發／回覆及實際回執仍待驗收；留言不等於營銷同意 |
-| 自由 Flow 執行 | 程式已正式發布 | 任意有效圖、不可變版本與持久執行；既有三套標準旅程保留。真實來源／渠道執行仍需證據 |
+| 自由 Flow 執行 | 程式已正式發布 | 正式Flow Studio及執行控制可讀；現有draft尚未發布，顯示1項配置驗證問題，待修正配置。沒有編輯／發布／執行；既有三套標準旅程保留，真實來源／渠道執行仍待驗收 |
 | 網站聊天 | **仍 blocked，尚未開放** | 13個網站函數及4表仍缺失；原生確認累計7次逾時，沒有第8次嘗試或替代 DDL／確認繞過 |
-| Owner／正式 UI | **仍 pending** | 新版 Owner 正式登入畫面及 reload 讀回未取得，不宣稱通過 |
+| Owner／正式 UI | **基本正式 UI 及唯讀頁面已通過** | Owner登入、CRM、公司設定及原生reload讀回成功；社交規則空列表、Flow Studio與POS工作空間已載入。沒有執行客戶或外發業務動作 |
 | 第5／付款接駁 | planned，繼續押後 | 通用公司 API／Webhook／n8n／Make及網上收款不在本次發布；付款只作人工核實紀錄 |
 
 [完整 CI 43807976351](https://github.com/kieran97125/growthos-crm/actions/runs/43807976351) attempt1 在上述 exact source 全部成功，13:17:37 HKT 完成：**514項程式／資料庫、2項 Workflow、225項 browser、4項首屏及8組 native PostgreSQL 並行驗收**。225為181項主驗收及44項擴充（原42項加2項缺網站 schema 的桌面／手機深連結、reload及附件隔離情境）。新增8項 server readiness 測試均實際通過；[原 CRM 43807976355](https://github.com/kieran97125/growthos-crm/actions/runs/43807976355)另有60項程式及25項 browser 通過。remaining120及expansion44的JSON均為skip／unexpected／flaky／global errors 0；其他61項及4項首屏由完整成功 logs 支持，不假稱每組都有JSON。
@@ -23,9 +23,9 @@
 
 網站入口以現有公司／actor／品牌範圍內 SELECT-only staff-read RPC 檢查可用性，最多等3秒、只用React request cache；缺schema與暫時故障分開，權限錯誤維持403。未就緒的網站tab及設定入口顯示準備／未開放，網站深連結清除thread／contact／queue後返回社交收件匣。未加環境旗標、未降低權限、未改SQL；之後正式schema安裝成功可在下一次頁面請求重新檢查，完整catalog與正式驗收仍須獨立完成。
 
-新deployment早期runtime掃描 **13:08:49–13:23:49 HKT**，只限上述deployment／project／team／production，error0／fatal0；這是早期log觀察，不是Owner或真實渠道驗收。部署、CI、正式DB及真人操作四類證據保持分開。
+新deployment早期runtime掃描 **13:08:49–13:23:49 HKT**，只限上述deployment／project／team／production，error0／fatal0；這是早期log觀察，不代替Owner或真實渠道驗收。Owner唯讀驗收後再次只查同一新deployment，13:21:53–13:36:53HKT的error／fatal紀錄亦為0。部署、CI、正式DB及真人操作四類證據保持分開。
 
-沿用 wa-media、meta-media、social-comment-to-dm、round-two-journeys及convelta-expansion-program，狀態in_progress；website-chat-widget保持blocked。Owner讀回及公司外部驗收繼續pending，既有[#10](https://github.com/kieran97125/growthos-crm/issues/10)／[#12](https://github.com/kieran97125/growthos-crm/issues/12)保留。沒有發真實渠道訊息、邀請、推播、Meta事件、付費模型探測或啟用外部帳戶；沒有合併PR或變更automations。
+沿用 wa-media、meta-media、social-comment-to-dm、round-two-journeys及convelta-expansion-program，狀態in_progress；website-chat-widget保持blocked。Owner基本正式UI、CRM／設定原生reload及上述唯讀頁面已通過；最後返回乾淨CRM URL，網站準備中按鈕停用且完整收件匣載入。驗收前後業務revision5及四項MD5與原基準完全一致。真實客戶／業務動作及公司外部驗收繼續pending，既有[#10](https://github.com/kieran97125/growthos-crm/issues/10)／[#12](https://github.com/kieran97125/growthos-crm/issues/12)保留。沒有發真實渠道訊息、邀請、推播、Meta事件、付費模型探測或啟用外部帳戶；沒有合併PR或變更automations。
 
 Product Learning Sync checked：protocol6a80846、最新index a851d07、checkpoint e52e473；原六篇相關中立契約及新增11月16日完整讀取／durable capture entry 1b448c1已考慮。新增entry仍Observed，沒有採納其實作、移入pilot資料或改分類；canonical proposal#88由原工作另行維護。
 
@@ -33,7 +33,7 @@ Product Learning Sync checked：protocol6a80846、最新index a851d07、checkpoi
 
 ## 歷史驗收及發布閘門（保留原文）
 
-以下「尚未部署」及較早逾時次數屬當時記錄；最新正式狀態以本節以上為準。Owner／網站與真實外部驗收仍未完成。
+以下「尚未部署」及較早逾時次數屬當時記錄；最新正式狀態以本節以上為準。網站與真實外部驗收仍未完成；Owner基本UI的新讀回結果以上方最新段落為準。
 
 
 日期：2026-11-16（香港時間）。使用者已直接授權1–4實作；四項程式及完整CI驗收通過。正式資料庫只完成社交留言、Flow及附件三項schema；網站schema仍受平台確認阻塞。本輪App未部署，Owner／真實外部驗收未完成。

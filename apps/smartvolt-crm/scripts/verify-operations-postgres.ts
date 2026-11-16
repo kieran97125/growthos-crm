@@ -26,7 +26,8 @@ function execute(input: string) {
   });
   const done = new Promise<string>((resolve, reject) => {
     child.on("error", reject);
-    child.on("exit", (code) =>
+    // Process exit can precede the final pipe data; parse only after stdio closes.
+    child.on("close", (code) =>
       code === 0
         ? resolve(output.trim())
         : reject(new Error(error || "Native database verification failed.")),

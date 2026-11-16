@@ -1,5 +1,9 @@
 # Convelta 收件匣與流程擴充
 
+## 2026-11-16 晚間接管完成讀回
+
+網站聊天已補齊正式 schema、安裝到 convelta.io 並完成訪客→CRM→訪客真實雙向對話及重載驗收；Flow 草稿配置及試跑同事名稱已修正。App 來源 `6179801`、正式部署 `dpl_CFKL39RU3qW5W14WNBeqLbC52Epi` READY，515 程式／資料庫、2 Workflow、225 browser、4 首屏及 native PostgreSQL 全部通過。詳見[最新接管驗收](convelta-recovery-20261116.md)。WA／Meta 公司連線仍為 0；實際渠道驗收受缺少 App Secret、Meta 重入密碼及渠道設定阻塞。以下較早發布段落為歷史狀態，以本段及最新驗收記錄為準。
+
 [release-a9b-dpl_DMWpknnzT7eNwKnYhgcXyPXwRbeX]
 
 ## 最新正式發布：三項程式已上線，網站聊天仍受阻

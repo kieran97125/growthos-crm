@@ -1,10 +1,10 @@
 # Convelta recovery and production acceptance — 2026-11-16
 
-Latest checked: 2026-11-16 22:56 HKT. This record supersedes the earlier missing website schema and invalid draft-graph status. It does not certify WhatsApp/Meta activation.
+Latest checked: 2026-11-16 23:27 HKT. This record supersedes the earlier missing website schema and invalid draft-graph status. It does not certify WhatsApp/Meta activation.
 
 ## Released results
 
-- Application source: `6179801442e10a1049746ff07085a2e43a1517cc`; production `dpl_CFKL39RU3qW5W14WNBeqLbC52Epi`, READY with `app.convelta.io` retained.
+- Application source: `6179801442e10a1049746ff07085a2e43a1517cc`; production `dpl_8sR4Enk6uPUJEC69uMBN8K8EXCFV`, READY with `app.convelta.io` retained. This configuration-only deployment uses the identical qualified runtime source and adds the production Meta App Secret; prior runtime acceptance was on `dpl_CFKL39RU3qW5W14WNBeqLbC52Epi`.
 - Website production: `dpl_BPPS7VVdZVKRP1evRVamzhEtKV1p`, READY with `convelta.io` and `www.convelta.io` retained. Qualified preview `dpl_8YwHuPhby1Jo6nKAJE9dVwDd6VVd`. Only homepage source changed; all 38 other deployment-source files were reused unchanged by SHA-1. The existing source archive was updated in place.
 - Native website migration succeeded. Exact source file `20261115164148_convelta_website_chat.sql` is unchanged; native migration history records `20261116143007_convelta_website_chat`. This is an explicit history/source mapping, not an invented original installation date.
 - Full catalog verification: all 50 expected functions installed with exact source MD5, invoker semantics, no anon/authenticated execution and service execution present; all 17 expected tables installed with RLS and no browser grants. Private attachment bucket remains private.
@@ -38,11 +38,15 @@ Post-migration advisories were inspected. RLS-without-policy notices are expecte
 
 ## Remaining real provider boundary
 
-The actual company has zero WhatsApp connections, zero Messenger/Instagram connections and zero provider messages. Its production App ID matches the existing SmartVolt CRM Meta App; the App Secret is absent. The existing Meta App is not published and currently lists only the WhatsApp use case. The native Meta secret-display action requires the account owner to re-enter the Facebook password; that original dialog is preserved for handoff. No password was requested in chat, changed, entered or bypassed. Messenger/Instagram use cases, permission/publication requirements, provider credentials, company Webhooks, real inbound/manual reply/receipts, private media and source-triggered Flow still require provider acceptance.
+The account owner completed native Meta password reauthentication. The existing dedicated App Secret was transferred directly into the existing application's production-only Vercel Secret setting; metadata-only readback confirms sensitive storage and Production as its sole target. No secret value is included in this record, source, command output or screenshots. The same qualified application source was deployed as `dpl_8sR4Enk6uPUJEC69uMBN8K8EXCFV`; READY and the canonical app alias were independently read back. Authenticated production now enables the Meta connection form and returns the protected verification-token control.
+
+Messenger and Instagram use cases were selected and saved in the existing dedicated SmartVolt CRM App. The dashboard readback shows all three intended use cases. This adds configuration, not a Page/account grant, working provider connection or permission-review approval. The native Messenger webhook form was prepared with the canonical callback. Its first verification failed after the browser exposed the protected token as a redacted literal. The literal was cleared; the page's copy control reported success but the automation clipboard remained empty. No verified callback is claimed.
+
+Native WhatsApp token generation and Messenger Page connection each opened Facebook's `Switch account → Continue` screen for the established administrator. The browser's pointer actions timed out on that native popup; the Page authorization screen is retained for the account owner to continue. No asset selection, Page token or WhatsApp token was completed. The actual company still has zero WhatsApp connections and zero Meta connections, independently read back after configuration. No provider send occurred. The existing Meta App remains unpublished; WhatsApp's native configuration page explicitly warns that production webhooks are unavailable until publication. Publication/policy requirements, owned Page/Instagram linkage, scoped provider tokens, webhook/account subscriptions, real inbound/manual reply/receipts, private media and source-triggered Flow remain pending.
 
 The repaired company Flow cannot be published without a connected brand channel. Its configuration and simulation are verified; real provider execution remains pending. General company API/Webhooks/n8n/Make and online payment remain at the user's previously deferred scope.
 
-System cards now record website-chat-widget complete, Flow configuration repaired with provider execution pending, and WA/Meta real acceptance blocked by the concrete connection/authentication prerequisites. Earlier historical card text is retained beneath the latest findings.
+System cards now record website-chat-widget complete, Flow configuration repaired with provider execution pending, and WA/Meta real acceptance blocked by native asset authorization, publication, subscription and real-transport prerequisites. The earlier missing-App-Secret/password blockers are resolved. Earlier historical card text is retained beneath the latest findings.
 
 ## Product learning boundary
 

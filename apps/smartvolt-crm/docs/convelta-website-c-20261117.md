@@ -10,7 +10,7 @@ CRM displays the visitor's stated enquiry, summary, outstanding question, wait d
 
 ## Validation and release
 
-Production baseline: `1dc6e13ac2f160c7611cdecf978ba639b35cd7d1`; latest upstream documentation `e9e7bcc6655fa8f424e3fc49446be960a30e921b` is preserved. Migration: `20261117045125_convelta_website_concierge.sql`.
+Production baseline: `1dc6e13ac2f160c7611cdecf978ba639b35cd7d1`; latest upstream documentation `e9e7bcc6655fa8f424e3fc49446be960a30e921b` is preserved. Migration: `20261117053327_convelta_website_concierge.sql`.
 
 Local checks: 521 existing/unit/database checks passed before the final focused additions; 18 focused C policy, appearance, database and embed checks pass. TypeScript, lint, workflow and exact-source hosted CI are required before release. Local Chromium could not start because the execution environment disallows its socket operation; this is an environment failure, not a successful browser test. Hosted browser tests cover actual settings components, 12 palettes/custom colors, contrast, combined installation, mobile accessibility, C/human collaboration and reload-safe visitor retry. Native PostgreSQL adds competing capture/claim/publication and shared company quota checks.
 
@@ -30,3 +30,11 @@ Only general engineering invariants were applied. No private source implementati
 ## Product boundary
 
 This ships the existing Convelta website assistant and customer configuration. The separate SmartVolt AI website-management/CMS product, visual editor and MCP integrations remain a retained product idea; this change does not claim those products are built. Remaining source-page/UTM enrichment and scheduled escalation rules require their own tracked acceptance and must not be presented as delivered by this release.
+
+## Qualified first release and final appearance review
+
+Runtime `3d889f28949968833ae6ec5c9d733ebc91a0e780` passed full [CI run 44024472823](https://github.com/kieran97125/growthos-crm/actions/runs/44024472823) and the original CRM workflow. The run records 528 unit/database, two Workflow and four first-paint checks; all browser partitions and native PostgreSQL pass. Staged production deployment `dpl_9BaikzYiAdCuLsHdMvKRXweJqiv6` was fetched successfully before promotion, then independently resolved from `app.convelta.io`. All 24 hosted function fingerprints match the reviewed source. Rollback-only hosted functional acceptance passed and left no synthetic company.
+
+The own site's C is enabled with five explicitly selected public articles, its blue brand color and the unchanged company AI limit of 30/day. Two real, source-grounded model answers were observed in the public widget, including one after human ownership; the human request and its CRM notification remained open. Human-only preference survived a real reload, and visitor-requested C resumption was exercised. Synthetic acceptance conversations are closed through the normal lifecycle and retained as audit records.
+
+Artifact `14302069447` was downloaded and verified against SHA-256 `b08ea9a6ee09c0d535fc5e524a237f2c8e24073e0d318229c19f86a2ed1cf072`. Visual review found that the standalone mobile settings fixture should own its box sizing and keep the knowledge checkbox inline. The final appearance adjustment scopes those styles, shortens the mobile heading and adds a real card-boundary assertion. The migration filename is reconciled to the native hosted version `20261117053327`; its SQL bytes are unchanged. Final adjustment CI/release is recorded below when qualified.

@@ -210,7 +210,7 @@ export default function WebChatSettings({
       <header className="wc-settings-heading">
         <div>
           <span className="wc-eyebrow">C · WEBSITE ASSISTANT</span>
-          <h1>將 C 變成你品牌嘅接待助手</h1>
+          <h1>為品牌設定 C</h1>
           <p>配合品牌外觀、選擇公開知識，將 C 接到你嘅網站。</p>
         </div>
         <div className={`wc-status ${live?.enabled ? "enabled" : ""}`}>

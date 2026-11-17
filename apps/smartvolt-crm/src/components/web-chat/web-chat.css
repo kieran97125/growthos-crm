@@ -1,3 +1,7 @@
+.wc-settings *,
+.wc-inbox * {
+  box-sizing: border-box;
+}
 .wc-settings,
 .wc-inbox {
   --wc-blue: #2457e7;
@@ -925,6 +929,7 @@
 }
 .wc-article {
   display: flex !important;
+  flex-direction: row !important;
   align-items: start;
   gap: 10px;
   margin: 10px 0;

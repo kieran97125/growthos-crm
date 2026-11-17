@@ -141,6 +141,19 @@ test("mobile setup retains accessible controls, readable preview and no horizont
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   ).toBe(true);
+  const overflowing = await page
+    .locator(".wc-card input, .wc-card textarea, .wc-card select")
+    .evaluateAll(
+      (controls) =>
+        controls.filter((control) => {
+          const box = control.getBoundingClientRect(),
+            card = control.closest(".wc-card")!.getBoundingClientRect();
+          return (
+            box.width > 0 && (box.left < card.left || box.right > card.right)
+          );
+        }).length,
+    );
+  expect(overflowing).toBe(0);
   const violations = (
     await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()
   ).violations;

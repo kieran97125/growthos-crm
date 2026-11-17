@@ -4,7 +4,11 @@ import Link from "next/link";
 import useSWR from "swr";
 import { Bell, Check, Clock3, Smartphone } from "lucide-react";
 import { formatHongKongDateTime } from "@/lib/datetime";
-import type { NotificationPage } from "@/lib/notifications/model";
+import {
+  effectiveNotificationPreferences,
+  notificationPushState,
+  type NotificationPage,
+} from "@/lib/notifications/model";
 import { engagementFetcher } from "@/components/engagement/fetcher";
 import { useRecordedCommand } from "@/components/engagement/useRecordedCommand";
 import "../engagement/engagement.css";
@@ -92,6 +96,14 @@ export default function NotificationWorkspace({
         </p>
       </main>
     );
+  const preferences = effectiveNotificationPreferences(data.preferences.data);
+  const pushState = notificationPushState(data);
+  const pushLabels = {
+    unconfigured: "伺服器尚未配置",
+    off: "未啟用",
+    no_device: "未有已登記接收裝置",
+    ready: "設定就緒",
+  };
   return (
     <main className="eng-work">
       <header className="eng-header">
@@ -117,6 +129,20 @@ export default function NotificationWorkspace({
           核對同一請求
         </button>
       )}
+      <section className="eng-notification-state" aria-label="通知設定狀態">
+        <div>
+          <span>網站工作台提醒</span>
+          <strong>{preferences.website ? "已開啟" : "已關閉"}</strong>
+        </div>
+        <div>
+          <span>裝置推播</span>
+          <strong>{pushLabels[pushState]}</strong>
+        </div>
+        <p>
+          網站提醒會顯示喺
+          CRM；離開工作台後收推播，亦需要開啟裝置推播及登記接收裝置。
+        </p>
+      </section>
       <div className="eng-section-title">
         <h2>等待處理</h2>
         <span>{data.total} 項</span>
@@ -270,11 +296,7 @@ export default function NotificationWorkspace({
                 <input
                   type="checkbox"
                   name={k}
-                  defaultChecked={
-                    k === "observation" || k === "website"
-                      ? data.preferences.data[k] !== false
-                      : data.preferences.data[k]
-                  }
+                  defaultChecked={preferences[k]}
                   disabled={k === "push" && !data.pushConfigured}
                 />
                 {t}

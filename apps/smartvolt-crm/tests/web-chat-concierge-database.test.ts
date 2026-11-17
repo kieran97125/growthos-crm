@@ -39,6 +39,233 @@ before(async () => {
   );
 });
 after(() => db.close());
+async function interruptedTurn(
+  f: Awaited<ReturnType<typeof fixture>>,
+  id: string,
+) {
+  // A previously admitted worker, not a second model dispatch or a mutable
+  // terminal receipt. Fixtures supply its historical admission timestamp.
+  await db.query(
+    "update sv_web_chat_c_turns j set state='running',admitted_at=now()-interval '3 minutes',model='openai/gpt-5.4-mini',context_hash=smartvolt_private.web_chat_c_context_hash(c)from sv_web_chat_configs c where j.company_id=$1 and j.message_id=$2 and c.company_id=j.company_id and c.id=$3",
+    [f.company, id, f.id],
+  );
+}
+test("interrupted C recovery cannot reopen a human request after a real staff response", async () => {
+  const f = await fixture(),
+    id = await receive(f, "What features?");
+  await interruptedTurn(f, id);
+  const t = await thread(f);
+  await rpc("sv_web_chat_staff_action", [
+    f.company,
+    owner,
+    randomUUID(),
+    {
+      action: "reply",
+      threadId: f.thread,
+      revision: t.revision,
+      body: "A real staff answer",
+    },
+  ]);
+  assert.equal((await thread(f)).humanWaiting, false);
+  await rpc("sv_web_chat_c_claim", [f.company, id, "openai/gpt-5.4-mini"]);
+  assert.equal((await thread(f)).humanWaiting, false);
+  const notices = await rpc<{ rows: unknown[] }>("sv_notification_read", [
+    f.company,
+    owner,
+  ]);
+  assert.equal(notices.rows.length, 0);
+});
+test("legacy website preference shown on in CRM admits push without needing a prior preference save", async () => {
+  const f = await fixture();
+  await receive(f, "想同真人傾", "human");
+  await rpc("sv_notification_action", [
+    f.company,
+    owner,
+    randomUUID(),
+    "device",
+    {
+      endpoint: `https://fcm.googleapis.com/synthetic-${f.company}`,
+      p256dh: "a".repeat(87),
+      auth: "b".repeat(22),
+      label: "Synthetic device — no network",
+    },
+  ]);
+  // Persisted pre-website preferences: the category is absent, global opt-in
+  // and the device were already explicitly enabled. Reading must not enable
+  // global push or require an otherwise unnecessary preference save.
+  await db.query(
+    "update sv_notification_preferences set data=(data-'website')||'{\"quietStart\":0,\"quietEnd\":0}'::jsonb where company_id=$1",
+    [f.company],
+  );
+  const read = await rpc<{ preferences: { data: Record<string, unknown> } }>(
+    "sv_notification_read",
+    [f.company, owner],
+  );
+  assert.equal(read.preferences.data.website, true);
+  assert.equal(
+    (
+      await db.query<{ missing: boolean }>(
+        "select not(data?'website')missing from sv_notification_preferences where company_id=$1",
+        [f.company],
+      )
+    ).rows[0].missing,
+    true,
+  );
+  assert.equal(
+    (await rpc<unknown[]>("sv_push_claim", [f.company, owner])).length,
+    1,
+  );
+  assert.equal(
+    (await rpc<unknown[]>("sv_push_claim", [f.company, owner])).length,
+    0,
+  );
+});
+test("a genuinely unanswered interrupted turn still requests a human exactly once without another model dispatch", async () => {
+  const f = await fixture(),
+    id = await receive(f, "What features?");
+  await interruptedTurn(f, id);
+  assert.equal(
+    (await rpc("sv_web_chat_c_claim", [f.company, id, "openai/gpt-5.4-mini"]))
+      .state,
+    "failed",
+  );
+  assert.equal((await thread(f)).humanWaiting, true);
+  const before = (
+    await db.query<{ n: number }>(
+      "select count(*)::int n from sv_web_chat_messages where thread_id=$1 and sender='c'",
+      [f.thread],
+    )
+  ).rows[0].n;
+  await rpc("sv_web_chat_c_claim", [f.company, id, "openai/gpt-5.4-mini"]);
+  assert.equal(
+    (
+      await db.query<{ n: number }>(
+        "select count(*)::int n from sv_web_chat_messages where thread_id=$1 and sender='c'",
+        [f.thread],
+      )
+    ).rows[0].n,
+    before,
+  );
+  await rpc("sv_web_chat_staff_action", [
+    f.company,
+    owner,
+    randomUUID(),
+    {
+      action: "reply",
+      threadId: f.thread,
+      revision: (await thread(f)).revision,
+      body: "Staff replies after recovery",
+    },
+  ]);
+  await rpc("sv_web_chat_c_claim", [f.company, id, "openai/gpt-5.4-mini"]);
+  assert.equal((await thread(f)).humanWaiting, false);
+});
+for (const change of ["close", "pauseC", "newer_question"] as const)
+  test(`interrupted recovery respects ${change} and never raises a new human request from the old turn`, async () => {
+    const f = await fixture(),
+      id = await receive(f, "What features?");
+    await interruptedTurn(f, id);
+    if (change === "newer_question") await receive(f, "Another question");
+    else
+      await rpc("sv_web_chat_staff_action", [
+        f.company,
+        owner,
+        randomUUID(),
+        {
+          action: change,
+          threadId: f.thread,
+          revision: (await thread(f)).revision,
+        },
+      ]);
+    assert.equal(
+      (await rpc("sv_web_chat_c_claim", [f.company, id, "openai/gpt-5.4-mini"]))
+        .state,
+      "superseded",
+    );
+    assert.equal((await thread(f)).humanWaiting, false);
+  });
+test("website-off preference survives an old client save, and push still requires global opt-in and a registered device", async () => {
+  const f = await fixture();
+  await receive(f, "想同真人傾", "human");
+  async function prefs(data: Record<string, unknown>) {
+    const current = await rpc<{ preferences: { revision: number } }>(
+      "sv_notification_read",
+      [f.company, owner],
+    );
+    return rpc("sv_notification_action", [
+      f.company,
+      owner,
+      randomUUID(),
+      "preferences",
+      {
+        revision: current.preferences.revision,
+        data: {
+          assignment: true,
+          followup: true,
+          sla: true,
+          push: false,
+          quietStart: 0,
+          quietEnd: 0,
+          ...data,
+        },
+      },
+    ]);
+  }
+  await prefs({ website: false });
+  await prefs({ push: true });
+  const p = await rpc<{ preferences: { data: { website: boolean } } }>(
+    "sv_notification_read",
+    [f.company, owner],
+  );
+  assert.equal(p.preferences.data.website, false);
+  assert.equal(
+    (await rpc<unknown[]>("sv_push_claim", [f.company, owner])).length,
+    0,
+  );
+  await prefs({ website: true, push: true });
+  assert.equal(
+    (await rpc<unknown[]>("sv_push_claim", [f.company, owner])).length,
+    0,
+  );
+  await rpc("sv_notification_action", [
+    f.company,
+    owner,
+    randomUUID(),
+    "device",
+    {
+      endpoint: `https://fcm.googleapis.com/synthetic-${f.company}`,
+      p256dh: "a".repeat(87),
+      auth: "b".repeat(22),
+      label: "Synthetic device — no network",
+    },
+  ]);
+  await prefs({ website: true, push: false });
+  assert.equal(
+    (await rpc<unknown[]>("sv_push_claim", [f.company, owner])).length,
+    0,
+  );
+  const hour = (
+    await db.query<{ h: number }>(
+      "select extract(hour from now()at time zone'Asia/Hong_Kong')::int h",
+    )
+  ).rows[0].h;
+  await prefs({
+    website: true,
+    push: true,
+    quietStart: hour,
+    quietEnd: (hour + 1) % 24,
+  });
+  assert.equal(
+    (await rpc<unknown[]>("sv_push_claim", [f.company, owner])).length,
+    0,
+  );
+  await prefs({ website: true, push: true });
+  assert.equal(
+    (await rpc<unknown[]>("sv_push_claim", [f.company, owner])).length,
+    1,
+  );
+});
+
 test("public AI admission shares the staff daily budget and falls back to the human queue", async () => {
   const f = await fixture();
   await db.query(

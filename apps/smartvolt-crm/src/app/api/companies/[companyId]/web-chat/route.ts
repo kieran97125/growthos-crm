@@ -3,6 +3,7 @@ import { json, failure, sameOrigin } from "@/lib/saas/http";
 import { boundedJson } from "@/lib/whatsapp/http";
 import { readChatSettings, changeChatSettings } from "@/lib/web-chat/server";
 type Context = { params: Promise<{ companyId: string }> };
+export const maxDuration = 60;
 export async function GET(_req: NextRequest, { params }: Context) {
   try {
     return json(await readChatSettings((await params).companyId));

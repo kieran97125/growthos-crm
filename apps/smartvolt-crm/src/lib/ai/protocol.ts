@@ -155,6 +155,7 @@ export function inspectGroundedAnswer(
   input: AssistantInput,
   now: number,
   model: string,
+  audience: "staff" | "website" = "staff",
 ) {
   const quotesValid = output.evidence.every((e) =>
     input.articles.some(
@@ -188,7 +189,12 @@ export function inspectGroundedAnswer(
       ? "hours"
       : "service";
   const policyHandoff =
-    detectIntent(input.message) === "handoff" ||
+    // Public admission already persists actual human requests/preferences. A
+    // later question may mention the waiting colleague without requesting a
+    // second transfer. Keep the existing sensitive-topic boundary in both modes.
+    (audience === "website"
+      ? /退款|投訴|經理|醫生|懷孕|發炎|refund|complaint/i.test(input.message)
+      : detectIntent(input.message) === "handoff") ||
     (output.intent === "faq" &&
       ((topic === "location" && !input.profile.allowLocation) ||
         (topic === "hours" && !input.profile.allowHours) ||

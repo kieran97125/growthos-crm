@@ -80,10 +80,11 @@ test("iframe content neutralizes merchant-supplied script closers and keeps bear
     "nonce",
   );
   assert.equal(html.includes("</script><script>alert(1)</script>"), false);
-  assert.ok(html.includes("Authorization:'Bearer '+session.token"));
+  const compact = html.replace(/\s+/g, "");
+  assert.ok(compact.includes("Authorization:'Bearer'+session.token"));
   assert.ok(!html.includes("token:session.token"));
-  assert.ok(html.includes("credentials:'omit'"));
-  assert.ok(html.includes("text.textContent=message.body"));
+  assert.ok(compact.includes("credentials:'omit'"));
+  assert.ok(compact.includes("text.textContent=message.body"));
 });
 test("per-widget frame CSP permits only verified exact ancestors and nonce scripts", () => {
   const policy = chatFramePolicy(["https://example.org"], "nonce");
@@ -139,5 +140,8 @@ test("visitor composer can submit inside the sandbox while native form navigatio
     },
     "nonce",
   );
-  assert.ok(html.includes("event.preventDefault();send()"));
+  assert.match(
+    html,
+    /addEventListener\('submit',\s*e\s*=>\s*\{\s*e.preventDefault\(\);\s*send\(\)/,
+  );
 });

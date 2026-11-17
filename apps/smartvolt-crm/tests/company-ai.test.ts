@@ -58,6 +58,38 @@ const output = {
   nextStep: "了解團隊人數及現有渠道。",
   interest: "medium" as const,
 };
+test("admitted website C may answer a later question mentioning the waiting human without weakening evidence or sensitive-topic checks", () => {
+  const later = { ...input, message: "真人未覆，C幫我答點管理查詢" };
+  assert.equal(
+    inspectGroundedAnswer(output, later, now, "model").answer.decision,
+    "handoff",
+  );
+  assert.equal(
+    inspectGroundedAnswer(output, later, now, "model", "website").answer
+      .decision,
+    "draft",
+  );
+  assert.equal(
+    inspectGroundedAnswer(
+      { ...output, evidence: [] },
+      later,
+      now,
+      "model",
+      "website",
+    ).answer.decision,
+    "handoff",
+  );
+  assert.equal(
+    inspectGroundedAnswer(
+      output,
+      { ...later, message: "投訴退款" },
+      now,
+      "model",
+      "website",
+    ).answer.decision,
+    "handoff",
+  );
+});
 test("AI uses only same-company approved unexpired knowledge at Hong Kong day rollover", () => {
   const rows = [
     article,

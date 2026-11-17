@@ -46,6 +46,79 @@ function websitePolls(captures: CapturedRequest[]) {
     (c) => c.path.endsWith("/web-chat/threads") && c.method === "GET",
   );
 }
+
+test("CRM keeps the human request visible while C cooperates and offers explicit ownership controls", async ({
+  page,
+}) => {
+  const f = await mountIntegration(page, bundle, {
+    initialWebsite: true,
+    handler: async (request, route) => {
+      if (
+        request.method !== "POST" ||
+        !request.path.endsWith("/web-chat/threads")
+      )
+        return false;
+      const t = f.websiteConversation.thread;
+      if (request.body?.action === "reply") {
+        t.humanWaiting = false;
+        return false;
+      }
+      if (request.body?.action === "claim") {
+        t.assigneeId = actor;
+        t.assigneeName = "Synthetic owner";
+      } else if (request.body?.action === "pauseC") t.cPaused = true;
+      else if (request.body?.action === "resumeC") t.cPaused = false;
+      else return false;
+      t.revision++;
+      await route.fulfill({ json: { ok: true } });
+      return true;
+    },
+  });
+  Object.assign(f.websiteConversation.thread, {
+    humanWaiting: true,
+    humanRequestedAt: new Date().toISOString(),
+    waitingMinutes: 7,
+    intent: "了解產品功能",
+    intentBasis: "stated",
+    summary: "客人想了解功能，並希望真人跟進。",
+    unanswered: "可否介紹接駁方式？",
+    aiEnabled: true,
+    cPaused: false,
+    preference: "cooperate",
+  });
+  f.websiteConversation.messages.push({
+    id: "9a111111-1111-4111-8111-111111111111",
+    sequence: 2,
+    body: "我可以幫你介紹服務，亦已保留真人請求。",
+    direction: "outgoing",
+    sender: "c",
+    actorName: "C · AI 助理",
+    createdAt: new Date().toISOString(),
+  });
+  await selectWebsite(page);
+  const context = page.getByRole("region", { name: "C 接待重點" });
+  await expect(context.getByText(/客人正等候真人回覆.*7 分鐘/)).toBeVisible();
+  await expect(context.getByText("可否介紹接駁方式？")).toBeVisible();
+  await expect(page.locator(".wc-from-c")).toContainText("C · AI 助理");
+  await page.getByRole("button", { name: "我來接待", exact: true }).click();
+  await expect(context.getByText("接待：Synthetic owner")).toBeVisible();
+  await expect(context.getByText(/客人正等候真人回覆/)).toBeVisible();
+  await page.getByRole("button", { name: "暫停 C 補答", exact: true }).click();
+  await expect(context.getByText("C 已暫停", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "恢復 C 補答", exact: true }).click();
+  await page
+    .getByLabel("回覆網站訪客", { exact: true })
+    .fill("我係真人同事，可以幫你介紹接駁。 ");
+  await page.getByRole("button", { name: "發送回覆", exact: true }).click();
+  await expect(context.getByText(/客人正等候真人回覆/)).toHaveCount(0);
+  expect(
+    f.captures
+      .filter(
+        (c) => c.method === "POST" && c.path.endsWith("/web-chat/threads"),
+      )
+      .map((c) => c.body?.action),
+  ).toEqual(["claim", "pauseC", "resumeC", "reply"]);
+});
 function customerWrites(captures: CapturedRequest[]) {
   return captures.filter(
     (c) => c.method !== "GET" && !c.path.endsWith("/editor"),
@@ -624,7 +697,6 @@ test("read-only website entry keeps the same company header and prevents visitor
   expect(new URL(page.url()).pathname).toBe(fixturePath);
 });
 
-
 for (const [name, viewport] of [
   ["desktop", { width: 1440, height: 1000 }],
   ["mobile", { width: 390, height: 844 }],
@@ -649,7 +721,9 @@ for (const [name, viewport] of [
     await expect(
       page.getByRole("button", { name: /Synthetic social customer/ }),
     ).toBeVisible();
-    await expect(page.getByLabel("回覆網站訪客", { exact: true })).toHaveCount(0);
+    await expect(page.getByLabel("回覆網站訪客", { exact: true })).toHaveCount(
+      0,
+    );
     await expect(
       page.getByText("Synthetic website visitor", { exact: true }),
     ).toHaveCount(0);
@@ -664,7 +738,9 @@ for (const [name, viewport] of [
         );
       })
       .toEqual([null, null, null, null]);
-    expect(new URL(page.url()).searchParams.get("websiteSchema")).toBe("missing");
+    expect(new URL(page.url()).searchParams.get("websiteSchema")).toBe(
+      "missing",
+    );
     await page.clock.runFor(31000);
     expect(socialPolls(f.captures).length).toBeGreaterThan(0);
 
@@ -689,9 +765,7 @@ for (const [name, viewport] of [
     await expect(pending).toBeVisible();
     await expect(pending).toBeDisabled();
     await expect(pending.getByRole("status")).toHaveText("準備中");
-    await expect(
-      page.getByLabel("回覆草稿", { exact: true }),
-    ).toBeVisible();
+    await expect(page.getByLabel("回覆草稿", { exact: true })).toBeVisible();
     await expect(
       page.getByRole("button", { name: "加入附件", exact: true }),
     ).toBeEnabled();
@@ -726,4 +800,3 @@ for (const [name, viewport] of [
     expect(f.unexpected).toEqual([]);
   });
 }
-

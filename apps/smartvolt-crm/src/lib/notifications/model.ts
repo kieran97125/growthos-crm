@@ -5,6 +5,7 @@ export const notificationPreferences = z
     followup: z.boolean(),
     sla: z.boolean(),
     observation: z.boolean().optional(),
+    website: z.boolean().optional(),
     push: z.boolean(),
     quietStart: z.number().int().min(0).max(23),
     quietEnd: z.number().int().min(0).max(23),
@@ -84,6 +85,18 @@ export type NotificationPage = {
     href: string;
     revision: number;
     created_at: string;
+    website?: {
+      visitorName: string;
+      site: string;
+      humanWaiting: boolean;
+      waitingMinutes?: number;
+      humanRequestedAt: string | null;
+      assigneeName: string | null;
+      intent: string;
+      summary: string;
+      unanswered: string;
+      preference: "cooperate" | "human_only";
+    } | null;
     evidence?: {
       detail: string;
       evidence: string[];

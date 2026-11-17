@@ -8,7 +8,7 @@ export default function NotificationBell({ companyId }: { companyId: string }) {
   const { data } = useSWR<NotificationPage>(
     `/api/companies/${companyId}/notifications`,
     engagementFetcher,
-    { refreshInterval: 60000, revalidateOnFocus: true },
+    { refreshInterval: 10000, revalidateOnFocus: true },
   );
   return (
     <Link

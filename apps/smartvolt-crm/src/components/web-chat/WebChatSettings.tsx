@@ -1,5 +1,6 @@
 "use client";
 import { useRef, useState } from "react";
+import { chatPalettes, chatTheme } from "@/lib/web-chat/theme";
 import useSWR from "swr";
 import {
   Check,
@@ -51,16 +52,30 @@ export default function WebChatSettings({
       initial.configs[0]?.origins.join("\n") ?? "",
     ),
     [enabled, setEnabled] = useState(initial.configs[0]?.enabled ?? false),
+    [aiEnabled, setAiEnabled] = useState(
+      initial.configs[0]?.aiEnabled ?? false,
+    ),
+    [aiArticleIds, setAiArticleIds] = useState<string[]>(
+      initial.configs[0]?.aiArticleIds ?? [],
+    ),
+    [accentColor, setAccentColor] = useState(
+      initial.configs[0]?.accentColor ?? "#2457E7",
+    ),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [copied, setCopied] = useState(""),
     [uncertain, setUncertain] = useState(false);
   const live = selected;
+  const theme = chatTheme(accentColor);
+  const articles = (data.publicArticles ?? []).filter(
+    (a) => a.brandId === brandId,
+  );
+  const validColor = /^#[a-f0-9]{6}$/i.test(accentColor);
   const pending = useRef<{
     signature: string;
     body: string;
-    action: "save" | "verify";
+    action: "save" | "verify" | "activate";
     origin?: string;
   } | null>(null);
   const [verificationMethod, setVerificationMethod] = useState<"html" | "dns">(
@@ -74,11 +89,14 @@ export default function WebChatSettings({
     setGreeting(c?.greeting ?? "你好！有咩可以幫到你？");
     setOrigins(c?.origins.join("\n") ?? "");
     setEnabled(c?.enabled ?? false);
+    setAiEnabled(c?.aiEnabled ?? false);
+    setAiArticleIds(c?.aiArticleIds ?? []);
+    setAccentColor(c?.accentColor ?? "#2457E7");
     setError("");
     setNotice("");
   }
   async function submit(
-    action: "save" | "verify",
+    action: "save" | "verify" | "activate",
     origin?: string,
     reconcile = false,
   ) {
@@ -103,14 +121,19 @@ export default function WebChatSettings({
                 .map((x) => x.trim())
                 .filter(Boolean),
               enabled,
+              aiEnabled,
+              aiArticleIds,
+              accentColor,
             }
-          : {
-              action,
-              id: target,
-              revision: live?.revision ?? 0,
-              origin,
-              method: verificationMethod,
-            };
+          : action === "activate"
+            ? { action, id: target, revision: live?.revision ?? 0 }
+            : {
+                action,
+                id: target,
+                revision: live?.revision ?? 0,
+                origin,
+                method: verificationMethod,
+              };
       const signature = JSON.stringify(payload);
       if (!reconcile && pending.current?.signature !== signature)
         pending.current = {
@@ -139,11 +162,13 @@ export default function WebChatSettings({
       const saved = fresh?.configs.find((c) => c.id === target);
       if (saved) choose(saved);
       setNotice(
-        action === "verify"
-          ? "網站已驗證，可以啟用聊天窗。"
-          : enabled
-            ? "聊天窗已啟用。"
-            : "設定已儲存。網站驗證後即可啟用。",
+        action === "activate"
+          ? "網站聊天已啟用，C 會按你嘅接待設定運作。"
+          : action === "verify"
+            ? "網站已驗證，可以啟用聊天窗。"
+            : enabled
+              ? "聊天窗已啟用。"
+              : "設定已儲存。網站驗證後即可啟用。",
       );
     } catch (e) {
       if (pending.current) setUncertain(true);
@@ -167,21 +192,26 @@ export default function WebChatSettings({
     }
   }
   const embed = live
-    ? `<script src="${appOrigin}/embed/chat.js" data-convelta-chat="${live.id}" defer></script>`
+    ? `<meta name="convelta-chat-verification" content="${live.verification}">\n<script src="${appOrigin}/embed/chat.js?widget=${live.id}&amp;site=${encodeURIComponent(live.origins[0])}" data-convelta-chat="${live.id}" defer></script>`
     : "";
   const dirty =
     !!live &&
     (live.name !== name ||
       live.greeting !== greeting ||
       live.origins.join("\n") !== origins ||
-      live.enabled !== enabled);
+      live.enabled !== enabled ||
+      (live.aiEnabled ?? false) !== aiEnabled ||
+      JSON.stringify(live.aiArticleIds ?? []) !==
+        JSON.stringify(aiArticleIds) ||
+      (live.accentColor ?? "#2457E7").toUpperCase() !==
+        accentColor.toUpperCase());
   return (
     <main className="wc-settings">
       <header className="wc-settings-heading">
         <div>
-          <span className="wc-eyebrow">WEBSITE CHAT</span>
-          <h1>喺網站接住每個查詢</h1>
-          <p>訪客直接留言，同事喺收件匣回覆。</p>
+          <span className="wc-eyebrow">C · WEBSITE ASSISTANT</span>
+          <h1>將 C 變成你品牌嘅接待助手</h1>
+          <p>配合品牌外觀、選擇公開知識，將 C 接到你嘅網站。</p>
         </div>
         <div className={`wc-status ${live?.enabled ? "enabled" : ""}`}>
           <span />
@@ -193,7 +223,7 @@ export default function WebChatSettings({
           <section className="wc-card">
             <div className="wc-card-heading">
               <h2>
-                <span>1</span>設定聊天窗
+                <span>1</span>品牌與外觀
               </h2>
               <button
                 className="wc-secondary"
@@ -233,7 +263,10 @@ export default function WebChatSettings({
                   aria-label="聊天窗品牌"
                   value={brandId}
                   disabled={!!live || busy || uncertain}
-                  onChange={(e) => setBrandId(e.target.value)}
+                  onChange={(e) => {
+                    setBrandId(e.target.value);
+                    setAiArticleIds([]);
+                  }}
                 >
                   {data.brands.map((b) => (
                     <option value={b.id} key={b.id}>
@@ -254,6 +287,51 @@ export default function WebChatSettings({
                 />
               </label>
             </div>
+            <fieldset className="wc-palette" disabled={busy || uncertain}>
+              <legend>品牌配色</legend>
+              <div className="wc-swatches">
+                {chatPalettes.map((p) => (
+                  <button
+                    key={p.color}
+                    type="button"
+                    title={p.name}
+                    aria-label={`配色：${p.name}`}
+                    aria-pressed={accentColor.toUpperCase() === p.color}
+                    style={{
+                      background: p.color,
+                      color: chatTheme(p.color).onAccent,
+                    }}
+                    onClick={() => setAccentColor(p.color)}
+                  >
+                    {accentColor.toUpperCase() === p.color && (
+                      <Check size={18} />
+                    )}
+                  </button>
+                ))}
+              </div>
+              <div className="wc-custom-color">
+                <input
+                  type="color"
+                  aria-label="自訂品牌顏色"
+                  value={theme.accent}
+                  onChange={(e) => setAccentColor(e.target.value.toUpperCase())}
+                />
+                <label>
+                  自訂色碼
+                  <input
+                    aria-label="品牌色碼"
+                    value={accentColor}
+                    maxLength={7}
+                    onChange={(e) => setAccentColor(e.target.value)}
+                    spellCheck={false}
+                  />
+                </label>
+              </div>
+              <p className="wc-help">
+                文字會自動配合深淺色，保持清晰易讀。
+                {!validColor && " 請輸入 # 加六位色碼。"}
+              </p>
+            </fieldset>
             <label>
               第一句問候
               <textarea
@@ -300,7 +378,9 @@ export default function WebChatSettings({
                   !brandId ||
                   !name.trim() ||
                   !greeting.trim() ||
-                  !origins.trim()
+                  !origins.trim() ||
+                  !validColor ||
+                  (aiEnabled && aiArticleIds.length === 0)
                 }
                 onClick={() => void submit("save")}
               >
@@ -312,151 +392,286 @@ export default function WebChatSettings({
           <section className="wc-card">
             <div className="wc-card-heading">
               <h2>
-                <span>2</span>驗證網站
+                <span>2</span>C 接待設定
               </h2>
-              <ShieldCheck size={20} />
+              <MessageCircle size={20} />
             </div>
-            {!live ? (
-              <p className="wc-help">先儲存上方設定，即可取得網站驗證資料。</p>
-            ) : (
-              <>
-                <label>
-                  驗證方式
-                  <select
-                    aria-label="網站驗證方式"
-                    disabled={busy || uncertain}
-                    value={verificationMethod}
+            <label className="wc-toggle">
+              <input
+                type="checkbox"
+                checked={aiEnabled}
+                disabled={busy || uncertain || data.canManageAI === false}
+                onChange={(e) => setAiEnabled(e.target.checked)}
+              />
+              <span>
+                <strong>C 自動介紹及回答問題</strong>
+                <small>
+                  真人接待期間仍可補答；客人要求只同真人傾時，C 會等候。
+                </small>
+              </span>
+            </label>
+            {data.canManageAI === false && (
+              <p className="wc-help">
+                公開知識及 AI 啟用由公司擁有人設定，你仍可調整品牌外觀。
+              </p>
+            )}
+            <fieldset
+              className="wc-knowledge"
+              disabled={busy || uncertain || data.canManageAI === false}
+            >
+              <legend>可以向網站訪客公開嘅知識</legend>
+              <p className="wc-help">
+                只選可以公開嘅內容。C
+                唔會使用未選取嘅內部知識；資料不足會轉交同事跟進。
+              </p>
+              {articles.map((a) => (
+                <label className="wc-article" key={a.id}>
+                  <input
+                    type="checkbox"
+                    checked={aiArticleIds.includes(a.id)}
                     onChange={(e) =>
-                      setVerificationMethod(e.target.value as "html" | "dns")
+                      setAiArticleIds(
+                        e.target.checked
+                          ? [...aiArticleIds, a.id]
+                          : aiArticleIds.filter((id) => id !== a.id),
+                      )
                     }
-                  >
-                    <option value="html">加入網站標記</option>
-                    <option value="dns">DNS TXT 紀錄</option>
-                  </select>
+                  />
+                  <span>{a.title}</span>
                 </label>
+              ))}
+              {!articles.length && (
                 <p className="wc-help">
-                  {verificationMethod === "html"
-                    ? "將以下標記加入網站首頁嘅 <head>，發布網頁後再撳驗證。"
-                    : "請網站管理員喺 DNS 加入以下 TXT 紀錄，再撳驗證。"}
+                  呢個品牌未有可選嘅已批核知識，請先喺知識庫加入並批核公開介紹。
                 </p>
-                {live.origins.map((origin) => (
-                  <div className="wc-domain" key={origin}>
-                    <div className="wc-domain-title">
-                      <strong>{new URL(origin).hostname}</strong>
-                      {live.verifiedOrigins.includes(origin) ? (
-                        <span className="wc-verified">
-                          <Check size={14} />
-                          已驗證
-                        </span>
-                      ) : (
-                        <button
-                          className="wc-secondary"
-                          disabled={busy || uncertain || dirty}
-                          onClick={() => void submit("verify", origin)}
-                        >
-                          驗證網站
-                        </button>
-                      )}
-                    </div>
-                    {verificationMethod === "html" ? (
-                      <>
-                        <pre className="wc-install">{`<meta name="convelta-chat-verification" content="${live.verification}">`}</pre>
-                        <button
-                          className="wc-secondary"
-                          onClick={() =>
-                            void copy(
-                              `<meta name="convelta-chat-verification" content="${live.verification}">`,
-                              "proof",
-                            )
-                          }
-                        >
-                          <Copy size={14} />
-                          複製網站標記
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <div className="wc-code-row">
-                          <span>名稱</span>
-                          <code>_convelta-chat.{new URL(origin).hostname}</code>
+              )}
+              <p className="wc-help">
+                已選 {aiArticleIds.length} / 30 · 啟用 C 亦需要公司 AI 已開啟。
+              </p>
+            </fieldset>
+            <p className="wc-help">
+              <a href={`/company/${initial.companyId}/crm?view=bot`}>
+                管理品牌知識庫 →
+              </a>{" "}
+              ·{" "}
+              <a href={`/company/${initial.companyId}/crm/ai`}>
+                公司 AI 設定 →
+              </a>
+            </p>
+            <div className="wc-card-actions">
+              <button
+                className="wc-primary"
+                disabled={
+                  busy ||
+                  uncertain ||
+                  !brandId ||
+                  !name.trim() ||
+                  !greeting.trim() ||
+                  !origins.trim() ||
+                  !validColor ||
+                  (aiEnabled && !aiArticleIds.length)
+                }
+                onClick={() => void submit("save")}
+              >
+                儲存接待設定
+              </button>
+            </div>
+          </section>
+          <section className="wc-card">
+            <div className="wc-card-heading">
+              <h2>
+                <span>3</span>安裝並啟用
+              </h2>
+              <Code2 size={20} />
+            </div>
+            <p className="wc-help">
+              複製以下完整代碼，貼到網站自訂代碼嘅 Head
+              區域並發布。之後一按即可檢查網站並啟用，唔使逐項處理驗證。
+            </p>
+            <pre className="wc-install">{embed || "先儲存聊天窗設定"}</pre>
+            <div className="wc-card-actions">
+              <button
+                className="wc-secondary"
+                disabled={!embed}
+                onClick={() => void copy(embed, "embed")}
+              >
+                <Copy size={14} />
+                {copied === "embed" ? "已複製" : "複製安裝代碼"}
+              </button>
+              <button
+                className="wc-primary"
+                disabled={!live || dirty || busy || uncertain}
+                onClick={() => void submit("activate")}
+              >
+                {busy ? "檢查中…" : "檢查安裝並啟用"}
+              </button>
+            </div>
+            {live && (
+              <p className="wc-help">
+                {live.origins
+                  .map(
+                    (o) =>
+                      `${new URL(o).hostname}：${live.verifiedOrigins.includes(o) ? "已驗證" : "待檢查"}`,
+                  )
+                  .join(" · ")}
+              </p>
+            )}
+            <details className="wc-technical">
+              <summary>手動驗證或 DNS 設定</summary>
+              <div className="wc-card-heading">
+                <ShieldCheck size={18} />
+                <strong>手動驗證網站</strong>
+              </div>
+              {!live ? (
+                <p className="wc-help">
+                  先儲存上方設定，即可取得網站驗證資料。
+                </p>
+              ) : (
+                <>
+                  <label>
+                    驗證方式
+                    <select
+                      aria-label="網站驗證方式"
+                      disabled={busy || uncertain}
+                      value={verificationMethod}
+                      onChange={(e) =>
+                        setVerificationMethod(e.target.value as "html" | "dns")
+                      }
+                    >
+                      <option value="html">加入網站標記</option>
+                      <option value="dns">DNS TXT 紀錄</option>
+                    </select>
+                  </label>
+                  <p className="wc-help">
+                    {verificationMethod === "html"
+                      ? "將以下標記加入網站首頁嘅 <head>，發布網頁後再撳驗證。"
+                      : "請網站管理員喺 DNS 加入以下 TXT 紀錄，再撳驗證。"}
+                  </p>
+                  {live.origins.map((origin) => (
+                    <div className="wc-domain" key={origin}>
+                      <div className="wc-domain-title">
+                        <strong>{new URL(origin).hostname}</strong>
+                        {live.verifiedOrigins.includes(origin) ? (
+                          <span className="wc-verified">
+                            <Check size={14} />
+                            已驗證
+                          </span>
+                        ) : (
                           <button
-                            className="wc-icon"
-                            aria-label={`複製 ${origin} 驗證名稱`}
-                            onClick={() =>
-                              void copy(
-                                `_convelta-chat.${new URL(origin).hostname}`,
-                                origin,
-                              )
-                            }
+                            className="wc-secondary"
+                            disabled={busy || uncertain || dirty}
+                            onClick={() => void submit("verify", origin)}
                           >
-                            <Copy size={14} />
+                            驗證網站
                           </button>
-                        </div>
-                        <div className="wc-code-row">
-                          <span>TXT 值</span>
-                          <code>convelta-chat={live.verification}</code>
+                        )}
+                      </div>
+                      {verificationMethod === "html" ? (
+                        <>
+                          <pre className="wc-install">{`<meta name="convelta-chat-verification" content="${live.verification}">`}</pre>
                           <button
-                            className="wc-icon"
-                            aria-label="複製驗證值"
+                            className="wc-secondary"
                             onClick={() =>
                               void copy(
-                                `convelta-chat=${live.verification}`,
+                                `<meta name="convelta-chat-verification" content="${live.verification}">`,
                                 "proof",
                               )
                             }
                           >
                             <Copy size={14} />
+                            複製網站標記
                           </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                ))}
-              </>
-            )}
-          </section>
-          <section className="wc-card">
-            <div className="wc-card-heading">
-              <h2>
-                <span>3</span>加入網站
-              </h2>
-              <Code2 size={20} />
-            </div>
-            <p className="wc-help">
-              將以下代碼貼喺網站嘅 &lt;/body&gt; 前面，啟用後即可開始接待。
-            </p>
-            <pre className="wc-install">{embed || "先儲存聊天窗設定"}</pre>
-            <button
-              className="wc-secondary"
-              disabled={!embed}
-              onClick={() => void copy(embed, "embed")}
-            >
-              <Copy size={14} />
-              {copied === "embed" ? "已複製" : "複製安裝代碼"}
-            </button>
-            <details className="wc-technical">
-              <summary>交畀網站管理員嘅補充資料</summary>
-              <p>
+                        </>
+                      ) : (
+                        <>
+                          <div className="wc-code-row">
+                            <span>名稱</span>
+                            <code>
+                              _convelta-chat.{new URL(origin).hostname}
+                            </code>
+                            <button
+                              className="wc-icon"
+                              aria-label={`複製 ${origin} 驗證名稱`}
+                              onClick={() =>
+                                void copy(
+                                  `_convelta-chat.${new URL(origin).hostname}`,
+                                  origin,
+                                )
+                              }
+                            >
+                              <Copy size={14} />
+                            </button>
+                          </div>
+                          <div className="wc-code-row">
+                            <span>TXT 值</span>
+                            <code>convelta-chat={live.verification}</code>
+                            <button
+                              className="wc-icon"
+                              aria-label="複製驗證值"
+                              onClick={() =>
+                                void copy(
+                                  `convelta-chat=${live.verification}`,
+                                  "proof",
+                                )
+                              }
+                            >
+                              <Copy size={14} />
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </>
+              )}
+              <p className="wc-help">
                 如網站有 Content Security Policy，請允許 {appOrigin} 載入 script
-                及 iframe。聊天窗只提供真人接待，不會自行啟用 AI 回覆。
+                及 iframe。安裝代碼只需加入一次；之後外觀及接待知識喺呢度更新。
               </p>
             </details>
           </section>
         </div>
         <aside className="wc-preview-column">
           <div className="wc-preview-label">即時外觀預覽</div>
-          <div className="wc-preview">
+          <div
+            className="wc-preview"
+            style={
+              {
+                "--wc-accent": theme.accent,
+                "--wc-on-accent": theme.onAccent,
+                "--wc-tint": theme.tint,
+              } as React.CSSProperties
+            }
+          >
             <header>
               <span className="wc-preview-icon">
                 <MessageCircle size={22} />
               </span>
               <div>
                 <strong>{name || "你嘅品牌"}</strong>
-                <small>留言後，同事會喺呢度回覆</small>
+                <small>
+                  {aiEnabled
+                    ? "C · AI 助理與客服團隊"
+                    : "留言後，同事會喺呢度回覆"}
+                </small>
               </div>
             </header>
             <div className="wc-preview-body">
               <p>{greeting || "你好！有咩可以幫到你？"}</p>
+              {aiEnabled && (
+                <>
+                  <div className="wc-preview-chips">
+                    <span>了解功能</span>
+                    <span>同真人傾</span>
+                  </div>
+                  <p className="wc-preview-visitor">想了解你哋嘅服務</p>
+                  <p>
+                    <small>C · AI 助理</small>
+                    <br />
+                    我可以幫你介紹服務，亦可以交畀同事繼續跟進。
+                  </p>
+                </>
+              )}
             </div>
             <footer>
               <span>輸入訊息…</span>

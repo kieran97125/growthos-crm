@@ -49,7 +49,8 @@ export const chatSettingsAction = z.discriminatedUnion("action", [
         .transform((a) => [...new Set(a)]),
       enabled: z.boolean(),
       aiEnabled: z.boolean().optional(),
-      aiArticleIds: z.array(z.string().min(1).max(150)).max(30).optional(),
+      aiKnowledgeMode: z.enum(["selected", "brand_public"]).optional(),
+      aiArticleIds: z.array(z.string().min(1).max(150)).max(100).optional(),
       accentColor: z
         .string()
         .regex(/^#[a-f0-9]{6}$/i)
@@ -146,6 +147,7 @@ export type WebChatConfig = {
   revision: number;
   verification: string;
   aiEnabled?: boolean;
+  aiKnowledgeMode?: "selected" | "brand_public";
   aiArticleIds?: string[];
   accentColor?: string;
 };
@@ -154,7 +156,12 @@ export type WebChatSettings = {
   canManage: boolean;
   brands: { id: string; name: string }[];
   configs: WebChatConfig[];
-  publicArticles?: { id: string; brandId: string; title: string }[];
+  publicArticles?: {
+    id: string;
+    brandId: string;
+    title: string;
+    autoPublic?: boolean;
+  }[];
   canManageAI?: boolean;
 };
 export type WebChatThread = {

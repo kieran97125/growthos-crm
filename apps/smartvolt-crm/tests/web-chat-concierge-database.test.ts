@@ -50,6 +50,210 @@ async function interruptedTurn(
     [f.company, id, f.id],
   );
 }
+test("a legacy 35-article save is persisted instead of failing the hidden 30-article cap", async () => {
+  const f = await fixture();
+  const w = (
+    await db.query<{ payload: ReturnType<typeof createCompanyState> }>(
+      "select payload from sv_workspaces where company_id=$1",
+      [f.company],
+    )
+  ).rows[0].payload;
+  const articles = Array.from({ length: 35 }, (_, i) => ({
+    ...w.studio.articles[0],
+    id: `public-${i}`,
+  }));
+  w.studio.articles.push(...articles);
+  await db.query("update sv_workspaces set payload=$2 where company_id=$1", [
+    f.company,
+    JSON.stringify(w),
+  ]);
+  await rpc("sv_web_chat_configure", [
+    f.company,
+    owner,
+    randomUUID(),
+    {
+      ...f.config,
+      revision: 2,
+      aiArticleIds: articles.map((a) => a.id),
+    },
+    proof,
+  ]);
+  const settings = await rpc<{ configs: { aiArticleIds: string[] }[] }>(
+    "sv_web_chat_settings",
+    [f.company, owner],
+  );
+  assert.equal(settings.configs[0].aiArticleIds.length, 35);
+});
+test("automatic public knowledge follows approvals and edits beyond 30 while excluding private and foreign material", async () => {
+  const f = await fixture();
+  const w = (
+    await db.query<{ payload: ReturnType<typeof createCompanyState> }>(
+      "select payload from sv_workspaces where company_id=$1",
+      [f.company],
+    )
+  ).rows[0].payload;
+  const base = w.studio.articles[0];
+  const articles = Array.from({ length: 35 }, (_, i) => ({
+    ...base,
+    id: `public-${String(i).padStart(2, "0")}`,
+    website: {
+      importId: randomUUID(),
+      url: site,
+      fetchedAt: new Date().toISOString(),
+      contentHash: "a".repeat(64),
+      truncated: false,
+    },
+  }));
+  const excluded = [
+    { ...base, id: "private-manual", source: "Internal team notes" },
+    { ...articles[0], id: "private-override", visibility: "internal" as const },
+    { ...articles[0], id: "draft", status: "draft" as const },
+    { ...articles[0], id: "expired", validUntil: "2000-01-01" },
+    { ...articles[0], id: "other-brand", brandId: "other" },
+    { ...articles[0], id: "other-company", clientId: randomUUID() },
+    {
+      ...articles[0],
+      id: "style-only",
+      coaching: {
+        analysisId: randomUUID(),
+        index: 0,
+        kind: "pattern" as const,
+      },
+    },
+  ];
+  w.studio.articles = [...articles, ...excluded];
+  async function persist() {
+    await db.query("update sv_workspaces set payload=$2 where company_id=$1", [
+      f.company,
+      JSON.stringify(w),
+    ]);
+  }
+  await persist();
+  await rpc("sv_web_chat_configure", [
+    f.company,
+    owner,
+    randomUUID(),
+    {
+      ...f.config,
+      revision: 2,
+      enabled: true,
+      aiKnowledgeMode: "brand_public",
+      aiArticleIds: [],
+    },
+    proof,
+  ]);
+  const settings = await rpc<{
+    configs: { aiKnowledgeMode: string }[];
+    publicArticles: { id: string; autoPublic: boolean }[];
+  }>("sv_web_chat_settings", [f.company, owner]);
+  assert.equal(settings.configs[0].aiKnowledgeMode, "brand_public");
+  assert.equal(
+    settings.publicArticles.find((a) => a.id === "public-34")?.autoPublic,
+    true,
+  );
+  assert.equal(
+    settings.publicArticles.find((a) => a.id === "private-manual")?.autoPublic,
+    false,
+  );
+  async function claim() {
+    return rpc<{ dispatch: boolean; articles: typeof articles }>(
+      "sv_web_chat_c_claim",
+      [f.company, await receive(f, "features"), "openai/gpt-5.4-mini"],
+    );
+  }
+  const id = await receive(f, "features");
+  const first = await rpc<{ articles: typeof articles }>(
+    "sv_web_chat_c_claim",
+    [f.company, id, "openai/gpt-5.4-mini"],
+  );
+  assert.equal(first.articles.length, 35);
+  assert.deepEqual(
+    first.articles.map((a) => a.id),
+    articles.map((a) => a.id),
+  );
+  articles[34].content = "Updated public answer after the thirtieth article";
+  await persist();
+  assert.equal(
+    (
+      await rpc("sv_web_chat_c_finish", [
+        f.company,
+        id,
+        {
+          decision: "draft",
+          reply: "Old answer",
+          sources: [{ id: "public-34" }],
+        },
+        null,
+        1,
+        1,
+      ])
+    ).state,
+    "superseded",
+  );
+  assert.equal(
+    (await claim()).articles.find((a) => a.id === "public-34")?.content,
+    articles[34].content,
+  );
+  w.studio.articles.find((a) => a.id === "public-34")!.visibility = "internal";
+  await persist();
+  assert.equal(
+    (await claim()).articles.some((a) => a.id === "public-34"),
+    false,
+  );
+  w.studio.articles.push({
+    ...base,
+    id: "new-manual-public",
+    visibility: "public",
+  });
+  await persist();
+  const next = await claim();
+  assert.equal(next.articles.length, 35);
+  assert.equal(
+    next.articles.some((a) => a.id === "new-manual-public"),
+    true,
+  );
+});
+test("legacy explicit knowledge is preserved and only an owner can opt into automatic publication", async () => {
+  const f = await fixture();
+  const read = () =>
+    rpc<{ configs: { aiKnowledgeMode: string; aiArticleIds: string[] }[] }>(
+      "sv_web_chat_settings",
+      [f.company, owner],
+    );
+  assert.equal((await read()).configs[0].aiKnowledgeMode, "selected");
+  await db.query(
+    "update sv_memberships set brand_ids=array['main']where company_id=$1 and user_id=$2",
+    [f.company, manager],
+  );
+  await assert.rejects(
+    rpc("sv_web_chat_configure", [
+      f.company,
+      manager,
+      randomUUID(),
+      { ...f.config, revision: 2, aiKnowledgeMode: "brand_public" },
+      proof,
+    ]),
+  );
+  const command = randomUUID(),
+    data = {
+      ...f.config,
+      revision: 2,
+      enabled: true,
+      aiKnowledgeMode: "brand_public",
+    };
+  await rpc("sv_web_chat_configure", [f.company, owner, command, data, proof]);
+  await rpc("sv_web_chat_configure", [f.company, owner, command, data, proof]);
+  assert.deepEqual((await read()).configs[0].aiArticleIds, ["public-faq"]);
+  const id = await receive(f, "features");
+  const claimed = await rpc<{ articles: { id: string }[] }>(
+    "sv_web_chat_c_claim",
+    [f.company, id, "openai/gpt-5.4-mini"],
+  );
+  assert.deepEqual(
+    claimed.articles.map((a) => a.id),
+    ["public-faq"],
+  );
+});
 test("interrupted C recovery cannot reopen a human request after a real staff response", async () => {
   const f = await fixture(),
     id = await receive(f, "What features?");

@@ -49,7 +49,15 @@ export function chatFailure(error: { code?: string; message?: string } | null) {
   if (/domain_unverified/.test(message))
     throw new AccessError("請先完成每個網站嘅網域驗證，再啟用聊天窗。", 409);
   if (/chat_public_knowledge_required/.test(message))
-    throw new AccessError("請先選擇同品牌、已批核及未過期嘅公開知識。", 409);
+    throw new AccessError(
+      "品牌暫未有可用公開知識。請先匯入並批核網站 FAQ，或將知識設為可供網站 C 使用。",
+      409,
+    );
+  if (/chat_settings_invalid/.test(message))
+    throw new AccessError(
+      "設定格式未符合要求，請檢查品牌色碼、網站網址及知識設定後再儲存。",
+      400,
+    );
   if (/chat_ai_owner_required/.test(message))
     throw new AccessError(
       "只有公司擁有人可以設定 C 嘅公開知識及自動回覆。",

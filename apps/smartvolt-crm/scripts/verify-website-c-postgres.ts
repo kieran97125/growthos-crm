@@ -178,4 +178,50 @@ export async function verifyWebsiteCNative(
   console.log(
     "Native PostgreSQL: staff-held response versus expired C recovery, legacy website push defaults and no redispatch passed (no external send).",
   );
+  // The reported 35/30 cap must not survive in PostgreSQL or model admission.
+  state.studio.articles.push(
+    ...Array.from({ length: 34 }, (_, i) => ({
+      ...state.studio.articles[0],
+      id: `auto-public-${i}`,
+      visibility: "public" as const,
+    })),
+    {
+      ...state.studio.articles[0],
+      id: "private-unpublished",
+      visibility: "internal",
+    },
+  );
+  await sql(
+    `update sv_workspaces set payload=${q(JSON.stringify(state))}::jsonb where company_id=${q(company)};select sv_web_chat_configure(${q(company)},${q(owner)},${q(randomUUID())},${q(JSON.stringify({ ...config, revision: 2, enabled: true, aiKnowledgeMode: "brand_public" }))}::jsonb,${q(proof)});`,
+  );
+  const autoMessage = randomUUID();
+  await sql(
+    `select sv_web_chat_receive(${q(widget)},${q(site)},${q(thread)},${q(token)},${q(autoMessage)},'A new public question','message','{}');`,
+  );
+  const autoClaim = await json(
+    `select sv_web_chat_c_claim(${q(company)},${q(autoMessage)},'synthetic/model');`,
+  );
+  assert.equal(autoClaim.dispatch, true);
+  assert.equal(autoClaim.articles.length, 35);
+  assert.equal(
+    autoClaim.articles.some(
+      (a: { id: string }) => a.id === "private-unpublished",
+    ),
+    false,
+  );
+  state.studio.articles[1].visibility = "internal";
+  await sql(
+    `update sv_workspaces set payload=${q(JSON.stringify(state))}::jsonb where company_id=${q(company)};`,
+  );
+  assert.equal(
+    (
+      await json(
+        `select sv_web_chat_c_finish(${q(company)},${q(autoMessage)},${q(JSON.stringify({ decision: "draft", reply: "Old public answer", sources: [{ id: "auto-public-0" }] }))}::jsonb,null,1,1);`,
+      )
+    ).state,
+    "superseded",
+  );
+  console.log(
+    "Native PostgreSQL: 35 automatic public articles, private exclusion and publication revocation passed (no external send).",
+  );
 }

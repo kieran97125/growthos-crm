@@ -5,6 +5,7 @@ import { createCompanyState } from "../src/lib/saas/workspace";
 export async function verifyWebsiteCNative(
   sql: (query: string) => Promise<string>,
   owner: string,
+  raceUnderLock: <T>(lock: string, work: () => Promise<T>) => Promise<T>,
 ) {
   const q = (s: string) => "'" + s.replaceAll("'", "''") + "'";
   const json = async (s: string) => JSON.parse(await sql(s));
@@ -120,5 +121,61 @@ export async function verifyWebsiteCNative(
   );
   console.log(
     "Native PostgreSQL: duplicate visitor capture, one C dispatch/publication and shared staff/public AI quota passed.",
+  );
+  const oldTurn = randomUUID();
+  await sql(
+    `update sv_ai_settings set daily_limit=100 where company_id=${q(company)};select sv_web_chat_receive(${q(widget)},${q(site)},${q(thread)},${q(token)},${q(oldTurn)},'Interrupted question','message','{}');update sv_web_chat_c_turns j set state='running',admitted_at=now()-interval'3 minutes',model='synthetic/model',context_hash=smartvolt_private.web_chat_c_context_hash(c)from sv_web_chat_configs c where j.company_id=${q(company)}and j.message_id=${q(oldTurn)}and c.company_id=j.company_id and c.id=${q(widget)};`,
+  );
+  const revision = Number(
+    await sql(
+      `select revision from sv_web_chat_threads where company_id=${q(company)}and id=${q(thread)};`,
+    ),
+  );
+  const reply = {
+    action: "reply",
+    threadId: thread,
+    revision,
+    body: "Native staff resolves the question",
+  };
+  // Recovery starts while the staff response owns the thread row. It must
+  // observe the committed response after waiting, not resurrect stale work.
+  const recovered = await raceUnderLock(
+    `select sv_web_chat_staff_action(${q(company)},${q(owner)},${q(randomUUID())},${q(JSON.stringify(reply))}::jsonb);`,
+    () =>
+      json(
+        `select sv_web_chat_c_claim(${q(company)},${q(oldTurn)},'synthetic/model');`,
+      ),
+  );
+  assert.equal(recovered.state, "superseded");
+  assert.equal(
+    await sql(
+      `select human_waiting from sv_web_chat_threads where company_id=${q(company)}and id=${q(thread)};`,
+    ),
+    "f",
+  );
+  await sql(
+    `select sv_web_chat_receive(${q(widget)},${q(site)},${q(thread)},${q(token)},${q(randomUUID())},'Human please','human','{}');select sv_notification_action(${q(company)},${q(owner)},${q(randomUUID())},'device',${q(JSON.stringify({ endpoint: "https://fcm.googleapis.com/native-c-" + company, p256dh: "synthetic", auth: "synthetic", label: "Native fake device — no network" }))}::jsonb);update sv_notification_preferences set data=(data-'website')||'{"push":true,"quietStart":0,"quietEnd":0}'::jsonb where company_id=${q(company)}and user_id=${q(owner)};`,
+  );
+  const preferences = await json(
+    `select sv_notification_read(${q(company)},${q(owner)});`,
+  );
+  assert.equal(preferences.preferences.data.website, true);
+  const notice = await sql(
+    `select id from sv_notifications where company_id=${q(company)}and user_id=${q(owner)}and kind='website'and source_key like ${q("website:" + thread + ":% ".trim())}and state='open';`,
+  );
+  const admitted = await json(
+    `select sv_push_claim(${q(company)},${q(owner)});`,
+  );
+  assert.ok(
+    admitted.some(
+      (a: { notificationId: string }) => a.notificationId === notice,
+    ),
+  );
+  assert.equal(
+    (await json(`select sv_push_claim(${q(company)},${q(owner)});`)).length,
+    0,
+  );
+  console.log(
+    "Native PostgreSQL: staff-held response versus expired C recovery, legacy website push defaults and no redispatch passed (no external send).",
   );
 }

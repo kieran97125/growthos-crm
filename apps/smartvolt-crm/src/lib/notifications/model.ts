@@ -11,6 +11,27 @@ export const notificationPreferences = z
     quietEnd: z.number().int().min(0).max(23),
   })
   .strict();
+/** Same effective defaults as the database read/sync/push boundary. Global
+ * push consent is independent from the categories shown in the CRM feed. */
+export function effectiveNotificationPreferences(
+  data: z.infer<typeof notificationPreferences>,
+) {
+  return {
+    ...data,
+    website: data.website ?? true,
+    observation: data.observation ?? true,
+    push: data.push ?? false,
+  };
+}
+export function notificationPushState(
+  page: Pick<NotificationPage, "preferences" | "pushConfigured" | "devices">,
+) {
+  if (!page.pushConfigured) return "unconfigured";
+  if (!effectiveNotificationPreferences(page.preferences.data).push)
+    return "off";
+  if (!page.devices.some((d) => d.active)) return "no_device";
+  return "ready";
+}
 const command = { commandId: z.uuid() };
 const endpoint = z
   .url()

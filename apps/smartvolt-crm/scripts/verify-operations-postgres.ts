@@ -865,7 +865,7 @@ async function main() {
     chatHistory.messages.map((message) => message.sequence),
     [1, 2],
   );
-  await verifyWebsiteCNative(sql, owner);
+  await verifyWebsiteCNative(sql, owner, raceUnderNativeLock);
   console.log(
     "Native PostgreSQL: verified website enablement, competing visitor/staff retries, exact session scope and explicit CRM identity passed.",
   );

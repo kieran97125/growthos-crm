@@ -11,6 +11,8 @@ export function engagementFailure(
   e: { message?: string; code?: string } | null,
 ) {
   if (!e) return;
+  if (/chat_response_required/.test(e.message ?? ""))
+    throw new AccessError("網站客人仍等候回覆，請開啟對話接待或結束對話。", 409);
   if (/access_denied|product_required|brand_scope/.test(e.message ?? ""))
     throw new AccessError("你無權操作呢個品牌嘅訊息。", 403);
   if (

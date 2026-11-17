@@ -180,10 +180,7 @@ export default function WebChatInbox({
     else url.searchParams.delete("thread");
     window.history.replaceState(null, "", url.pathname + url.search + url.hash);
   }
-  async function action(
-    kind: "reply" | "close" | "reopen" | "linkCustomer",
-    reconcile = false,
-  ) {
+  async function action(kind: PendingChatAction["action"], reconcile = false) {
     if (!thread || busy || !active) return;
     const current = selected,
       existing = pending[current];
@@ -353,7 +350,11 @@ export default function WebChatInbox({
                   </span>
                   <span className="wc-thread-meta">
                     {t.brandName}
-                    {t.unread && <span className="wc-dot">待回覆</span>}
+                    {t.humanWaiting ? (
+                      <span className="wc-waiting-badge">等候真人</span>
+                    ) : (
+                      t.unread && <span className="wc-dot">新查詢</span>
+                    )}
                   </span>
                 </span>
               </button>
@@ -449,6 +450,74 @@ export default function WebChatInbox({
                 </>
               )}
             </div>
+            <section className="wc-concierge" aria-label="C 接待重點">
+              <div className="wc-concierge-title">
+                <strong>接待重點</strong>
+                <span>
+                  {thread.assigneeName
+                    ? `接待：${thread.assigneeName}`
+                    : "待同事接待"}
+                </span>
+              </div>
+              {thread.humanWaiting && (
+                <p className="wc-waiting-text">
+                  客人正等候真人回覆
+                  {thread.humanRequestedAt
+                    ? ` · ${thread.waitingMinutes ?? 0} 分鐘`
+                    : ""}
+                </p>
+              )}
+              <p>
+                <strong>{thread.intent || "需要進一步了解"}</strong>
+                {thread.intentBasis === "inferred"
+                  ? " · C 推斷，請核對"
+                  : thread.intentBasis === "stated"
+                    ? " · 按客人訊息整理"
+                    : ""}
+              </p>
+              {thread.summary && <p>{thread.summary}</p>}
+              {thread.unanswered && (
+                <p className="wc-concierge-question">
+                  <span>待確認問題</span>
+                  {thread.unanswered}
+                </p>
+              )}
+              <div className="wc-concierge-controls">
+                <span>
+                  {thread.preference === "human_only"
+                    ? "客人已選只由真人回覆"
+                    : thread.cPaused
+                      ? "C 已暫停"
+                      : thread.aiEnabled
+                        ? "C 可繼續補答"
+                        : "C 自動回覆未開啟"}
+                </span>
+                {conversation.data?.canReply && thread.status === "open" && (
+                  <>
+                    <button
+                      type="button"
+                      disabled={
+                        busy || unresolved || thread.assigneeId === actorId
+                      }
+                      onClick={() => void action("claim")}
+                    >
+                      我來接待
+                    </button>
+                    {thread.aiEnabled && (
+                      <button
+                        type="button"
+                        disabled={busy || unresolved}
+                        onClick={() =>
+                          void action(thread.cPaused ? "resumeC" : "pauseC")
+                        }
+                      >
+                        {thread.cPaused ? "恢復 C 補答" : "暫停 C 補答"}
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            </section>
             {linkOpen && (
               <form
                 className="wc-link-form"
@@ -537,12 +606,17 @@ export default function WebChatInbox({
             >
               {messages.length ? (
                 messages.map((m) => (
-                  <article key={m.id} className={`wc-message ${m.direction}`}>
+                  <article
+                    key={m.id}
+                    className={`wc-message ${m.direction} ${m.sender === "c" ? "wc-from-c" : ""}`}
+                  >
                     <p>{m.body}</p>
                     <small>
                       {m.direction === "incoming"
                         ? thread.visitorName
-                        : m.actorName}{" "}
+                        : m.sender === "c"
+                          ? "C · AI 助理"
+                          : m.actorName}{" "}
                       · {time(m.createdAt)}
                     </small>
                   </article>

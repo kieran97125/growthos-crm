@@ -48,6 +48,20 @@ export const chatSettingsAction = z.discriminatedUnion("action", [
         .max(10)
         .transform((a) => [...new Set(a)]),
       enabled: z.boolean(),
+      aiEnabled: z.boolean().optional(),
+      aiArticleIds: z.array(z.string().min(1).max(150)).max(30).optional(),
+      accentColor: z
+        .string()
+        .regex(/^#[a-f0-9]{6}$/i)
+        .optional(),
+    })
+    .strict(),
+  z
+    .object({
+      action: z.literal("activate"),
+      commandId: z.uuid(),
+      id: z.uuid(),
+      revision: z.number().int().nonnegative(),
     })
     .strict(),
   z
@@ -81,6 +95,14 @@ export const chatStaffAction = z.discriminatedUnion("action", [
     .strict(),
   z
     .object({
+      action: z.enum(["claim", "pauseC", "resumeC"]),
+      commandId: z.uuid(),
+      threadId: z.uuid(),
+      revision: z.number().int().nonnegative(),
+    })
+    .strict(),
+  z
+    .object({
       action: z.literal("linkCustomer"),
       commandId: z.uuid(),
       threadId: z.uuid(),
@@ -106,6 +128,9 @@ export const publicChatAction = z.discriminatedUnion("action", [
       origin,
       commandId: z.uuid(),
       body: z.string().trim().min(1).max(2000),
+      kind: z
+        .enum(["message", "human", "human_only", "resume_c"])
+        .default("message"),
       website: z.literal(""),
     })
     .strict(),
@@ -120,12 +145,17 @@ export type WebChatConfig = {
   enabled: boolean;
   revision: number;
   verification: string;
+  aiEnabled?: boolean;
+  aiArticleIds?: string[];
+  accentColor?: string;
 };
 export type WebChatSettings = {
   companyId: string;
   canManage: boolean;
   brands: { id: string; name: string }[];
   configs: WebChatConfig[];
+  publicArticles?: { id: string; brandId: string; title: string }[];
+  canManageAI?: boolean;
 };
 export type WebChatThread = {
   id: string;
@@ -139,6 +169,19 @@ export type WebChatThread = {
   status: "open" | "closed";
   revision: number;
   site: string;
+  humanWaiting?: boolean;
+  waitingMinutes?: number;
+  humanRequestedAt?: string | null;
+  assigneeId?: string | null;
+  assigneeName?: string | null;
+  cPaused?: boolean;
+  preference?: "cooperate" | "human_only";
+  intent?: string;
+  intentBasis?: "stated" | "inferred" | "unknown";
+  summary?: string;
+  unanswered?: string;
+  aiState?: string | null;
+  aiEnabled?: boolean;
 };
 export type WebChatMessage = {
   id: string;
@@ -147,6 +190,7 @@ export type WebChatMessage = {
   createdAt: string;
   actorName: string | null;
   sequence: number;
+  sender?: "visitor" | "staff" | "c";
 };
 export type WebChatPage = {
   scopeStamp?: string;
@@ -164,4 +208,3 @@ export function chatFramePolicy(origins: readonly string[], nonce: string) {
   const allowed = origins.map(normalizeChatOrigin);
   return `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors ${allowed.length ? allowed.join(" ") : "'none'"}`;
 }
-

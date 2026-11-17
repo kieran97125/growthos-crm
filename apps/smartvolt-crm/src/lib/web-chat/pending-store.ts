@@ -1,6 +1,6 @@
 import { chatStaffAction } from "./model";
 export type PendingChatAction = {
-  action: "reply" | "close" | "reopen" | "linkCustomer";
+  action: "reply" | "close" | "reopen" | "linkCustomer" | "claim" | "pauseC" | "resumeC";
   commandId: string;
   threadId: string;
   revision: number;

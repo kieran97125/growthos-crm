@@ -7,6 +7,8 @@ import { AccessError } from "@/lib/saas/identity";
 import { boundedJson } from "@/lib/whatsapp/http";
 import { publicChatAction, publicChatId, normalizeChatOrigin } from "./model";
 import { chatFailure } from "./server";
+import { assessChatTurn } from "./concierge-policy";
+import { wakeWebsiteTurn } from "./concierge-server";
 
 function requestBoundary(request: NextRequest) {
   const expected = new URL(
@@ -40,6 +42,8 @@ export async function publicConfig(id: string, site: string) {
     name: string;
     greeting: string;
     origin: string;
+    aiEnabled?: boolean;
+    accentColor?: string;
   };
 }
 export async function visitorGet(request: NextRequest, id: string) {
@@ -96,14 +100,17 @@ export async function visitorPost(request: NextRequest, id: string) {
     chatFailure(r.error);
     return r.data;
   }
-  const r = await database().rpc("sv_web_chat_visitor_send", {
+  const r = await database().rpc("sv_web_chat_receive", {
     p_id: id,
     p_origin: data.origin,
     p_thread: data.threadId,
     p_hash: hash,
     p_command: data.commandId,
     p_body: data.body,
+    p_kind: data.kind,
+    p_assessment: assessChatTurn(data.body, data.kind),
   });
   chatFailure(r.error);
-  return r.data;
+  if (r.data?.companyId) wakeWebsiteTurn(r.data.companyId, data.commandId);
+  return { ok: true, id: r.data.id };
 }

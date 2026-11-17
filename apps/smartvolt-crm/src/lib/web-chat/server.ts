@@ -19,16 +19,23 @@ import {
   type WebChatThread,
 } from "./model";
 
-export function missingChatSchema(error: { code?: string; message?: string } | null) {
-  return !!error &&
+export function missingChatSchema(
+  error: { code?: string; message?: string } | null,
+) {
+  return (
+    !!error &&
     ["PGRST202", "PGRST205", "42P01", "42883"].includes(error.code ?? "") &&
-    /\b(?:sv_web_chat_|smartvolt_private\.web_chat_)/.test(error.message ?? "");
+    /\b(?:sv_web_chat_|smartvolt_private\.web_chat_)/.test(error.message ?? "")
+  );
 }
 
 export function chatFailure(error: { code?: string; message?: string } | null) {
   if (!error) return;
   const message = error.message ?? "";
-  if (error.code === "42501" || /access_denied|brand_scope|product_required/.test(message))
+  if (
+    error.code === "42501" ||
+    /access_denied|brand_scope|product_required/.test(message)
+  )
     throw new AccessError("你無權查看或修改呢個網站渠道。", 403);
   if (missingChatSchema(error))
     throw new AccessError("網站聊天尚未準備完成，請先使用其他聯絡渠道。", 503);
@@ -41,6 +48,17 @@ export function chatFailure(error: { code?: string; message?: string } | null) {
     throw new AccessError("操作較頻密，請稍後再試。", 429);
   if (/domain_unverified/.test(message))
     throw new AccessError("請先完成每個網站嘅網域驗證，再啟用聊天窗。", 409);
+  if (/chat_public_knowledge_required/.test(message))
+    throw new AccessError("請先選擇同品牌、已批核及未過期嘅公開知識。", 409);
+  if (/chat_ai_owner_required/.test(message))
+    throw new AccessError(
+      "只有公司擁有人可以設定 C 嘅公開知識及自動回覆。",
+      403,
+    );
+  if (/chat_ai_unavailable|chat_ai_disabled/.test(message))
+    throw new AccessError("請先喺公司 AI 設定啟用 AI，再開啟網站 C。", 409);
+  if (/chat_already_claimed/.test(message))
+    throw new AccessError("呢段對話已有同事接待，請由管理員調整。", 409);
   if (/chat_expired/.test(message))
     throw new AccessError(
       "網站訪客對話已過期，請用客人其他已授權方式聯絡。",
@@ -70,15 +88,20 @@ export const readChatReadiness = cache(async function readChatReadiness(
 ): Promise<WebChatReadiness> {
   const a = await access(companyId);
   try {
-    const r = await a.db.rpc("sv_web_chat_staff_read", {
-      p_company: companyId,
-      p_actor: a.user.id,
-      p_query: {},
-    }).abortSignal(AbortSignal.timeout(3000));
+    const r = await a.db
+      .rpc("sv_web_chat_staff_read", {
+        p_company: companyId,
+        p_actor: a.user.id,
+        p_query: {},
+      })
+      .abortSignal(AbortSignal.timeout(3000));
     if (r.error) return missingChatSchema(r.error) ? "pending" : "unavailable";
-    return r.data && Array.isArray(r.data.threads) &&
-      typeof r.data.canReply === "boolean" && typeof r.data.scopeStamp === "string"
-      ? "ready" : "unavailable";
+    return r.data &&
+      Array.isArray(r.data.threads) &&
+      typeof r.data.canReply === "boolean" &&
+      typeof r.data.scopeStamp === "string"
+      ? "ready"
+      : "unavailable";
   } catch {
     return "unavailable";
   }
@@ -100,6 +123,70 @@ export async function changeChatSettings(companyId: string, raw: unknown) {
     data = chatSettingsAction.parse(raw);
   if (!canManage(a.actor.role))
     throw new AccessError("網站聊天設定只供管理員使用。", 403);
+  if (data.action === "activate") {
+    const settings = await readChatSettings(companyId);
+    const config = settings.configs.find((c) => c.id === data.id);
+    if (!config) throw new AccessError("網站設定已有更新，請重新讀取。", 409);
+    const receipt = await a.db
+      .from("sv_action_receipts")
+      .select("actor_id,kind,data,result")
+      .eq("company_id", companyId)
+      .eq("command_id", data.commandId)
+      .maybeSingle();
+    chatFailure(receipt.error);
+    if (receipt.data) {
+      const old = receipt.data;
+      if (
+        old.actor_id !== a.user.id ||
+        old.kind !== "web-chat-activate" ||
+        old.data.id !== data.id ||
+        old.data.revision !== data.revision
+      )
+        throw new AccessError("操作識別已使用，請重新讀取設定。", 409);
+      return old.result;
+    }
+    if (config.revision !== data.revision)
+      throw new AccessError("網站設定已有更新，請重新讀取。", 409);
+    for (const origin of config.origins.filter(
+      (o) => !config.verifiedOrigins.includes(o),
+    )) {
+      try {
+        const page = await fetchWebsite(origin, {
+          root: origin,
+          signal: AbortSignal.timeout(4000),
+          maxBytes: 524288,
+        });
+        if (
+          page.status !== 200 ||
+          new URL(page.url).origin !== origin ||
+          !/text\/html/i.test(page.type)
+        )
+          throw new Error("proof_missing");
+        const $ = loadBuffer(page.body);
+        if (
+          !$("meta[name='convelta-chat-verification']")
+            .toArray()
+            .some((node) => $(node).attr("content") === config.verification)
+        )
+          throw new Error("proof_missing");
+      } catch {
+        throw new AccessError(
+          `未喺 ${origin} 找到安裝標記。請先發布代碼，再檢查並啟用。`,
+          409,
+        );
+      }
+    }
+    const r = await a.db.rpc("sv_web_chat_activate", {
+      p_company: companyId,
+      p_actor: a.user.id,
+      p_command: data.commandId,
+      p_config: data.id,
+      p_revision: data.revision,
+      p_proof: config.verification,
+    });
+    chatFailure(r.error);
+    return r.data;
+  }
   if (data.action === "verify") {
     const settings = await readChatSettings(companyId),
       config = settings.configs.find((c) => c.id === data.id);
@@ -263,4 +350,3 @@ export async function actWebChat(companyId: string, raw: unknown) {
   chatFailure(r.error);
   return r.data;
 }
-

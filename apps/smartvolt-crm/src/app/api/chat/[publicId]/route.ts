@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { json, failure } from "@/lib/saas/http";
 import { visitorGet, visitorPost } from "@/lib/web-chat/public";
 export const runtime = "nodejs";
+export const maxDuration = 60;
 type Context = { params: Promise<{ publicId: string }> };
 export async function GET(req: NextRequest, { params }: Context) {
   try {

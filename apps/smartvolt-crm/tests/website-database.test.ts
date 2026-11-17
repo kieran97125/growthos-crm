@@ -419,3 +419,92 @@ test("FAQ scans replace untouched legacy page dumps while keeping immutable orig
   );
   assert.deepEqual(saved, old.state);
 });
+
+for (const visibility of ["internal", "public"] as const) {
+  test(`website refresh preserves explicit ${visibility} visibility across repeated scans`, async () => {
+    const c = await isolatedCompany();
+    const html = (price: number) =>
+      `<main><h1>服務收費係幾多？</h1><p>小組訓練每堂 HK$${price}，費用包含教練指導，請先聯絡同事確認時段。</p></main>`;
+    const first = await publish(c, await ready(randomUUID(), c, html(388)));
+    const initial = appSchema.parse(first.state);
+    const id = initial.studio.articles[0].id;
+    const edited = applyCompanyCommand(
+      initial,
+      {
+        type: "studio",
+        action: {
+          type: "article",
+          article: { ...initial.studio.articles[0], visibility, revision: 2 },
+        },
+      },
+      { id: owner, name: "Owner", role: "owner" },
+      Date.now(),
+      ["crm", "pos"],
+    );
+    await call("sv_commit_workspace", [
+      c,
+      owner,
+      first.revision,
+      randomUUID(),
+      JSON.stringify(edited),
+      "studio",
+    ]);
+    for (const price of [488, 588]) {
+      const scan = await ready(randomUUID(), c, html(price));
+      const result = await publish(c, scan);
+      const article = appSchema.parse(result.state).studio.articles[0];
+      assert.equal(result.refreshed, 1);
+      assert.equal(article.id, id);
+      assert.equal(article.visibility, visibility);
+      assert.match(article.content, new RegExp(String(price)));
+      assert.equal(
+        await val(
+          "select smartvolt_private.web_chat_article_public($1::jsonb) v",
+          [JSON.stringify(article)],
+        ),
+        visibility === "public",
+      );
+      const available = await val<{ id: string }[]>(
+        "select smartvolt_private.web_chat_public_articles(jsonb_populate_record(null::public.sv_web_chat_configs,jsonb_build_object('company_id',$1::text,'brand_id','main','ai_knowledge_mode','brand_public','ai_article_ids','[]'::jsonb))) v",
+        [c],
+      );
+      assert.equal(
+        available?.some((a) => a.id === id),
+        visibility === "public",
+      );
+      assert.deepEqual((await publish(c, scan)).state, result.state);
+    }
+  });
+}
+
+test("withdrawn legacy page cannot return as public FAQ fragments", async () => {
+  const c = await isolatedCompany();
+  const scan = await ready(randomUUID(), c, undefined, true);
+  const first = await publish(c, scan);
+  const initial = appSchema.parse(first.state);
+  const article = {
+    ...initial.studio.articles[0],
+    visibility: "internal" as const,
+    revision: 2,
+  };
+  const edited = applyCompanyCommand(
+    initial,
+    { type: "studio", action: { type: "article", article } },
+    { id: owner, name: "Owner", role: "owner" },
+    Date.now(),
+    ["crm", "pos"],
+  );
+  await call("sv_commit_workspace", [
+    c,
+    owner,
+    first.revision,
+    randomUUID(),
+    JSON.stringify(edited),
+    "studio",
+  ]);
+  const result = await publish(c, await ready(randomUUID(), c));
+  assert.equal(result.added, 0);
+  assert.equal(result.refreshed, 0);
+  assert.equal(result.skipped, 1);
+  assert.deepEqual(appSchema.parse(result.state).studio.articles, [article]);
+});

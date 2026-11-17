@@ -1,0 +1,7 @@
+# Preserve FAQ publication scope on website refresh
+
+Product Learning Sync checked: canonical protocol, index and checkpoint read; considered `2026-10-06-optional-operator-settings.md` and `2026-11-17-customer-platform-authority-separation.md`. Only neutral preservation of operator-controlled publication authority is used. No pilot data or implementation copied.
+
+PR #19's refresh path discarded explicit visibility when replacing a matching source-backed FAQ. Two new database regressions first failed on the released schema, then passed with this additive function-only migration. Matching FAQ refreshes retain explicit internal/public scope through repeated changed-answer scans and immutable replay. The actual automatic C article selector excludes refreshed internal FAQ. Existing manually edited answers remain protected. Withdrawn legacy page imports are retained and same-URL FAQ replacements skipped until an owner changes scope; this conservative policy avoids reviving an entire withdrawn page.
+
+No existing FAQ, workspace payload, widget configuration or notification settings are rewritten by this migration. No grants or security mode change. Full unit/database tests and exact-head CI are separate from focused test results. This does not retrospectively identify already-lost scope, or infer that a wholly new question is the same revoked FAQ. Real device push acceptance remains out of scope.

@@ -24,15 +24,21 @@ test.beforeAll(async () => {
     })
   ).outputFiles[0].text;
 });
-async function mount(page: import("@playwright/test").Page) {
+async function mount(
+  page: import("@playwright/test").Page,
+  options: { count?: number; legacy?: boolean } = {},
+) {
   const data: WebChatSettings = {
     companyId: company,
     canManage: true,
     canManageAI: true,
     brands: [{ id: "brand", name: "Terra Studio" }],
-    publicArticles: [
-      { id: "public-faq", brandId: "brand", title: "品牌及服務介紹" },
-    ],
+    publicArticles: Array.from({ length: options.count ?? 1 }, (_, i) => ({
+      id: `public-${i}`,
+      brandId: "brand",
+      title: `品牌及服務介紹 ${i + 1}`,
+      autoPublic: true,
+    })),
     configs: [
       {
         id,
@@ -45,7 +51,8 @@ async function mount(page: import("@playwright/test").Page) {
         revision: 1,
         verification: "a".repeat(48),
         aiEnabled: false,
-        aiArticleIds: [],
+        aiKnowledgeMode: options.legacy ? "selected" : "brand_public",
+        aiArticleIds: options.legacy ? ["public-0"] : [],
         accentColor: "#2457E7",
       },
     ],
@@ -96,7 +103,6 @@ test("customers select a palette or exact brand color, preview it and save only 
   );
   await page.getByLabel("品牌色碼", { exact: true }).fill("#166534");
   await page.getByLabel("C 自動介紹及回答問題", { exact: false }).check();
-  await page.getByLabel("品牌及服務介紹", { exact: true }).check();
   await page.getByRole("button", { name: "儲存接待設定", exact: true }).click();
   await expect.poll(() => f.calls.length).toBe(1);
   expect(f.calls[0]).toMatchObject({
@@ -104,12 +110,57 @@ test("customers select a palette or exact brand color, preview it and save only 
     id,
     accentColor: "#166534",
     aiEnabled: true,
-    aiArticleIds: ["public-faq"],
+    aiKnowledgeMode: "brand_public",
   });
   await expect(page.locator(".wc-preview header")).toHaveCSS(
     "background-color",
     "rgb(22, 101, 52)",
   );
+});
+test("35 public articles save and reload automatically with no article checklist", async ({
+  page,
+}) => {
+  const f = await mount(page, { count: 35 });
+  await expect(page.getByText("35 篇可用知識", { exact: true })).toBeVisible();
+  await expect(
+    page.locator('.wc-knowledge input[type="checkbox"]'),
+  ).toHaveCount(0);
+  await page.getByLabel("C 自動介紹及回答問題", { exact: false }).check();
+  await page.getByRole("button", { name: "儲存接待設定", exact: true }).click();
+  await expect.poll(() => f.calls.length).toBe(1);
+  expect(f.calls[0]).toMatchObject({
+    aiEnabled: true,
+    aiKnowledgeMode: "brand_public",
+  });
+  expect(f.calls[0]).not.toHaveProperty("aiArticleIds");
+  await expect(page.getByText("有未儲存改動", { exact: true })).toHaveCount(0);
+  await page.reload();
+  await expect(
+    page.getByLabel("C 自動介紹及回答問題", { exact: false }),
+  ).toBeChecked();
+  await expect(page.getByText("35 篇可用知識", { exact: true })).toBeVisible();
+  await page.screenshot({
+    path: test.info().outputPath("website-c-automatic-public-knowledge-35.png"),
+    fullPage: true,
+  });
+});
+test("legacy publication stays explicit and one action adopts future public knowledge", async ({
+  page,
+}) => {
+  const f = await mount(page, { count: 35, legacy: true });
+  await expect(page.getByText("1 篇可用知識", { exact: true })).toBeVisible();
+  await page
+    .getByRole("button", { name: "改用自動同步公開知識", exact: true })
+    .click();
+  await expect(page.getByText("35 篇可用知識", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "儲存接待設定", exact: true }).click();
+  await expect.poll(() => f.calls.length).toBe(1);
+  expect(f.calls[0]).toMatchObject({ aiKnowledgeMode: "brand_public" });
+  expect(f.data.configs[0].aiArticleIds).toEqual(["public-0"]);
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "改用自動同步公開知識", exact: true }),
+  ).toHaveCount(0);
 });
 test("installation is one combined snippet and one verified activation command", async ({
   page,

@@ -3,6 +3,7 @@ import { useRef, useState } from "react";
 import { chatPalettes, chatTheme } from "@/lib/web-chat/theme";
 import useSWR from "swr";
 import {
+  BookOpen,
   Check,
   Code2,
   Copy,
@@ -58,6 +59,12 @@ export default function WebChatSettings({
     [aiArticleIds, setAiArticleIds] = useState<string[]>(
       initial.configs[0]?.aiArticleIds ?? [],
     ),
+    [aiKnowledgeMode, setAiKnowledgeMode] = useState<
+      "selected" | "brand_public"
+    >(
+      initial.configs[0]?.aiKnowledgeMode ??
+        (initial.configs[0] ? "selected" : "brand_public"),
+    ),
     [accentColor, setAccentColor] = useState(
       initial.configs[0]?.accentColor ?? "#2457E7",
     ),
@@ -70,6 +77,11 @@ export default function WebChatSettings({
   const theme = chatTheme(accentColor);
   const articles = (data.publicArticles ?? []).filter(
     (a) => a.brandId === brandId,
+  );
+  const availableArticles = articles.filter((a) =>
+    aiKnowledgeMode === "brand_public"
+      ? a.autoPublic || aiArticleIds.includes(a.id)
+      : aiArticleIds.includes(a.id),
   );
   const validColor = /^#[a-f0-9]{6}$/i.test(accentColor);
   const pending = useRef<{
@@ -91,6 +103,7 @@ export default function WebChatSettings({
     setEnabled(c?.enabled ?? false);
     setAiEnabled(c?.aiEnabled ?? false);
     setAiArticleIds(c?.aiArticleIds ?? []);
+    setAiKnowledgeMode(c?.aiKnowledgeMode ?? (c ? "selected" : "brand_public"));
     setAccentColor(c?.accentColor ?? "#2457E7");
     setError("");
     setNotice("");
@@ -122,7 +135,8 @@ export default function WebChatSettings({
                 .filter(Boolean),
               enabled,
               aiEnabled,
-              aiArticleIds,
+              aiKnowledgeMode,
+              ...(aiKnowledgeMode === "selected" ? { aiArticleIds } : {}),
               accentColor,
             }
           : action === "activate"
@@ -201,6 +215,7 @@ export default function WebChatSettings({
       live.origins.join("\n") !== origins ||
       live.enabled !== enabled ||
       (live.aiEnabled ?? false) !== aiEnabled ||
+      (live.aiKnowledgeMode ?? "selected") !== aiKnowledgeMode ||
       JSON.stringify(live.aiArticleIds ?? []) !==
         JSON.stringify(aiArticleIds) ||
       (live.accentColor ?? "#2457E7").toUpperCase() !==
@@ -211,7 +226,7 @@ export default function WebChatSettings({
         <div>
           <span className="wc-eyebrow">C · WEBSITE ASSISTANT</span>
           <h1>為品牌設定 C</h1>
-          <p>配合品牌外觀、選擇公開知識，將 C 接到你嘅網站。</p>
+          <p>配合品牌外觀，同步品牌公開知識，將 C 接到你嘅網站。</p>
         </div>
         <div className={`wc-status ${live?.enabled ? "enabled" : ""}`}>
           <span />
@@ -266,6 +281,7 @@ export default function WebChatSettings({
                   onChange={(e) => {
                     setBrandId(e.target.value);
                     setAiArticleIds([]);
+                    setAiKnowledgeMode("brand_public");
                   }}
                 >
                   {data.brands.map((b) => (
@@ -380,7 +396,7 @@ export default function WebChatSettings({
                   !greeting.trim() ||
                   !origins.trim() ||
                   !validColor ||
-                  (aiEnabled && aiArticleIds.length === 0)
+                  (aiEnabled && availableArticles.length === 0)
                 }
                 onClick={() => void submit("save")}
               >
@@ -419,35 +435,46 @@ export default function WebChatSettings({
               className="wc-knowledge"
               disabled={busy || uncertain || data.canManageAI === false}
             >
-              <legend>可以向網站訪客公開嘅知識</legend>
-              <p className="wc-help">
-                只選可以公開嘅內容。C
-                唔會使用未選取嘅內部知識；資料不足會轉交同事跟進。
-              </p>
-              {articles.map((a) => (
-                <label className="wc-article" key={a.id}>
-                  <input
-                    type="checkbox"
-                    checked={aiArticleIds.includes(a.id)}
-                    onChange={(e) =>
-                      setAiArticleIds(
-                        e.target.checked
-                          ? [...aiArticleIds, a.id]
-                          : aiArticleIds.filter((id) => id !== a.id),
-                      )
-                    }
-                  />
-                  <span>{a.title}</span>
-                </label>
-              ))}
-              {!articles.length && (
-                <p className="wc-help">
-                  呢個品牌未有可選嘅已批核知識，請先喺知識庫加入並批核公開介紹。
-                </p>
+              <legend>品牌公開知識</legend>
+              <div className="wc-knowledge-summary">
+                <BookOpen size={22} aria-hidden="true" />
+                <div>
+                  <strong>{availableArticles.length} 篇可用知識</strong>
+                  <p className="wc-help">
+                    {aiKnowledgeMode === "brand_public"
+                      ? "自動同步同品牌已批核嘅網站 FAQ 同公開知識，新增或修改後毋須再設定 C。"
+                      : "目前沿用已指定嘅公開知識。改用自動同步後，新增及修改嘅公開 FAQ 亦會直接供 C 使用。"}
+                  </p>
+                </div>
+              </div>
+              {aiKnowledgeMode === "selected" && (
+                <button
+                  className="wc-secondary"
+                  type="button"
+                  onClick={() => setAiKnowledgeMode("brand_public")}
+                >
+                  改用自動同步公開知識
+                </button>
               )}
               <p className="wc-help">
-                已選 {aiArticleIds.length} / 30 · 啟用 C 亦需要公司 AI 已開啟。
+                內部、草稿、過期及其他品牌知識不會供訪客使用；資料不足會交同事跟進。
               </p>
+              {!availableArticles.length && (
+                <p className="wc-help">
+                  請先喺品牌知識庫匯入網站 FAQ，或將資料設為可供網站 C
+                  使用並批核。
+                </p>
+              )}
+              {!!availableArticles.length && (
+                <details className="wc-knowledge-list">
+                  <summary>檢視可用知識</summary>
+                  <ul>
+                    {availableArticles.map((a) => (
+                      <li key={a.id}>{a.title}</li>
+                    ))}
+                  </ul>
+                </details>
+              )}
             </fieldset>
             <p className="wc-help">
               <a href={`/company/${initial.companyId}/crm?view=bot`}>
@@ -469,7 +496,7 @@ export default function WebChatSettings({
                   !greeting.trim() ||
                   !origins.trim() ||
                   !validColor ||
-                  (aiEnabled && !aiArticleIds.length)
+                  (aiEnabled && !availableArticles.length)
                 }
                 onClick={() => void submit("save")}
               >

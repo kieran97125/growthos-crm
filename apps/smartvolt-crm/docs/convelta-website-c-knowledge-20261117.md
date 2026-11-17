@@ -1,0 +1,19 @@
+# Website C: automatic public knowledge and saving
+
+The owner reported 35 checked articles against an undisclosed 30-item API/database limit, followed by a generic validation error. Two regressions reproduce the failure on the released schema. The model worker separately parsed at most 30 articles, so increasing only the form limit would still fail at answer time.
+
+New widgets use automatic brand-public knowledge. The setup page shows the available count and a collapsed read-only list, with no article checkbox task. Existing curated widgets keep their explicit grants; an owner can adopt automatic synchronization in one action. The current Convelta widget will adopt that mode under the owner's request after qualification. API, database and worker now agree with the existing studio capacity of 100 articles. Retrieval still selects at most 12 relevant articles and 16,000 content characters; the company AI budget is unchanged.
+
+Automatic knowledge includes current, approved, same-company/same-brand website-import FAQ and explicitly public manual articles. Existing explicit grants remain available. Internal overrides, drafts, expired records, other tenants/brands and coaching patterns are excluded. The FAQ editor has a public/internal scope control; existing unspecified scope is preserved, and new manual records start internal. Website-import provenance supplies the existing public-source authority. No internal article is made public solely because it was approved for staff use.
+
+Adding or editing eligible knowledge updates C without configuring each widget again. Setting an article internal or revoking approval removes it; the context hash also rejects an answer admitted under superseded publication. Only an owner can change the widget's public-knowledge policy. Existing role, brand, replay, source validation and domain verification contracts remain.
+
+The additive migration is `20261117065652_convelta_c_automatic_public_knowledge.sql`. It preserves legacy widget mode and explicit IDs. No global backfill of public visibility, device opt-in, subscription, customer conversation or private provider configuration is performed. Existing owned React/SWR, Zod, retrieval, PostgreSQL and Playwright/PGlite tooling are sufficient; no dependency is added.
+
+Verification covers the reported 35-item command and persistence, automatic inclusion beyond article 30, source/company/brand/privacy/approval/expiry controls, current edits, publication revocation, owner-only policy changes, replay, prompt budgeting and actual setup-component save/reload without article checkboxes. Native PostgreSQL verifies a 35-article admission and rejects an answer after a public source is withdrawn. Exact-source CI, hosted fingerprint/rollback acceptance and release receipts are recorded after qualification.
+
+The separate website C handoff and notification defects were corrected in PR #18. Parent acceptance remains open; real device/provider/OS delivery still requires an authorized registered device. This knowledge setup change does not close that item or establish customer impact.
+
+## Product Learning Sync checked
+
+Fresh canonical protocol, index and checkpoint were checked. Considered `2026-10-06-optional-operator-settings.md`, `2026-09-01-app-owned-destructive-action-lifecycle.md`, `2026-11-16-complete-operational-reads-and-durable-capture.md`, `2026-07-29-build-source-immutability-and-lead-schema-contract.md` and `2026-11-17-fresh-registration-and-provider-admission.md`. Only neutral progressive-disclosure, current-publication, preserved authority and bounded-evidence invariants are adopted. Private provider/capture implementation and client data remain outside this project. The existing canonical draft review proposal records the consumed learning; canonical main is not represented as merged.

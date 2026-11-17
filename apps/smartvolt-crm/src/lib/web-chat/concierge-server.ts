@@ -25,7 +25,7 @@ export async function processWebsiteTurn(company: string, message: string) {
     const data = claim.data;
     const articles = retrieveKnowledge(
       approvedKnowledge(
-        z.array(articleSchema).max(30).parse(data.articles),
+        z.array(articleSchema).max(100).parse(data.articles),
         company,
         data.brandId,
         Date.now(),

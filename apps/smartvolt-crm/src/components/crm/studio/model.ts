@@ -131,6 +131,7 @@ export const articleSchema = z.object({
   keywords: z.array(z.string().min(1).max(50)).max(20),
   source: z.string().min(1).max(120),
   status: z.enum(["approved", "draft"]),
+  visibility: z.enum(["public", "internal"]).optional(),
   validUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   revision: z.number().int().min(1),
   coaching: z

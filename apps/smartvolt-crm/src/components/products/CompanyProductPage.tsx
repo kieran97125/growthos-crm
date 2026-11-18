@@ -40,9 +40,14 @@ export async function CompanyProductPage({
       if (websiteReadiness !== "ready" && query.provider === "website") {
         const clean = new URLSearchParams();
         for (const [key, value] of Object.entries(query))
-          if (value !== undefined && !["provider", "thread", "contact", "queue"].includes(key))
+          if (
+            value !== undefined &&
+            !["provider", "thread", "contact", "queue"].includes(key)
+          )
             clean.set(key, value);
-        redirect(`/company/${companyId}/crm${clean.size ? "?" + clean.toString() : ""}`);
+        redirect(
+          `/company/${companyId}/crm${clean.size ? "?" + clean.toString() : ""}`,
+        );
       }
     } else
       company = await loadCompany(
@@ -105,6 +110,7 @@ export async function CompanyProductPage({
           <ProductWorkspace
             initialProduct={selected}
             initialView={view}
+            initialBotTab={query.rules === "1" ? "settings" : "knowledge"}
             initialContact={query.contact}
             initialBrand={query.brand}
             initialConversation={query.conversation}
@@ -114,4 +120,3 @@ export async function CompanyProductPage({
     </>
   );
 }
-

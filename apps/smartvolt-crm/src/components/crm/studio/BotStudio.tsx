@@ -1,6 +1,12 @@
 "use client";
 import { useIdentity } from "@/lib/saas/CompanyProvider";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import Link from "next/link";
+import { canManage } from "@/lib/saas/identity";
+import AIDraft from "@/components/ai/AIDraft";
+import ReplyScenarios from "@/components/ai/ReplyScenarios";
+import ResponseRules from "./ResponseRules";
+import "@/components/ai/ai.css";
 import {
   ArrowRight,
   BookOpen,
@@ -11,7 +17,6 @@ import {
   Hand,
   MessageSquare,
   Play,
-  Save,
   Send,
   ShieldCheck,
   Sparkles,
@@ -58,9 +63,13 @@ type LabMessage = {
 export default function BotStudio({
   studio,
   onInbox,
+  initialTab = "knowledge",
+  initialBrand,
 }: {
   studio: StudioController;
   onInbox: () => void;
+  initialTab?: "settings" | "knowledge";
+  initialBrand?: string;
 }) {
   const identity = useIdentity();
   const BRANDS = identity.scope.brands;
@@ -68,8 +77,10 @@ export default function BotStudio({
   const { state, dispatch } = studio;
   const ai = useAssistant();
   const connection = useAIConnection();
-  const [brandId, setBrandId] = useState<BrandId>(BRANDS[0].id);
-  const [tab, setTab] = useState<"settings" | "knowledge">("knowledge");
+  const [brandId, setBrandId] = useState<BrandId>(
+    BRANDS.some((b) => b.id === initialBrand) ? initialBrand! : BRANDS[0].id,
+  );
+  const [tab, setTab] = useState<"settings" | "knowledge">(initialTab);
   const [labInput, setLabInput] = useState(
     identity.connected
       ? "我哋幾個同事分開覆 IG 同 Messenger，想集中管理查詢，有咩方案適合？"
@@ -81,10 +92,22 @@ export default function BotStudio({
   const [businessHours, setBusinessHours] = useState(true);
   const [humanOwned, setHumanOwned] = useState(false);
   const [notice, setNotice] = useState("");
+  const [labLocked, setLabLocked] = useState(false);
+  const labRef = useRef<HTMLElement>(null);
+  const editable = !identity.connected || canManage(identity.actor.role);
+  const rulesDisabled = !editable || labLocked || studio.storageError;
+  const saving =
+    identity.connected && studio.storage !== "已儲存至公司工作空間";
+  function chooseTrial(question: string) {
+    if (labLocked) return;
+    setLabInput(question);
+    labRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
   const profile = state.bots.find((b) => b.brandId === brandId)!;
   const articles = state.articles.filter((a) => a.brandId === brandId);
   const today = new Date(actionTime() + 8 * 3600000).toISOString().slice(0, 10);
   function patch(changes: Partial<BotProfile>) {
+    if (rulesDisabled) return;
     const next = { ...profile, ...changes };
     if (next.openingHour >= next.closingHour) {
       setNotice("接待結束時間需要遲於開始時間。");
@@ -93,6 +116,7 @@ export default function BotStudio({
     dispatch({ type: "bot", bot: { ...profile, ...changes } });
   }
   function changeBrand(value: BrandId) {
+    if (labLocked) return;
     ai.cancel();
     setBrandId(value);
     setLabMessages([]);
@@ -180,17 +204,14 @@ export default function BotStudio({
         </div>
         {tab === "settings" && (
           <div className="st-header-actions">
-            <StudioStatus />
+            {identity.connected ? (
+              <span className="st-rules-save" role="status">
+                {studio.storage ?? "正在核對儲存狀態…"}
+              </span>
+            ) : (
+              <StudioStatus />
+            )}
             <AIConnectButton />
-            <button
-              className="st-button st-primary"
-              onClick={() =>
-                setNotice("設定已保留，真實 WhatsApp 渠道仍未接通。")
-              }
-            >
-              <Save size={15} />
-              儲存設定
-            </button>
           </div>
         )}
       </header>
@@ -204,6 +225,7 @@ export default function BotStudio({
             {BRANDS.map((b, i) => (
               <button
                 key={b.id}
+                disabled={labLocked}
                 className={brandId === b.id ? "is-active" : ""}
                 onClick={() => changeBrand(b.id as BrandId)}
               >
@@ -217,7 +239,9 @@ export default function BotStudio({
             ))}
           </div>
           <div className="st-bot-summary">
-            <span className="st-neutral-chip">示範設定</span>
+            <span className="st-neutral-chip">
+              {identity.connected ? "品牌回應規則" : "示範設定"}
+            </span>
             <strong>{profile.name}</strong>
             <p>{modes.find((m) => m.id === profile.mode)?.title}</p>
             <div>
@@ -291,90 +315,54 @@ export default function BotStudio({
         <div className="st-bot-editor-scroll">
           {tab === "settings" ? (
             <>
-              <div className="st-editor-section">
-                <div className="st-editor-section-title">
-                  <span>01</span>
-                  <div>
-                    <h2>助手點樣參與對話？</h2>
-                    <p>
-                      {identity.connected
-                        ? "公司 AI 提供回覆建議，由同事確認後傳送。自動模式只供流程設計與示範。"
-                        : "先設定處理範圍，再喺右邊試聊。"}
-                    </p>
+              {!editable && (
+                <p className="st-rule-hint">
+                  你可以檢視規則；修改需要公司管理員權限。
+                </p>
+              )}
+              <ResponseRules
+                profile={profile}
+                patch={patch}
+                disabled={rulesDisabled}
+                onTry={chooseTrial}
+              />
+              <details className="st-rule-advanced">
+                <summary>接待時段與流程設計</summary>
+                <p>
+                  {identity.connected
+                    ? "公司訊息由同事確認後傳送；以下模式供流程設計。網站 C 喺網站聊天設定獨立啟用。"
+                    : "喺示範對話測試不同接待模式。"}
+                </p>
+                <fieldset disabled={rulesDisabled}>
+                  <legend>接待模式</legend>
+                  <div
+                    className="st-mode-options"
+                    role="radiogroup"
+                    aria-label="BOT 回覆模式"
+                  >
+                    {modes.map((m) => {
+                      const Icon = m.icon;
+                      return (
+                        <button
+                          type="button"
+                          key={m.id}
+                          role="radio"
+                          aria-checked={profile.mode === m.id}
+                          className={profile.mode === m.id ? "is-active" : ""}
+                          onClick={() => patch({ mode: m.id })}
+                        >
+                          <span>
+                            <Icon size={19} aria-hidden="true" />
+                          </span>
+                          <div>
+                            <strong>{m.title}</strong>
+                            <p>{m.text}</p>
+                          </div>
+                          <i>{profile.mode === m.id && <span />}</i>
+                        </button>
+                      );
+                    })}
                   </div>
-                </div>
-                <div
-                  className="st-mode-options"
-                  role="radiogroup"
-                  aria-label="BOT 回覆模式"
-                >
-                  {modes.map((m) => {
-                    const Icon = m.icon;
-                    return (
-                      <button
-                        role="radio"
-                        aria-checked={profile.mode === m.id}
-                        className={profile.mode === m.id ? "is-active" : ""}
-                        key={m.id}
-                        onClick={() => patch({ mode: m.id })}
-                      >
-                        <span>
-                          <Icon size={19} />
-                        </span>
-                        <div>
-                          <strong>{m.title}</strong>
-                          <p>{m.text}</p>
-                        </div>
-                        <i>{profile.mode === m.id && <span />}</i>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-              <div className="st-editor-section">
-                <div className="st-editor-section-title">
-                  <span>02</span>
-                  <div>
-                    <h2>回覆風格與接待時間</h2>
-                    <p>品牌語氣可以調整，資料仍然跟知識庫。</p>
-                  </div>
-                </div>
-                <div className="st-fields">
-                  <label>
-                    助手名稱
-                    <input
-                      aria-label="助手名稱"
-                      maxLength={60}
-                      value={profile.name}
-                      onChange={(e) => {
-                        if (e.target.value.trim())
-                          patch({ name: e.target.value });
-                      }}
-                    />
-                  </label>
-                  <label>
-                    回覆語氣
-                    <select
-                      aria-label="BOT 回覆語氣"
-                      value={profile.tone}
-                      onChange={(e) =>
-                        patch({ tone: e.target.value as "friendly" })
-                      }
-                    >
-                      <option value="friendly">自然親切・廣東話</option>
-                      <option value="professional">簡潔專業・繁體中文</option>
-                    </select>
-                  </label>
-                  <label>
-                    開場白
-                    <textarea
-                      aria-label="BOT 開場白"
-                      rows={3}
-                      maxLength={1000}
-                      value={profile.greeting}
-                      onChange={(e) => patch({ greeting: e.target.value })}
-                    />
-                  </label>
                   <div className="st-sim-inputs">
                     <label>
                       接待開始（香港時間）
@@ -411,43 +399,8 @@ export default function BotStudio({
                       </select>
                     </label>
                   </div>
-                </div>
-              </div>
-              <div className="st-editor-section">
-                <div className="st-editor-section-title">
-                  <span>03</span>
-                  <div>
-                    <h2>允許自動處理嘅問題</h2>
-                    <p>超出範圍會交畀同事，保留完整上下文。</p>
-                  </div>
-                </div>
-                <div className="st-allow-topics">
-                  {[
-                    { key: "allowService", label: "服務介紹及已核實收費" },
-                    { key: "allowLocation", label: "分店及到店指引" },
-                    { key: "allowHours", label: "營業及接待時間" },
-                  ].map((o) => (
-                    <label key={o.key}>
-                      <input
-                        type="checkbox"
-                        checked={profile[o.key as "allowService"]}
-                        onChange={(e) => patch({ [o.key]: e.target.checked })}
-                      />
-                      <span>{o.label}</span>
-                      <ShieldCheck size={14} />
-                    </label>
-                  ))}
-                </div>
-                <div className="st-handoff-rule">
-                  <Hand size={17} />
-                  <div>
-                    <strong>以下情況轉真人</strong>
-                    <p>
-                      客戶要求、投訴退款、專業判斷、資料不足，或需要核實正式預約。
-                    </p>
-                  </div>
-                </div>
-              </div>
+                </fieldset>
+              </details>
             </>
           ) : (
             <BrandKnowledge key={brandId} studio={studio} brandId={brandId} />
@@ -456,15 +409,88 @@ export default function BotStudio({
         {tab === "settings" && (
           <footer className="st-editor-footer">
             <ShieldCheck size={12} />
-            {studio.storageError
-              ? "設定未能儲存，請保留頁面"
-              : "設定自動保留於此瀏覽器"}
-            <span>真實 WhatsApp 未接通</span>
+            {studio.storage ??
+              (studio.storageError
+                ? "設定未能儲存，請保留頁面"
+                : "此瀏覽器自動儲存")}
+            <span>
+              {identity.connected ? "已保存嘅規則先會用於真實試答" : "示範設定"}
+            </span>
           </footer>
         )}
       </div>
-      {tab === "settings" && (
-        <aside className="st-bot-lab" aria-label="BOT 試聊測試">
+      {tab === "settings" && identity.connected && (
+        <aside
+          ref={labRef}
+          className="st-bot-lab st-connected-lab"
+          aria-label="品牌回應試答"
+        >
+          <header>
+            <div>
+              <span>
+                <Play size={14} aria-hidden="true" />
+              </span>
+              <h2>即時試答</h2>
+            </div>
+            <Link
+              href={`/company/${identity.scope.companyId}/crm/ai?mode=replies&brand=${encodeURIComponent(brandId)}`}
+            >
+              完整試答
+            </Link>
+          </header>
+          <div className="st-connected-trial">
+            <p>使用已保存嘅品牌規則同有效知識。生成計入公司 AI 用量。</p>
+            <ReplyScenarios
+              message={labInput}
+              disabled={labLocked}
+              onChoose={setLabInput}
+            />
+            <label>
+              客戶想問乜？
+              <textarea
+                aria-label="BOT 測試訊息"
+                rows={4}
+                maxLength={2000}
+                disabled={labLocked}
+                value={labInput}
+                onChange={(e) => setLabInput(e.target.value)}
+              />
+            </label>
+            {saving && (
+              <p className="st-rule-hint">
+                {studio.storageError
+                  ? "請先核對未儲存改動，再試答。"
+                  : "正在儲存規則，完成後可以試答。"}
+              </p>
+            )}
+            <AIDraft
+              key={`${brandId}:${JSON.stringify(profile)}`}
+              view="test"
+              context={{
+                companyId: identity.scope.companyId,
+                brandId,
+                source: "playground",
+                message: labInput,
+              }}
+              disabled={
+                saving ||
+                identity.actor.role === "viewer" ||
+                connection.status !== "ready" ||
+                !labInput.trim() ||
+                !articles.some(
+                  (a) =>
+                    a.status === "approved" &&
+                    a.validUntil >= today &&
+                    a.coaching?.kind !== "pattern",
+                )
+              }
+              onRequestState={setLabLocked}
+            />
+          </div>
+        </aside>
+      )}
+      {tab === "settings" && !identity.connected && (
+        <aside ref={labRef} className="st-bot-lab" aria-label="BOT 試聊測試">
           <header>
             <div>
               <span>

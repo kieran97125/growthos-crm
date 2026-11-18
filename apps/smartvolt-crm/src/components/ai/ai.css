@@ -512,3 +512,126 @@
   background: var(--kies-tint);
   border-color: var(--kies-royal);
 }
+
+.ai-scenarios {
+  border: 0;
+  padding: 0;
+  margin: 0 0 18px;
+  min-width: 0;
+}
+.ai-scenarios legend {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.ai-scenarios > div {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+.ai-scenarios button {
+  min-height: 40px;
+  font-size: 12px;
+  padding: 8px 6px;
+  border: 1px solid var(--kies-line);
+  background: white;
+  color: var(--kies-ink);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.ai-scenarios button[aria-pressed="true"] {
+  background: var(--kies-tint);
+  border-color: var(--kies-royal);
+  color: var(--kies-royal);
+  font-weight: 600;
+}
+.ai-scenarios p {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--kies-text);
+}
+.ai-rules-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--kies-royal);
+  font-size: 12px;
+  line-height: 1.8;
+  margin-bottom: 24px;
+}
+.ai-answer-review {
+  border: 1px solid var(--kies-line);
+  border-radius: 12px;
+  margin: 16px 0;
+  overflow: hidden;
+  background: white;
+}
+.ai-answer-review > div {
+  padding: 16px;
+}
+.ai-answer-review h3 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  margin: 0 0 10px;
+  color: var(--kies-ink);
+}
+.ai-answer-review h3 > span {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--kies-muted);
+  font-weight: 400;
+}
+.ai-review-decision {
+  background: var(--kies-panel);
+}
+.ai-answer-review.needs-human .ai-review-decision {
+  background: #fff7ed;
+}
+.ai-answer-review ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.9;
+}
+.ai-answer-review p {
+  font-size: 12px;
+  line-height: 1.9;
+  margin: 7px 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.ai-answer-review small {
+  display: block;
+  font-size: 11px;
+  line-height: 1.8;
+  color: var(--kies-text);
+  margin-top: 7px;
+  overflow-wrap: anywhere;
+}
+.ai-review-sources {
+  border-top: 1px solid var(--kies-line);
+}
+.ai-review-sources article + article {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--kies-line);
+}
+.ai-review-sources article > b {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.ai-review-sources article > b > small {
+  display: inline;
+  margin: 0;
+  font-weight: 400;
+}
+@media (max-width: 420px) {
+  .ai-scenarios > div {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

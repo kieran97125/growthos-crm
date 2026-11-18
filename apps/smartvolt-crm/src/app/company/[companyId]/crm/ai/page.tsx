@@ -19,6 +19,7 @@ export default async function AIPage({
     brand?: string;
     coachSource?: string;
     coachId?: string;
+    scenario?: string;
   }>;
 }) {
   const { companyId } = await params;
@@ -45,6 +46,7 @@ export default async function AIPage({
       companyId={companyId}
       initialStatus={status}
       initialBrand={query.brand}
+      initialScenario={query.scenario}
       initialCoaching={
         source.success && query.coachId && query.coachId.length <= 100
           ? { source: source.data, sourceId: query.coachId }

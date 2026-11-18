@@ -98,6 +98,8 @@ export function ConversationWorkspace({
   initialNow,
   initialView = "inbox",
   initialConversation,
+  initialBotTab,
+  initialBotBrand,
   onSwitchProduct,
   requestedCustomer,
 }: {
@@ -106,6 +108,8 @@ export function ConversationWorkspace({
   initialView?: WorkspaceView;
   initialContact?: string;
   initialConversation?: string;
+  initialBotTab?: "settings" | "knowledge";
+  initialBotBrand?: string;
   onSwitchProduct: (product: Product, context?: CustomerContext) => void;
   requestedCustomer?: CustomerContext | null;
 }) {
@@ -1258,6 +1262,8 @@ export function ConversationWorkspace({
           ) : (
             <BotStudio
               studio={studio}
+              initialTab={initialBotTab}
+              initialBrand={initialBotBrand}
               onInbox={() => {
                 if (identity.connected && chrome?.navigate) {
                   chrome.navigate(`/company/${identity.scope.companyId}/crm`);

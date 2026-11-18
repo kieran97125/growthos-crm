@@ -216,3 +216,53 @@ test("viewers can inspect AI knowledge and readiness without generating or enabl
     0,
   );
 });
+test("scenario selection is editable, never dispatches automatically, and an old answer is hidden for a new question", async ({
+  page,
+}) => {
+  const attempts: Record<string, unknown>[] = [];
+  await mount(page, async (r, b) => {
+    attempts.push(b);
+    await r.fulfill({ json: answer });
+  });
+  await page.getByRole("button", { name: "價錢優惠", exact: true }).click();
+  await expect(page.getByLabel("客戶想問乜？")).toHaveValue(
+    "服務收費幾多？而家有冇優惠？",
+  );
+  expect(attempts).toHaveLength(0);
+  await page
+    .getByRole("button", { name: "準備 AI 回覆建議", exact: true })
+    .click();
+  const review = page.getByRole("region", { name: "試答檢查結果" });
+  await expect(review.getByRole("heading", { name: /資料來源/ })).toBeVisible();
+  await expect(review).toContainText(answer.evidence[0].quote);
+  await page.getByRole("button", { name: "要求真人", exact: true }).click();
+  await expect(page.locator(".ai-generated")).toHaveCount(0);
+  expect(attempts).toHaveLength(1);
+});
+test("trial human review explains actual checks even when no knowledge source is adopted", async ({
+  page,
+}) => {
+  await mount(page, async (r) => {
+    await r.fulfill({
+      json: {
+        ...answer,
+        decision: "handoff",
+        intent: "handoff",
+        sources: [],
+        evidence: [],
+        review: { handoffReasons: ["客人要求真人協助。"] },
+      },
+    });
+  });
+  await page.getByRole("button", { name: "要求真人", exact: true }).click();
+  await page
+    .getByRole("button", { name: "準備 AI 回覆建議", exact: true })
+    .click();
+  const review = page.getByRole("region", { name: "試答檢查結果" });
+  await expect(
+    review.getByRole("heading", { name: "轉真人原因", exact: true }),
+  ).toBeVisible();
+  await expect(review).toContainText("客人要求真人協助。");
+  await expect(review).toContainText("未有通知同事或建立客戶交接");
+  await expect(review).toContainText("0 篇");
+});

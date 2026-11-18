@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import type { CompanyAnswer } from "@/lib/ai/protocol";
 import { replyGoals, type ReplyGoal } from "@/lib/ai/goals";
+import AnswerReview from "./AnswerReview";
 type Context = { companyId: string; brandId: string } & (
   | { source: "playground"; message: string }
   | { source: "conversation"; conversationId: string }
@@ -33,6 +34,7 @@ export default function AIDraft({
   onGenerated,
   onRequestState,
   onHandoff,
+  view = "draft",
 }: {
   context: Context;
   disabled?: boolean;
@@ -40,6 +42,7 @@ export default function AIDraft({
   onGenerated?: () => void;
   onRequestState?: (locked: boolean) => void;
   onHandoff?: (answer: CompanyAnswer) => Promise<boolean | void>;
+  view?: "draft" | "test";
 }) {
   const [replyDraft, setReplyDraft] = useState("");
   const [result, setResult] = useState<CompanyAnswer | null>(null),
@@ -57,6 +60,10 @@ export default function AIDraft({
     (Context & { requestId: string; goal: ReplyGoal }) | null
   >(null);
   const scope = contextScope(context);
+  const visibleResult =
+    result && completedInput && contextScope(completedInput) === scope
+      ? result
+      : null;
   const currentScope = useRef(scope);
   useLayoutEffect(() => {
     currentScope.current = scope;
@@ -201,7 +208,7 @@ export default function AIDraft({
           ? "正在整理建議…"
           : pending
             ? "核對 AI 結果"
-            : result
+            : visibleResult
               ? "重新生成建議"
               : "準備 AI 回覆建議"}
         <ArrowUpRight size={15} aria-hidden="true" />
@@ -211,12 +218,12 @@ export default function AIDraft({
           {error}
         </p>
       )}
-      {notice && (
+      {notice && (!completedInput || visibleResult) && (
         <p className="ai-message ai-success" role="status">
           {notice}
         </p>
       )}
-      {result && (
+      {visibleResult && result && (
         <div className="ai-generated">
           <div className="ai-result-heading">
             <b>
@@ -226,10 +233,11 @@ export default function AIDraft({
             </b>
             <span>真實 AI · {result.model}</span>
           </div>
-          {result.decision !== "draft" && (
+          {view !== "test" && result.decision !== "draft" && (
             <p className="ai-result-reason">{result.reason}</p>
           )}
           <blockquote>{replyDraft}</blockquote>
+          {view === "test" && <AnswerReview answer={result} />}
           <DraftTranslation
             key={result.requestId ?? result.reply}
             scope={{
@@ -324,7 +332,7 @@ export default function AIDraft({
               ))}
             </div>
           )}
-          {!!result.sources.length && (
+          {view !== "test" && !!result.sources.length && (
             <details className="ai-citations" open>
               <summary>
                 <BookOpen size={14} aria-hidden="true" />

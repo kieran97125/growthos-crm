@@ -4,7 +4,11 @@ import Link from "next/link";
 import useSWR from "swr";
 import { Bell, Check, Clock3, Smartphone } from "lucide-react";
 import { formatHongKongDateTime } from "@/lib/datetime";
-import type { NotificationPage } from "@/lib/notifications/model";
+import {
+  effectiveNotificationPreferences,
+  notificationPushState,
+  type NotificationPage,
+} from "@/lib/notifications/model";
 import { engagementFetcher } from "@/components/engagement/fetcher";
 import { useRecordedCommand } from "@/components/engagement/useRecordedCommand";
 import "../engagement/engagement.css";
@@ -22,7 +26,7 @@ export default function NotificationWorkspace({
     { data, error, mutate } = useSWR<NotificationPage>(
       url + (cursor ? "?" + cursor : ""),
       engagementFetcher,
-      { fallbackData: cursor ? undefined : initial, refreshInterval: 30000 },
+      { fallbackData: cursor ? undefined : initial, refreshInterval: 10000 },
     ),
     c = useRecordedCommand(url, () => mutate());
   async function enable() {
@@ -92,6 +96,14 @@ export default function NotificationWorkspace({
         </p>
       </main>
     );
+  const preferences = effectiveNotificationPreferences(data.preferences.data);
+  const pushState = notificationPushState(data);
+  const pushLabels = {
+    unconfigured: "伺服器尚未配置",
+    off: "未啟用",
+    no_device: "未有已登記接收裝置",
+    ready: "設定就緒",
+  };
   return (
     <main className="eng-work">
       <header className="eng-header">
@@ -117,6 +129,20 @@ export default function NotificationWorkspace({
           核對同一請求
         </button>
       )}
+      <section className="eng-notification-state" aria-label="通知設定狀態">
+        <div>
+          <span>網站工作台提醒</span>
+          <strong>{preferences.website ? "已開啟" : "已關閉"}</strong>
+        </div>
+        <div>
+          <span>裝置推播</span>
+          <strong>{pushLabels[pushState]}</strong>
+        </div>
+        <p>
+          網站提醒會顯示喺
+          CRM；離開工作台後收推播，亦需要開啟裝置推播及登記接收裝置。
+        </p>
+      </section>
       <div className="eng-section-title">
         <h2>等待處理</h2>
         <span>{data.total} 項</span>
@@ -130,7 +156,31 @@ export default function NotificationWorkspace({
             <div className="eng-campaign-main">
               <h2>{n.title}</h2>
               <p>{formatHongKongDateTime(n.created_at, "second")}</p>
-              <Link href={n.href}>開啟跟進 →</Link>
+              {n.website && (
+                <div className="eng-website-context">
+                  <strong>
+                    {n.website.visitorName} · {n.website.intent}
+                  </strong>
+                  {n.website.summary && <p>{n.website.summary}</p>}
+                  {n.website.unanswered && (
+                    <p>待確認：{n.website.unanswered}</p>
+                  )}
+                  <p>
+                    {n.website.humanWaiting
+                      ? "客人要求真人回覆"
+                      : "網站有新留言"}
+                    {n.website.humanRequestedAt
+                      ? ` · 等候 ${n.website.waitingMinutes ?? 0} 分鐘`
+                      : ""}
+                    {n.website.assigneeName
+                      ? ` · 接待：${n.website.assigneeName}`
+                      : " · 待分派"}
+                  </p>
+                </div>
+              )}
+              <Link href={n.href}>
+                {n.kind === "website" ? "開啟網站對話 →" : "開啟跟進 →"}
+              </Link>
               {n.evidence && (
                 <details className="eng-step-details">
                   <summary>觀察來源</summary>
@@ -155,37 +205,39 @@ export default function NotificationWorkspace({
                 </details>
               )}
             </div>
-            <div className="eng-actions">
-              <button
-                disabled={c.busy || c.frozen}
-                onClick={() =>
-                  void c.send({
-                    action: "snooze",
-                    commandId: crypto.randomUUID(),
-                    id: n.id,
-                    revision: n.revision,
-                    until: new Date(Date.now() + 3600000).toISOString(),
-                  })
-                }
-              >
-                <Clock3 size={15} />
-                一小時後
-              </button>
-              <button
-                disabled={c.busy || c.frozen}
-                onClick={() =>
-                  void c.send({
-                    action: "done",
-                    commandId: crypto.randomUUID(),
-                    id: n.id,
-                    revision: n.revision,
-                  })
-                }
-              >
-                <Check size={15} />
-                完成提醒
-              </button>
-            </div>
+            {n.kind !== "website" && (
+              <div className="eng-actions">
+                <button
+                  disabled={c.busy || c.frozen}
+                  onClick={() =>
+                    void c.send({
+                      action: "snooze",
+                      commandId: crypto.randomUUID(),
+                      id: n.id,
+                      revision: n.revision,
+                      until: new Date(Date.now() + 3600000).toISOString(),
+                    })
+                  }
+                >
+                  <Clock3 size={15} />
+                  一小時後
+                </button>
+                <button
+                  disabled={c.busy || c.frozen}
+                  onClick={() =>
+                    void c.send({
+                      action: "done",
+                      commandId: crypto.randomUUID(),
+                      id: n.id,
+                      revision: n.revision,
+                    })
+                  }
+                >
+                  <Check size={15} />
+                  完成提醒
+                </button>
+              </div>
+            )}
           </article>
         ))}
       </section>
@@ -221,6 +273,7 @@ export default function NotificationWorkspace({
                 followup: f.has("followup"),
                 sla: f.has("sla"),
                 observation: f.has("observation"),
+                website: f.has("website"),
                 push: f.has("push"),
                 quietStart: Number(f.get("quietStart")),
                 quietEnd: Number(f.get("quietEnd")),
@@ -235,6 +288,7 @@ export default function NotificationWorkspace({
                 ["followup", "到期跟進"],
                 ["sla", "超過真人回覆目標"],
                 ["observation", "C 根據正式紀錄整理嘅觀察"],
+                ["website", "網站新查詢及真人接待要求"],
                 ["push", "離開工作台後接收裝置推播"],
               ] as const
             ).map(([k, t]) => (
@@ -242,11 +296,7 @@ export default function NotificationWorkspace({
                 <input
                   type="checkbox"
                   name={k}
-                  defaultChecked={
-                    k === "observation"
-                      ? data.preferences.data[k] !== false
-                      : data.preferences.data[k]
-                  }
+                  defaultChecked={preferences[k]}
                   disabled={k === "push" && !data.pushConfigured}
                 />
                 {t}

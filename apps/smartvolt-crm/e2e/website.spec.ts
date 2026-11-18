@@ -215,16 +215,14 @@ for (const mobile of [false, true])
           .analyze()
       ).violations,
     ).toEqual([]);
-    await page
-      .locator(".st-workspace")
-      .screenshot({
-        path: info.outputPath(
-          `${mobile ? "mobile" : "desktop"}-website-faq.png`,
-        ),
-      });
+    await page.locator(".st-workspace").screenshot({
+      path: info.outputPath(`${mobile ? "mobile" : "desktop"}-website-faq.png`),
+    });
     await row.getByRole("button", { name: /修改 FAQ/ }).click();
     const dialog = page.getByRole("dialog");
-    await expect(dialog.getByRole("combobox")).toHaveCount(0);
+    await expect(dialog.getByRole("combobox")).toHaveCount(1);
+    await expect(dialog.getByLabel("FAQ 使用範圍")).toHaveValue("inherit");
+    await dialog.getByLabel("FAQ 使用範圍").selectOption("internal");
     await expect(dialog.getByRole("textbox")).toHaveCount(2);
     await dialog
       .getByLabel("答案", { exact: true })
@@ -235,6 +233,7 @@ for (const mobile of [false, true])
       .toBe("小組訓練每堂 HK$388，預約時段請先聯絡同事核實。");
     await expect(page.getByLabel("目前助手名稱")).toHaveText("已更新助手");
     expect(f.state().studio.articles[0].status).toBe("approved");
+    expect(f.state().studio.articles[0].visibility).toBe("internal");
     expect(f.state().studio.articles).toHaveLength(1);
     await page.reload();
     await page.locator(".kb-item > summary").click();

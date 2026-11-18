@@ -28,6 +28,8 @@ import {
 } from "lucide-react";
 import CoachPanel from "@/components/coaching/CoachPanel";
 import VoiceMessage from "@/components/voice/VoiceMessage";
+import MediaComposer from "@/components/media/MediaComposer";
+import MediaMessage from "@/components/media/MediaMessage";
 import { BrandMark } from "@/components/BrandMark";
 import ThreadOperationsPanel, {
   type OperationDraft,
@@ -76,6 +78,7 @@ export default function UnifiedInbox({
   initialProvider,
   initialCustomer,
   initialQueue,
+  active = true,
 }: {
   companyId: string;
   companyName: string;
@@ -84,6 +87,7 @@ export default function UnifiedInbox({
   initialProvider?: string;
   initialCustomer?: string;
   initialQueue?: string;
+  active?: boolean;
 }) {
   const chrome = useWorkspaceChrome();
   const base = `/api/companies/${companyId}`;
@@ -143,8 +147,12 @@ export default function UnifiedInbox({
   const key = selected ? selected.provider + ":" + selected.id : "",
     query = new URLSearchParams({ queue, channel, search }).toString();
   useWorkspaceCustomer("crm", {
-    contactId: detail?.customer.id ?? standalone?.customer.id,
-    brandId: detail?.thread.brand_id ?? standalone?.customer.brandIds[0],
+    contactId: active
+      ? (detail?.customer.id ?? standalone?.customer.id)
+      : undefined,
+    brandId: active
+      ? (detail?.thread.brand_id ?? standalone?.customer.brandIds[0])
+      : undefined,
   });
   useEffect(() => {
     selectedRef.current = selected;
@@ -222,6 +230,7 @@ export default function UnifiedInbox({
     [request, initialCustomer],
   );
   useEffect(() => {
+    if (!active) return;
     const ctl = new AbortController();
     let running = false;
     const load = async () => {
@@ -246,9 +255,9 @@ export default function UnifiedInbox({
       ctl.abort();
       clearInterval(timer);
     };
-  }, [refresh, query, key]);
+  }, [refresh, query, key, active]);
   useEffect(() => {
-    if (!initialCustomer) return;
+    if (!active || !initialCustomer) return;
     const controller = new AbortController();
     void request<CustomerDetail>(
       "customers?id=" + encodeURIComponent(initialCustomer),
@@ -271,7 +280,7 @@ export default function UnifiedInbox({
         if (!controller.signal.aborted) setError(e.message);
       });
     return () => controller.abort();
-  }, [initialCustomer, request]);
+  }, [initialCustomer, request, active]);
   const newestMessageId = detail?.messages.at(-1)?.id;
   useEffect(() => {
     const box = messageBox.current;
@@ -416,7 +425,7 @@ export default function UnifiedInbox({
     companyId,
     selected?.provider,
     selected?.id,
-    canEdit,
+    active && canEdit,
   );
   async function send() {
     if (!detail || !selected || !draft.trim()) return;
@@ -664,6 +673,29 @@ export default function UnifiedInbox({
                   {overview?.brands.find((b) => b.id === detail.thread.brand_id)
                     ?.name ?? "品牌查詢"}
                 </small>
+                {!!detail.commentSources?.length && (
+                  <details className="iq-comment-origin">
+                    <summary>由貼文留言轉入</summary>
+                    {detail.commentSources.map((source) =>
+                      source.permalink &&
+                      /^https:\/\/(?:www\.)?(?:facebook\.com|instagram\.com|fb\.com)\//i.test(
+                        source.permalink,
+                      ) ? (
+                        <a
+                          key={source.commentId}
+                          href={source.permalink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          查看原貼文{" "}
+                          <ArrowUpRight size={12} aria-hidden="true" />
+                        </a>
+                      ) : (
+                        <span key={source.commentId}>已保留原貼文來源</span>
+                      ),
+                    )}
+                  </details>
+                )}
               </div>
               <button
                 className="iq-mobile-profile"
@@ -716,7 +748,16 @@ export default function UnifiedInbox({
                   <div>
                     {m.direction === "note" && <b>內部備註</b>}
                     <p>{m.body}</p>
-                    {m.direction === "incoming" && (
+                    {m.hasMedia && (
+                      <MediaMessage
+                        companyId={companyId}
+                        brandId={detail.thread.brand_id}
+                        source={detail.thread.provider}
+                        sourceId={detail.thread.id}
+                        messageId={m.id}
+                      />
+                    )}
+                    {m.direction === "incoming" && !m.hasMedia && (
                       <MessageTranslation
                         key={key + m.id + m.body}
                         scope={{
@@ -864,6 +905,30 @@ export default function UnifiedInbox({
                 />
               )}
               <div className="iq-compose-footer">
+                {!note && selected && overview && (
+                  <MediaComposer
+                    key={overview.actorId + ":" + key + ":attachments"}
+                    actorId={overview.actorId}
+                    companyId={companyId}
+                    brandId={detail.thread.brand_id}
+                    source={selected.provider}
+                    sourceId={selected.id}
+                    channel={
+                      detail.thread.channel === "whatsapp"
+                        ? undefined
+                        : detail.thread.channel
+                    }
+                    revision={detail.thread.revision}
+                    canSend={canEdit && openWindow && !unresolved}
+                    disabled={
+                      locked ||
+                      replyLease.busy ||
+                      (replyLease.state.occupied && !replyLease.state.held)
+                    }
+                    acquireEditor={replyLease.acquire}
+                    onSent={() => refresh()}
+                  />
+                )}
                 {!note && selected?.provider === "whatsapp" && (
                   <ManualTemplateReply
                     key={key}
@@ -954,7 +1019,7 @@ export default function UnifiedInbox({
                   )
                     .then((d) =>
                       setDetail((old) =>
-                        old
+                        old && old.customer.id === d.customer.id
                           ? {
                               ...old,
                               events: [...old.events, ...d.events],

@@ -19,6 +19,9 @@ import {
 } from "./protocol";
 import { inspectPage, sendMetaText, MetaGraphError } from "./graph";
 import { inboxQuerySchema, threadOperationsSchema } from "./operations";
+import { ingestSocialComments } from "@/lib/social-comments/server";
+import { safeSocialPostUrl } from "@/lib/social-comments/model";
+import { readMediaMessageFlags } from "@/lib/media/server";
 const uuid = z.uuid();
 const bodySchema = z
   .string()
@@ -149,7 +152,7 @@ export async function readMeta(
     const thread = await a.db
       .from("sv_meta_threads")
       .select(
-        "id,revision,last_inbound_at,status,read_seq,connection_id,peer_id,customer_name,assignee_id,priority,follow_up_at,next_step",
+        "id,brand_id,revision,last_inbound_at,status,read_seq,connection_id,peer_id,customer_name,assignee_id,priority,follow_up_at,next_step",
       )
       .eq("company_id", companyId)
       .eq("id", threadId)
@@ -171,6 +174,17 @@ export async function readMeta(
     const m = await q;
     check(m.error);
     const rows = m.data ?? [];
+    const mediaFlags = new Set(
+      await readMediaMessageFlags(
+        companyId,
+        {
+          brandId: thread.data.brand_id,
+          source: "meta",
+          sourceId: threadId,
+        },
+        rows.slice(0, 60).map((message) => message.id),
+      ),
+    );
     const sources = await a.db
       .from("sv_meta_events")
       .select("provider_at,raw")
@@ -189,7 +203,24 @@ export async function readMeta(
       .order("command_id", { ascending: false })
       .limit(20);
     check(activity.error);
+    const commentSources = await a.db
+      .from("sv_social_comment_jobs")
+      .select("post_id,comment_id,permalink,body,attempted_at")
+      .eq("company_id", companyId)
+      .eq("connection_id", thread.data.connection_id)
+      .eq("provider_peer_id", thread.data.peer_id)
+      .eq("state", "accepted")
+      .order("attempted_at", { ascending: false })
+      .limit(10);
+    check(commentSources.error);
     return {
+      commentSources: (commentSources.data ?? []).map((s) => ({
+        at: s.attempted_at,
+        postId: s.post_id,
+        commentId: s.comment_id,
+        permalink: safeSocialPostUrl(s.permalink),
+        body: s.body,
+      })),
       activity: activity.data ?? [],
       thread: thread.data,
       sources: (sources.data ?? []).map((e) => ({
@@ -199,7 +230,13 @@ export async function readMeta(
             ? e.raw.referral.ad_id.slice(0, 100)
             : null,
       })),
-      messages: rows.slice(0, 60).reverse(),
+      messages: rows
+        .slice(0, 60)
+        .reverse()
+        .map((message) => ({
+          ...message,
+          hasMedia: mediaFlags.has(message.id),
+        })),
       hasMore: rows.length > 60,
     };
   }
@@ -486,14 +523,14 @@ export async function receiveMeta(
   const config = platform();
   if (!signatureValid(raw, signature, config.appSecret))
     throw new AccessError("Webhook 簽署無效。", 403);
-  let events;
+  let events, payload: unknown;
   try {
-    events = parseEvents(
-      JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(raw)),
-    );
+    payload = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(raw));
+    events = parseEvents(payload);
   } catch {
     throw new AccessError("Webhook 資料未通過驗證。", 400);
   }
+  await ingestSocialComments(payload, config.appId, onAccepted);
   const db = database();
   const groups = new Map<string, typeof events>();
   for (const e of events) {

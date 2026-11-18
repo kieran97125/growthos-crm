@@ -300,9 +300,16 @@ test.beforeAll(async () => {
 async function mount(
   page: Page,
   kind: string,
-  { lost = false, mobile = false } = {},
+  {
+    lost = false,
+    mobile = false,
+    initialData = undefined as Record<string, unknown> | undefined,
+  } = {},
 ) {
-  const data = structuredClone(seed[kind]) as Record<string, unknown>,
+  const data = structuredClone(initialData ?? seed[kind]) as Record<
+      string,
+      unknown
+    >,
     commands: Record<string, unknown>[] = [],
     receipts = new Map<string, unknown>();
   let dropped = false;
@@ -471,4 +478,63 @@ for (const kind of Object.keys(modules))
           .analyze()
       ).violations,
     ).toEqual([]);
+  });
+
+for (const state of ["off", "no_device", "ready"] as const)
+  test(`notification category cannot be confused with device push: ${state}`, async ({
+    page,
+  }) => {
+    const initial = structuredClone(seed.notifications) as Record<
+      string,
+      unknown
+    >;
+    const preferences = initial.preferences as {
+      data: Record<string, unknown>;
+    };
+    initial.pushConfigured = true;
+    preferences.data.push = state !== "off";
+    initial.devices =
+      state === "ready"
+        ? [
+            {
+              id: eid,
+              label: "Synthetic device",
+              active: true,
+              created_at: now,
+            },
+          ]
+        : [];
+    const f = await mount(page, "notifications", { initialData: initial });
+    const panel = page.getByRole("region", { name: "通知設定狀態" });
+    await expect(panel.getByText("已開啟", { exact: true })).toBeVisible();
+    await expect(
+      panel.getByText(
+        state === "off"
+          ? "未啟用"
+          : state === "no_device"
+            ? "未有已登記接收裝置"
+            : "設定就緒",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await page.getByText("提醒偏好與裝置", { exact: false }).click();
+    await expect(
+      page.getByRole("checkbox", {
+        name: "網站新查詢及真人接待要求",
+        exact: true,
+      }),
+    ).toBeChecked();
+    await page
+      .getByRole("checkbox", { name: "網站新查詢及真人接待要求", exact: true })
+      .uncheck();
+    await page
+      .getByRole("button", { name: "儲存提醒偏好", exact: true })
+      .click();
+    await expect.poll(() => f.commands.length).toBe(1);
+    expect((f.commands[0].data as Record<string, unknown>).website).toBe(false);
+    if (state === "off")
+      await page.screenshot({
+        path: test.info().outputPath("website-category-on-device-push-off.png"),
+        fullPage: true,
+      });
   });

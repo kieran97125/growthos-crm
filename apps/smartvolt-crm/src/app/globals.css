@@ -1,4 +1,8 @@
 @import "../components/inquiries/inquiries.css";
+@import "../components/media/media.css";
+@import "../components/web-chat/web-chat.css";
+@import "../components/social-comments/social-comments.css";
+@import "../components/crm/studio/flow-runtime.css";
 @import "../components/translation/translation.css";
 @import "../components/copilot/copilot.css";
 @import "../components/operations/operations.css";

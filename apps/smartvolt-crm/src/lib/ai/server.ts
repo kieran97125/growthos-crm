@@ -75,7 +75,7 @@ export async function companyAIStatus(companyId: string) {
   const a = await loadCompany(companyId, "crm"),
     model = aiModel();
   const start = hongKongDay(Date.now()) + "T00:00:00+08:00";
-  const [settings, runtime, usage] = await Promise.all([
+  const [settings, runtime, usage, websiteUsage] = await Promise.all([
     a.db
       .from("sv_ai_settings")
       .select("enabled,daily_limit")
@@ -91,8 +91,10 @@ export async function companyAIStatus(companyId: string) {
       .select("request_id", { head: true, count: "exact" })
       .eq("company_id", companyId)
       .gte("created_at", start),
+    a.db.from("sv_web_chat_c_turns").select("message_id", { head: true, count: "exact" })
+      .eq("company_id", companyId).gte("admitted_at", start),
   ]);
-  for (const result of [settings, runtime, usage]) dbError(result.error);
+  for (const result of [settings, runtime, usage, websiteUsage]) dbError(result.error);
   const brands = a.scope.brands.map((b) => ({
     ...b,
     knowledgeCount: approvedKnowledge(
@@ -126,7 +128,7 @@ export async function companyAIStatus(companyId: string) {
     canConfigure: a.actor.role === "owner",
     brands,
     usage: {
-      used: usage.count ?? 0,
+      used: (usage.count ?? 0) + (websiteUsage.count ?? 0),
       limit,
       resetsAt: hongKongDay(Date.now() + 86400000) + "T00:00:00+08:00",
     },

@@ -136,6 +136,7 @@ export type InquiryMessage = {
   state: string;
   at: number;
   author: string | null;
+  hasMedia?: boolean;
 };
 export type Customer = {
   id: string;
@@ -198,6 +199,13 @@ export type InquiryDetail = CustomerDetail & {
   messages: InquiryMessage[];
   nextBefore: number | null;
   activity: import("@/lib/meta/operations").ThreadActivity[];
+  commentSources?: {
+    at: string | null;
+    postId: string;
+    commentId: string;
+    permalink: string | null;
+    body: string;
+  }[];
 };
 export type Availability = {
   revision: number;

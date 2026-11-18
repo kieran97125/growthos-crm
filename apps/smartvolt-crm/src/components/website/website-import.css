@@ -399,6 +399,7 @@
   color: #334765;
 }
 .kb-form input,
+.kb-form select,
 .kb-form textarea {
   width: 100%;
   border: 1px solid #d3ddec;
@@ -410,6 +411,12 @@
   background: #fff;
   line-height: 1.8;
   resize: vertical;
+}
+.kb-form .wi-hint {
+  margin: -8px 0 0;
+  color: #5b6d88;
+  font-size: 12px;
+  line-height: 1.7;
 }
 .kb-form > footer {
   display: flex;
@@ -502,6 +509,7 @@
     font-size: 14px;
   }
   .kb-form input,
+  .kb-form select,
   .kb-form textarea {
     font-size: 16px;
   }

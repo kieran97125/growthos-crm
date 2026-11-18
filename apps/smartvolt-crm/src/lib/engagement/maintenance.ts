@@ -5,6 +5,7 @@ import { dispatchFeedback } from "@/lib/feedback/runtime";
 import { dispatchNotifications } from "@/lib/notifications/runtime";
 import { syncBackgroundObservations } from "@/lib/notifications/observations";
 import { wakeDelivery } from "./scheduler";
+import { advanceInboxAutomations } from "./expansion-maintenance";
 export async function maintenance() {
   const db = database(),
     r = await db.rpc("sv_execution_tenants");
@@ -24,6 +25,10 @@ export async function maintenance() {
           );
           checked(
             (await db.rpc("sv_journey_catchup", { p_company: company })).error,
+          );
+          const expansionComplete = await advanceInboxAutomations(
+            company,
+            true,
           );
           await wakeDelivery(company);
           checked(
@@ -52,6 +57,7 @@ export async function maintenance() {
             if (observationError) throw observationError;
           });
           await dispatchFeedback(company);
+          if (!expansionComplete) throw new Error("inbox_expansion_pending");
           completed++;
         } catch {
           failed++;

@@ -202,7 +202,7 @@ export function validateFlow(flow: Flow): string[] {
       n.kind === "condition" &&
       ["new", "existing"].some((h) => !handles.includes(h))
     )
-      issues.push(`${n.title}：請連接新客及現客兩個分支。`);
+      issues.push(`${n.title}：請連接未有及已有核實預約兩個分支。`);
     if (
       !["answer", "reminder", "handoff", "end"].includes(n.kind) &&
       !edges.length
@@ -271,6 +271,7 @@ export type SimulationResult = {
 export function simulateFlow(
   flow: Flow,
   input: SimulationInput,
+  team: readonly { id: string; name: string }[] = [],
 ): SimulationResult {
   const issues = validateFlow(flow);
   if (issues.length)
@@ -287,7 +288,7 @@ export function simulateFlow(
     if (n.kind === "intent")
       detail = `測試查詢已分流至：${input.intent === "booking" ? "預約意向" : input.intent === "faq" ? "一般查詢" : "真人協助"}`;
     if (n.kind === "condition")
-      detail = `客戶類型：${input.customerType === "new" ? "新客" : "現有客戶"}`;
+      detail = `測試預約紀錄：${input.customerType === "new" ? "未有核實預約" : "已有核實預約"}`;
     if (n.kind === "answer") {
       state = input.withinWindow ? "completed" : "blocked";
       detail = input.withinWindow
@@ -309,7 +310,8 @@ export function simulateFlow(
     }
     if (n.kind === "handoff") {
       state = "waiting";
-      detail = `交接畀 ${n.config.owner === "me" ? "Mia" : n.config.owner === "ken" ? "Ken" : "Iris"}，附對話摘要，BOT 暫停。`;
+      const owner = team.find((member) => member.id === n.config.owner);
+      detail = `交接畀 ${owner?.name ?? "指定同事"}，附對話摘要，BOT 暫停。`;
     }
     if (n.kind === "delay") {
       state = "waiting";

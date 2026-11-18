@@ -5,11 +5,33 @@ export const notificationPreferences = z
     followup: z.boolean(),
     sla: z.boolean(),
     observation: z.boolean().optional(),
+    website: z.boolean().optional(),
     push: z.boolean(),
     quietStart: z.number().int().min(0).max(23),
     quietEnd: z.number().int().min(0).max(23),
   })
   .strict();
+/** Same effective defaults as the database read/sync/push boundary. Global
+ * push consent is independent from the categories shown in the CRM feed. */
+export function effectiveNotificationPreferences(
+  data: z.infer<typeof notificationPreferences>,
+) {
+  return {
+    ...data,
+    website: data.website ?? true,
+    observation: data.observation ?? true,
+    push: data.push ?? false,
+  };
+}
+export function notificationPushState(
+  page: Pick<NotificationPage, "preferences" | "pushConfigured" | "devices">,
+) {
+  if (!page.pushConfigured) return "unconfigured";
+  if (!effectiveNotificationPreferences(page.preferences.data).push)
+    return "off";
+  if (!page.devices.some((d) => d.active)) return "no_device";
+  return "ready";
+}
 const command = { commandId: z.uuid() };
 const endpoint = z
   .url()
@@ -84,6 +106,18 @@ export type NotificationPage = {
     href: string;
     revision: number;
     created_at: string;
+    website?: {
+      visitorName: string;
+      site: string;
+      humanWaiting: boolean;
+      waitingMinutes?: number;
+      humanRequestedAt: string | null;
+      assigneeName: string | null;
+      intent: string;
+      summary: string;
+      unanswered: string;
+      preference: "cooperate" | "human_only";
+    } | null;
     evidence?: {
       detail: string;
       evidence: string[];

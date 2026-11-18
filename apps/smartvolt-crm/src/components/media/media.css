@@ -1,0 +1,341 @@
+.cm-attachments {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  margin: 6px 0;
+}
+.cm-attachment {
+  display: grid;
+  gap: 8px;
+  max-width: 360px;
+  min-width: 0;
+  border: 1px solid #dce5f1;
+  border-radius: 14px;
+  padding: 11px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #172b4d;
+}
+.cm-attachment-heading {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  min-width: 0;
+}
+.cm-file-icon,
+.cm-upload-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 36px;
+  height: 38px;
+  border-radius: 10px;
+  background: #edf3ff;
+  color: #2457e7;
+}
+.cm-attachment-heading > span:last-child,
+.cm-upload-card > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+.cm-attachment-heading strong,
+.cm-upload-card strong {
+  font-size: 12px;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+.cm-attachment-heading small,
+.cm-upload-card small {
+  font-size: 11px;
+  color: #52657f;
+}
+.cm-open,
+.cm-download {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 33px;
+  border: 1px solid #dce5f1;
+  background: #fff;
+  border-radius: 9px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 650;
+  color: #2457e7;
+  text-decoration: none;
+  cursor: pointer;
+}
+.cm-open:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.cm-preview {
+  display: grid;
+  gap: 7px;
+}
+.cm-preview img,
+.cm-preview video {
+  display: block;
+  width: 100%;
+  max-height: 280px;
+  object-fit: contain;
+  border-radius: 9px;
+  background: #f2f5fb;
+}
+.cm-preview audio {
+  max-width: 100%;
+  width: 280px;
+}
+.cm-inline-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #9b352c;
+  background: #fff3f0;
+  border-radius: 9px;
+  padding: 9px;
+  overflow-wrap: anywhere;
+  margin: 0;
+}
+.cm-inline-error button {
+  font: inherit;
+  white-space: nowrap;
+  color: #84372e;
+  background: #fff;
+  border: 1px solid #e4b9b3;
+  border-radius: 6px;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+.cm-loading {
+  font-size: 11px;
+  color: #56677f;
+}
+.cm-attach-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 33px;
+  flex: 0 0 auto;
+  padding: 6px 9px;
+  color: #42546f;
+  background: #fff;
+  border: 1px solid #dbe3ef;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cm-attach-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.cm-attach-pending {
+  color: #9b6414;
+  border-color: #e9d0a3;
+  background: #fff9eb;
+}
+.cm-composer-dialog {
+  display: grid;
+  gap: 16px;
+  padding: 4px 0 0;
+  min-width: 0;
+}
+.cm-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+}
+.cm-drop-zone {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  min-height: 180px;
+  padding: 28px 18px;
+  border: 1.5px dashed #bdd0ef;
+  border-radius: 17px;
+  background: linear-gradient(145deg, #f7faff, #eef3ff);
+  color: #2457e7;
+  cursor: pointer;
+  text-align: center;
+}
+.cm-drop-zone strong {
+  font-size: 15px;
+  color: #233958;
+}
+.cm-drop-zone span {
+  font-size: 12px;
+  color: #52657f;
+}
+.cm-drop-zone small {
+  font-size: 11px;
+  color: #52657f;
+}
+.cm-file-input:focus-visible + .cm-drop-zone {
+  outline: 3px solid #a3bcff;
+  outline-offset: 3px;
+}
+.cm-upload-card {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  border: 1px solid #dce5f1;
+  background: #f8faff;
+  border-radius: 14px;
+  padding: 15px;
+}
+.cm-upload-card > div {
+  flex: 1;
+}
+.cm-icon-button {
+  border: 0;
+  border-radius: 8px;
+  background: #fff;
+  color: #65748d;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+}
+.cm-progress {
+  display: grid;
+  gap: 7px;
+}
+.cm-progress progress {
+  width: 100%;
+  height: 7px;
+  accent-color: #2457e7;
+}
+.cm-progress span {
+  font-size: 12px;
+  color: #60728e;
+}
+.cm-private-note,
+.cm-success,
+.cm-pending-note {
+  display: flex;
+  gap: 7px;
+  align-items: flex-start;
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 0;
+  color: #566b85;
+}
+.cm-private-note svg,
+.cm-success svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: #2457e7;
+}
+.cm-success {
+  padding: 12px;
+  background: #edf8f3;
+  color: #24684a;
+  border-radius: 10px;
+}
+.cm-success svg {
+  color: #278453;
+}
+.cm-pending-note {
+  padding: 12px;
+  background: #fff8e9;
+  color: #8b651b;
+  border-radius: 10px;
+}
+.cm-caption {
+  display: grid;
+  gap: 7px;
+  font-size: 12px;
+  color: #4a5f7c;
+  font-weight: 600;
+}
+.cm-caption textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #d6e0ee;
+  border-radius: 10px;
+  padding: 10px;
+  font: inherit;
+  color: #243854;
+  resize: vertical;
+  min-height: 80px;
+}
+.cm-caption textarea:focus {
+  outline: 2px solid #bfd0ff;
+  border-color: #2457e7;
+}
+.cm-dialog-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding-top: 5px;
+}
+.cm-primary,
+.cm-secondary {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 15px;
+  border-radius: 10px;
+  border: 1px solid #d9e2ef;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.cm-primary {
+  color: white;
+  background: #2457e7;
+  border-color: #2457e7;
+  box-shadow: 0 3px 8px #2457e71a;
+}
+.cm-secondary {
+  color: #536884;
+  background: white;
+}
+.cm-primary:disabled,
+.cm-secondary:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.cm-spin {
+  animation: cm-spin 0.9s linear infinite;
+}
+@keyframes cm-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (max-width: 600px) {
+  .cm-attachment {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  .cm-attach-button span {
+    display: none;
+  }
+  .cm-drop-zone {
+    min-height: 150px;
+    padding: 22px 12px;
+  }
+  .cm-dialog-actions > button {
+    flex: 1;
+  }
+  .cm-composer-dialog {
+    gap: 13px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cm-spin {
+    animation: none;
+  }
+}

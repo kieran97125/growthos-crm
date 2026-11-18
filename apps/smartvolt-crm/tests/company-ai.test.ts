@@ -58,6 +58,38 @@ const output = {
   nextStep: "了解團隊人數及現有渠道。",
   interest: "medium" as const,
 };
+test("admitted website C may answer a later question mentioning the waiting human without weakening evidence or sensitive-topic checks", () => {
+  const later = { ...input, message: "真人未覆，C幫我答點管理查詢" };
+  assert.equal(
+    inspectGroundedAnswer(output, later, now, "model").answer.decision,
+    "handoff",
+  );
+  assert.equal(
+    inspectGroundedAnswer(output, later, now, "model", "website").answer
+      .decision,
+    "draft",
+  );
+  assert.equal(
+    inspectGroundedAnswer(
+      { ...output, evidence: [] },
+      later,
+      now,
+      "model",
+      "website",
+    ).answer.decision,
+    "handoff",
+  );
+  assert.equal(
+    inspectGroundedAnswer(
+      output,
+      { ...later, message: "投訴退款" },
+      now,
+      "model",
+      "website",
+    ).answer.decision,
+    "handoff",
+  );
+});
 test("AI uses only same-company approved unexpired knowledge at Hong Kong day rollover", () => {
   const rows = [
     article,
@@ -141,6 +173,9 @@ test("answer diagnostics distinguish invalid evidence from model-requested human
     "model",
   );
   assert.equal(invalid.answer.decision, "handoff");
+  assert.deepEqual(invalid.answer.review?.handoffReasons, [
+    "答案引文未能對應核准資料。",
+  ]);
   assert.deepEqual(invalid.validation.issues, ["invalid_quotes"]);
   const handoff = inspectGroundedAnswer(
     { ...output, action: "handoff", confidence: 0.5 },
@@ -153,6 +188,54 @@ test("answer diagnostics distinguish invalid evidence from model-requested human
   assert.ok(!JSON.stringify(handoff.validation).includes(article.content));
   assert.deepEqual(
     inspectGroundedAnswer(output, input, now, "model").validation.issues,
+    [],
+  );
+});
+test("trial handoff reasons distinguish customer choice, saved scope, missing evidence and unsupported prices", () => {
+  const human = inspectGroundedAnswer(
+    output,
+    { ...input, message: "請轉真人" },
+    now,
+    "model",
+  ).answer;
+  assert.deepEqual(human.review?.handoffReasons, ["客人要求真人協助。"]);
+  const scope = inspectGroundedAnswer(
+    output,
+    { ...input, profile: { ...input.profile, allowService: false } },
+    now,
+    "model",
+  ).answer;
+  assert.deepEqual(scope.review?.handoffReasons, [
+    "呢類問題未獲品牌授權由 AI 處理。",
+  ]);
+  for (const [change, reason] of [
+    [{ reply: "服務收費 HK$999。" }, "答案提到未有核准依據嘅價錢。"],
+    [{ evidence: [], sourceIds: [] }, "未有足夠核准資料支持答案。"],
+    [{ reply: "已為你預約，保證有位。" }, "正式預約及即時名額需要同事核實。"],
+  ] as const) {
+    const answer = inspectGroundedAnswer(
+      {
+        ...output,
+        ...change,
+        evidence: [...(change.evidence ?? output.evidence)],
+        sourceIds: [...(change.sourceIds ?? output.sourceIds)],
+      },
+      input,
+      now,
+      "model",
+    ).answer;
+    assert.equal(answer.decision, "handoff");
+    assert.ok(answer.review?.handoffReasons.includes(reason));
+    assert.equal(
+      new Set(answer.review?.handoffReasons).size,
+      answer.review?.handoffReasons.length,
+    );
+    assert.deepEqual(answer.sources, []);
+    assert.deepEqual(answer.evidence, []);
+  }
+  assert.deepEqual(
+    inspectGroundedAnswer(output, input, now, "model").answer.review
+      ?.handoffReasons,
     [],
   );
 });

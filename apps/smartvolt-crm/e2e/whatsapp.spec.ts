@@ -4,6 +4,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { readFileSync } from "node:fs";
 import { build } from "esbuild";
+import { SWRConfig } from "swr";
 import WhatsAppInboxView, {
   type WhatsAppInboxViewProps,
 } from "../src/components/whatsapp/WhatsAppInboxView";
@@ -43,6 +44,7 @@ const message = {
 };
 const props: WhatsAppInboxViewProps = {
   companyId: "isolated-presentation",
+  actorId: "isolated-presentation-actor",
   companyName: "Aurora Studio · 測試資料",
   canSend: true,
   canManage: true,
@@ -88,8 +90,15 @@ const props: WhatsAppInboxViewProps = {
     { ...message, id: "fixture-media", seq: 3, body: "", messageType: "image" },
     {
       ...message,
-      id: "fixture-unknown",
+      id: "fixture-unsupported",
       seq: 4,
+      body: "",
+      messageType: "location",
+    },
+    {
+      ...message,
+      id: "fixture-unknown",
+      seq: 5,
       direction: "outgoing",
       state: "unknown",
       body: "呢個訊息結果仍待核實。",
@@ -113,9 +122,43 @@ const props: WhatsAppInboxViewProps = {
 const css =
   readFileSync("src/components/whatsapp/whatsapp.css", "utf8") +
   readFileSync("src/components/translation/translation.css", "utf8") +
-  readFileSync("src/components/voice/voice.css", "utf8");
+  readFileSync("src/components/voice/voice.css", "utf8") +
+  readFileSync("src/components/media/media.css", "utf8");
 function html(data: WhatsAppInboxViewProps) {
-  return `<!doctype html><html lang="zh-HK"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>WhatsApp presentation acceptance</title><style>body{margin:0}*{box-sizing:border-box}${css}</style></head><body>${renderToStaticMarkup(createElement(WhatsAppInboxView, data))}</body></html>`;
+  const mediaUrl =
+    `/api/companies/${data.companyId}/media?` +
+    new URLSearchParams({
+      brandId: conversation.brandId,
+      source: "whatsapp",
+      sourceId: conversation.id,
+      messageId: "fixture-media",
+    });
+  const view = createElement(
+    SWRConfig,
+    {
+      value: {
+        fallback: {
+          [mediaUrl]: {
+            items: [
+              {
+                id: "fixture-media:0",
+                assetId: null,
+                messageId: "fixture-media",
+                index: 0,
+                kind: "image",
+                filename: "客戶參考圖片.png",
+                mimeType: "image/png",
+                bytes: 1024,
+                available: true,
+              },
+            ],
+          },
+        },
+      },
+    },
+    createElement(WhatsAppInboxView, data),
+  );
+  return `<!doctype html><html lang="zh-HK"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>WhatsApp presentation acceptance</title><style>body{margin:0}*{box-sizing:border-box}${css}</style></head><body>${renderToStaticMarkup(view)}</body></html>`;
 }
 for (const [name, width, height] of [
   ["desktop", 1440, 1000],
@@ -131,8 +174,14 @@ for (const [name, width, height] of [
     ).toBeVisible();
     await expect(page.getByText("Meta 已接收", { exact: true })).toBeVisible();
     await expect(page.getByText("結果待核實", { exact: true })).toBeVisible();
-    await expect(page.getByText("收到 image 訊息")).toBeVisible();
+    await expect(page.getByText("收到 location 訊息")).toBeVisible();
     await expect(page.getByText("目前未提供附件預覽或播放。")).toBeVisible();
+    await expect(
+      page.getByText("客戶參考圖片.png", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "開啟附件", exact: true }),
+    ).toBeEnabled();
     await expect(
       page.locator(".wa-context-strip").getByText("曾由廣告進入"),
     ).toBeVisible();
@@ -253,7 +302,7 @@ test.beforeAll(async () => {
         import Setup from "./src/components/whatsapp/WhatsAppSetup";
         const target=document.getElementById("whatsapp-controller-fixture");
         createRoot(target).render(React.createElement(target.dataset.setup === "true" ? Setup : Inbox, {
-          companyId:"isolated-presentation",companyName:"Aurora · isolated fixture",
+          companyId:"isolated-presentation",actorId:"isolated-presentation-actor",companyName:"Aurora · isolated fixture",
           owner:true,canSend:true,canManage:true
         }));`,
       loader: "tsx",
@@ -266,7 +315,12 @@ test.beforeAll(async () => {
     jsx: "automatic",
     // Keep CSS out of the in-memory JS bundle; html()/mountController inject it.
     loader: { ".css": "empty" },
-    define: { "process.env.NODE_ENV": JSON.stringify("test") },
+    define: {
+      "process.env": JSON.stringify({
+        NODE_ENV: "test",
+        __NEXT_ROUTER_BASEPATH: "",
+      }),
+    },
   });
   clientBundle = result.outputFiles[0].text;
 });

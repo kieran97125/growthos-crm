@@ -227,20 +227,23 @@ export default function AIStudio({
               <span>{selected?.knowledgeCount ?? 0} 篇可用</span>
             </div>
             {knowledge.length ? (
-              knowledge.map((a) => (
-                <article key={a.id}>
-                  <div>
-                    <b>{a.title}</b>
-                    <span>
-                      {a.status === "approved" ? "可使用" : "暫停使用"}
-                    </span>
-                  </div>
-                  <small>
-                    v{a.revision} · 有效至 {a.validUntil}
-                  </small>
-                  <p>{a.source}</p>
-                </article>
-              ))
+              <details className="ai-library-details">
+                <summary>查看品牌知識目錄（{knowledge.length}）</summary>
+                {knowledge.map((a) => (
+                  <article key={a.id}>
+                    <div>
+                      <b>{a.title}</b>
+                      <span>
+                        {a.status === "approved" ? "已核准" : "暫停使用"}
+                      </span>
+                    </div>
+                    <small>
+                      v{a.revision} · 有效至 {a.validUntil}
+                    </small>
+                    <p>{a.source}</p>
+                  </article>
+                ))}
+              </details>
             ) : (
               <div className="ai-knowledge-empty">暫未有核准知識</div>
             )}

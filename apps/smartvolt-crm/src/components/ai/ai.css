@@ -635,3 +635,15 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+.ai-library-details > summary {
+  font-size: 12px;
+  line-height: 1.8;
+  cursor: pointer;
+  color: var(--kies-royal);
+}
+.ai-library-details[open] {
+  max-height: 480px;
+  overflow-y: auto;
+  padding-right: 8px;
+}

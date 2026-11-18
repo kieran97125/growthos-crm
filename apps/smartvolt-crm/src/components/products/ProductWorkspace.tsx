@@ -19,6 +19,7 @@ export function ProductWorkspace({
   initialContact,
   initialBrand: requestedBrand,
   initialConversation,
+  initialBotTab,
   previewPlan,
 }: {
   initialProduct?: Product;
@@ -26,6 +27,7 @@ export function ProductWorkspace({
   initialContact?: string;
   initialBrand?: string;
   initialConversation?: string;
+  initialBotTab?: "settings" | "knowledge";
   previewPlan?: string;
 }) {
   const { products, scope, connected } = useIdentity(),
@@ -97,6 +99,8 @@ export function ProductWorkspace({
         <div className="sv-product-surface" hidden={product !== "crm"}>
           <CRM
             initialView={initialView === "pos" ? "inbox" : initialView}
+            initialBotTab={initialBotTab}
+            initialBotBrand={requestedBrand}
             initialConversation={initialConversation}
             requestedCustomer={crmContext}
             onSwitchProduct={switchProduct}

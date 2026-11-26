@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { companiesForUser } from "@/lib/saas/server";
 import { AccessError } from "@/lib/saas/identity";
+import { MfaEnrollmentNotice } from "./auth/mfa/MfaEnrollmentNotice";
 import { BRAND } from "@/lib/brand";
 export const dynamic = "force-dynamic";
 export default async function Home() {
@@ -22,6 +23,7 @@ export default async function Home() {
       <span className="sv-eyebrow">{BRAND.name.toUpperCase()}</span>
       <h1>你嘅公司工作空間</h1>
       <p>選擇一間你有權使用嘅公司，直接開始工作。</p>
+      {result.mfaEnrollmentPending && <MfaEnrollmentNotice />}
       <div className="sv-company-grid">
         {result.memberships.map((m) => {
           const company = Array.isArray(m.sv_companies)

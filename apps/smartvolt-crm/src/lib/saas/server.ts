@@ -3,7 +3,7 @@ import { cache } from "react";
 import { z } from "zod";
 import { authClient } from "./session";
 export { authClient } from "./session";
-import { enforceAdminMfa } from "./mfa-server";
+import { workspaceMfaPending } from "./mfa-server";
 import { database } from "./database";
 export { database } from "./database";
 import { projectMemberWorkspace, type MemberScope } from "./member-scope";
@@ -39,11 +39,12 @@ export async function companiesForUser() {
     .eq("status", "active")
     .eq("sv_companies.status", "active");
   if (error) throw new AccessError("暫時未能讀取公司工作空間。", 503);
-  if (
-    data?.some((membership) => ["owner", "manager"].includes(membership.role))
-  )
-    await enforceAdminMfa(user.id);
-  return { user, memberships: data ?? [] };
+  const memberships = data ?? [];
+  const hasOwner = memberships.some((m) => m.role === "owner");
+  const privileged = hasOwner || memberships.some((m) => m.role === "manager");
+  const mfaEnrollmentPending =
+    privileged && (await workspaceMfaPending(user.id, hasOwner));
+  return { user, memberships, mfaEnrollmentPending };
 }
 export const requireCompany = cache(async function requireCompany(
   companyId: string,
@@ -62,8 +63,9 @@ export const requireCompany = cache(async function requireCompany(
     .maybeSingle();
   if (error) throw new AccessError("暫時未能核實公司權限。", 503);
   if (!member) throw new AccessError("你無權進入此公司工作空間。");
-  if (member.role === "owner" || member.role === "manager")
-    await enforceAdminMfa(user.id);
+  const privileged = member.role === "owner" || member.role === "manager";
+  const mfaEnrollmentPending =
+    privileged && (await workspaceMfaPending(user.id, member.role === "owner"));
   const company = Array.isArray(member.sv_companies)
     ? member.sv_companies[0]
     : member.sv_companies;
@@ -89,6 +91,7 @@ export const requireCompany = cache(async function requireCompany(
     db,
     user,
     actor,
+    mfaEnrollmentPending,
     products,
     memberScope,
     company: company as { id: string; name: string; status: string },

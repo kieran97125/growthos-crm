@@ -5,7 +5,7 @@ import test from "node:test";
 import { PGlite } from "@electric-sql/pglite";
 
 const migration = readFileSync(
-  "supabase/migrations/20261126083248_convelta_website_admin_trusted_mfa.sql",
+  "supabase/migrations/20261126085249_convelta_website_admin_trusted_mfa.sql",
   "utf8",
 );
 
@@ -30,7 +30,7 @@ test("CRM-only installations keep the website module optional", async () => {
   }
 });
 
-test("website administration requires the tenant owner and a trusted AAL2 session", async () => {
+test("website owner enrollment preserves existing access until pairing, then requires trusted AAL2", async () => {
   const db = new PGlite();
   const company = randomUUID();
   const owner = randomUUID();
@@ -40,6 +40,10 @@ test("website administration requires the tenant owner and a trusted AAL2 sessio
   const ownerSession = randomUUID();
   const otherSession = randomUUID();
   const agentSession = randomUUID();
+  const passwordSession = randomUUID();
+  const expiredSession = randomUUID();
+  const newOwner = randomUUID();
+  const newSession = randomUUID();
   const claims = {
     sub: owner,
     session_id: ownerSession,
@@ -63,6 +67,7 @@ test("website administration requires the tenant owner and a trusted AAL2 sessio
       create role anon;
       create role service_role;
       create schema auth;
+      create schema smartvolt_private;
       create schema website_private;
       create table auth.users(id uuid primary key);
       create table auth.sessions(id uuid primary key, user_id uuid, factor_id uuid, aal text, not_after timestamptz);
@@ -72,7 +77,7 @@ test("website administration requires the tenant owner and a trusted AAL2 sessio
       create function auth.uid() returns uuid language sql stable as
         $$select (auth.jwt()->>'sub')::uuid$$;
       create table public.sv_companies(id uuid primary key, status text);
-      create table public.sv_memberships(company_id uuid, user_id uuid, status text, role text);
+      create table public.sv_memberships(company_id uuid, user_id uuid, status text, role text, primary key(company_id,user_id));
       create table website_private.intake_settings(company_id uuid, singleton boolean, active boolean);
       create function public.sv_website_admin_access() returns boolean
         language sql stable security definer set search_path='' as $$select true$$;
@@ -100,6 +105,12 @@ test("website administration requires the tenant owner and a trusted AAL2 sessio
         "utf8",
       ),
     );
+    await db.exec(
+      readFileSync(
+        "supabase/migrations/20261126085228_convelta_existing_owner_enrollment.sql",
+        "utf8",
+      ),
+    );
     for (const [user, session] of [
       [owner, ownerSession],
       [otherOwner, otherSession],
@@ -115,15 +126,48 @@ test("website administration requires the tenant owner and a trusted AAL2 sessio
         "insert into auth.sessions values ($1,$2,$3,'aal2',null)",
         [session, user, factor],
       );
-      await db.query(
-        "insert into public.sv_trusted_mfa_factors(user_id, factor_id) values ($1,$2)",
-        [user, factor],
-      );
     }
+    await db.query(
+      "insert into public.sv_memberships values ($1,$2,'active','owner')",
+      [company, newOwner],
+    );
+    await db.query(
+      `insert into auth.sessions values ($1,$2,null,'aal1',null),
+      ($3,$2,null,'aal1',now()-interval '1 minute'), ($4,$5,null,'aal1',null)`,
+      [passwordSession, owner, expiredSession, newSession, newOwner],
+    );
     await db.exec(migration);
     await db.exec("set role anon");
     await assert.rejects(access(), /permission denied/);
     await db.exec("set role authenticated");
+    assert.equal(
+      await access({ aal: "aal1", session_id: passwordSession }),
+      true,
+    );
+    assert.equal(await access(), true);
+    assert.equal(
+      await access({ aal: "aal1", session_id: expiredSession }),
+      false,
+    );
+    assert.equal(
+      await access({ aal: "aal1", session_id: randomUUID() }),
+      false,
+    );
+    assert.equal(
+      await access({ aal: "aal1", sub: newOwner, session_id: newSession }),
+      false,
+    );
+    assert.equal(
+      await access({ aal: "aal1", sub: otherOwner, session_id: otherSession }),
+      false,
+    );
+    await db.exec(`reset role; insert into public.sv_trusted_mfa_factors(user_id, factor_id)
+      select user_id,id from auth.mfa_factors; set role authenticated`);
+    assert.equal(
+      await access({ aal: "aal1", session_id: passwordSession }),
+      false,
+    );
+    assert.equal(await access({ session_id: passwordSession }), false);
     assert.equal(await access(), true);
     assert.equal(await access({ aal: "aal1" }), false);
     assert.equal(await access({ aal: null }), false);

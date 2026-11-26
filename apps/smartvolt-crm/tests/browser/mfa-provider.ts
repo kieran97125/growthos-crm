@@ -25,6 +25,7 @@ export function mfaProvider() {
   let enrolled = false,
     verified = false,
     bound = false,
+    enrollmentPending = false,
     mailCode = "",
     mailLinkCode = "",
     mailChallenge = "",
@@ -225,10 +226,13 @@ export function mfaProvider() {
         if (!verified || body.user_id !== owner || body.factor_id !== factorId)
           return denied();
         bound = true;
+        enrollmentPending = false;
         return json({}, 201);
       }
       return json(bound ? [{ factor_id: factorId }] : []);
     }
+    if (path === "/rest/v1/rpc/sv_mfa_enrollment_pending")
+      return json(body.p_user === owner && enrollmentPending && !bound);
     if (path === "/rest/v1/rpc/sv_trusted_mfa_session")
       return json(
         bound && body.p_user === owner && verifiedSessions.has(body.p_session),
@@ -255,6 +259,9 @@ export function mfaProvider() {
     email,
     password,
     authenticatorCode,
+    designatePendingOwner: () => {
+      enrollmentPending = true;
+    },
     server,
     status: () => ({
       mailCode,

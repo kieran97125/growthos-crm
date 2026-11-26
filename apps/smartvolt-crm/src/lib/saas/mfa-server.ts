@@ -47,6 +47,25 @@ export const enforceAdminMfa = cache(async function enforceAdminMfa(
   if (claims.aal !== "aal2" || !(await trustedSession(user, claims.session_id)))
     throw new AccessError("請先完成管理員雙重驗證。", 428);
 });
+/** Only an explicitly grandfathered owner can open the workspace before first enrolment. */
+export const workspaceMfaPending = cache(async function workspaceMfaPending(
+  user: string,
+  owner: boolean,
+) {
+  try {
+    await enforceAdminMfa(user);
+    return false;
+  } catch (error) {
+    if (!owner || !(error instanceof AccessError) || error.status !== 428)
+      throw error;
+    const pending = await database().rpc("sv_mfa_enrollment_pending", {
+      p_user: user,
+    });
+    if (pending.error) throw unavailable();
+    if (pending.data !== true) throw error;
+    return true;
+  }
+});
 export const mailboxCookie =
   process.env.NODE_ENV === "production"
     ? "__Host-convelta-mfa-setup"

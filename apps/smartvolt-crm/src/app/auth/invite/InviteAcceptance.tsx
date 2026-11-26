@@ -14,7 +14,8 @@ export default function InviteAcceptance() {
   const [password, setPassword] = useState(""),
     [confirm, setConfirm] = useState(""),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [needsMfa, setNeedsMfa] = useState(false);
   useEffect(() => {
     if (credentials.current) return;
     const url = new URL(window.location.href),
@@ -54,6 +55,7 @@ export default function InviteAcceptance() {
           }),
         }),
         body = await r.json();
+      setNeedsMfa(r.status === 428);
       if (!r.ok) throw Error(body.error ?? "未能接受邀請。");
       credentials.current = null;
       router.replace(`/company/${body.companyId}`);
@@ -94,6 +96,11 @@ export default function InviteAcceptance() {
           首次使用請設定最少 12 個字元嘅密碼；已有帳戶可留空，沿用原有密碼。
         </p>
         {error && <p role="alert">{error}</p>}
+        {needsMfa && (
+          <Link href="/auth/mfa" target="_blank" rel="noopener noreferrer">
+            另開分頁完成雙重驗證
+          </Link>
+        )}
         <button className="sv-primary" disabled={busy}>
           {busy ? "正在加入…" : "接受邀請，進入公司"}
         </button>

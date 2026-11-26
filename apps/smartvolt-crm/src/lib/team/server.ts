@@ -3,6 +3,10 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { requireCompany, loadCompany, authClient } from "@/lib/saas/server";
 import { database } from "@/lib/saas/database";
+import {
+  enforceAdminMfa,
+  hasActiveAdminMembership,
+} from "@/lib/saas/mfa-server";
 import { saasConfig } from "@/lib/saas/config";
 import { AccessError, canManage } from "@/lib/saas/identity";
 import { readMasterKey } from "@/lib/whatsapp/crypto";
@@ -224,6 +228,18 @@ export async function acceptTeam(raw: unknown) {
   const confirmed = await isolated.auth.getUser();
   if (confirmed.error || confirmed.data.user?.id !== user.id)
     throw new AccessError("未能核實登入身份。", 401);
+  const alreadyPrivileged = await hasActiveAdminMembership(user.id);
+  if (alreadyPrivileged) {
+    try {
+      await enforceAdminMfa(user.id);
+    } catch (error) {
+      if (error instanceof AccessError && error.status === 503) throw error;
+      throw new AccessError(
+        "請先喺另一個分頁登入同一管理員帳戶並完成雙重驗證，再返嚟接受邀請。",
+        428,
+      );
+    }
+  }
   const accepted = await db.rpc("sv_team_accept", {
     p_invitation: input.invitation,
     p_actor: user.id,
@@ -232,7 +248,8 @@ export async function acceptTeam(raw: unknown) {
   });
   checked(accepted.error);
   if (input.password) {
-    const updated = await isolated.auth.updateUser({
+    const passwordClient = alreadyPrivileged ? await authClient() : isolated;
+    const updated = await passwordClient.auth.updateUser({
       password: input.password,
     });
     if (updated.error)
@@ -241,6 +258,7 @@ export async function acceptTeam(raw: unknown) {
         400,
       );
   }
+  if (alreadyPrivileged) return { companyId: accepted.data as string };
   const client = await authClient();
   const session = await client.auth.setSession(pair.data.session);
   if (session.error)

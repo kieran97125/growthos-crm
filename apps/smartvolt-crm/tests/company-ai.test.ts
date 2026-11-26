@@ -293,3 +293,109 @@ test("billing and authentication failures expose actionable categories without r
   for (const message of Object.values(aiErrors))
     assert.ok(!message.includes("sk-"));
 });
+
+test("website privacy gate calls no model on sensitive current or historical text", async () => {
+  const model = new MockLanguageModelV4();
+  for (const sensitive of [
+    "懷孕時可唔可以做呢個療程？",
+    "I have a medication allergy",
+    "我的身分證是 X123456(7)",
+    "Can you help with a refund?",
+    "My name is Someone Else, what is the cost?",
+  ]) {
+    for (const turn of [
+      { message: sensitive, history: [] },
+      {
+        message: "Any update?",
+        history: [{ role: "user" as const, content: sensitive }],
+      },
+      {
+        message: "Any update?",
+        history: [{ role: "assistant" as const, content: sensitive }],
+      },
+    ]) {
+      await assert.rejects(
+        generateCompanyAnswer(
+          { ...input, ...turn },
+          model,
+          "Synthetic",
+          now,
+          "answer",
+          "website",
+        ),
+        { message: "website_privacy_handoff" },
+      );
+    }
+  }
+  assert.equal(model.doGenerateCalls.length, 0);
+});
+
+test("website provider sees public facts and minimized conversation without staff context", async () => {
+  const model = new MockLanguageModelV4({
+    doGenerate: {
+      content: [{ type: "text", text: JSON.stringify(output) }],
+      finishReason: { unified: "stop", raw: "stop" },
+      usage: {
+        inputTokens: { total: 80, noCache: 80, cacheRead: 0, cacheWrite: 0 },
+        outputTokens: { total: 40, text: 40, reasoning: 0 },
+      },
+      warnings: [],
+    },
+  });
+  const visitor: AssistantInput = {
+    ...input,
+    name: "Robin Example",
+    message:
+      "Robin Example: demo on 2026-12-18 19:00 for HK$228, +852 5555 0199",
+    history: [
+      {
+        role: "assistant",
+        content: "Robin, was it robin123@example.net or ２３４５－６７８９?",
+      },
+    ],
+    articles: [
+      { ...article, content: article.content + " 公開商戶電話 5555 0123" },
+    ],
+    styleGuidance: ["Private staff review"],
+    customerMemory: [
+      {
+        id: "m",
+        revision: 1,
+        category: "note",
+        content: "Private staff memory",
+      },
+    ],
+    reviewedVoice: [
+      { id: "v", revision: 1, messageId: "vm", text: "Private voice" },
+    ],
+  };
+  await generateCompanyAnswer(
+    visitor,
+    model,
+    "Synthetic",
+    now,
+    "answer",
+    "website",
+  );
+  const transmitted = JSON.stringify(model.doGenerateCalls[0].prompt);
+  for (const value of [
+    "Robin",
+    "Example",
+    "5555 0199",
+    "2345",
+    "example.net",
+    "Private staff",
+    "Private voice",
+  ])
+    assert.ok(!transmitted.toLowerCase().includes(value.toLowerCase()), value);
+  for (const value of [
+    "2026-12-18 19:00",
+    "HK$228",
+    "5555 0123",
+    "demo",
+    "[電郵]",
+    "[聯絡號碼]",
+  ])
+    assert.ok(transmitted.includes(value), value);
+  assert.ok(visitor.message.includes("Robin Example"));
+});

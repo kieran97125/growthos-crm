@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireCompany } from "@/lib/saas/server";
 import { AccessError } from "@/lib/saas/identity";
+import { MfaEnrollmentNotice } from "@/app/auth/mfa/MfaEnrollmentNotice";
 import CompanyWorkspace from "@/components/workspace/CompanyWorkspace";
 export default async function CompanyLayout({
   children,
@@ -16,6 +17,8 @@ export default async function CompanyLayout({
   try {
     access = await requireCompany(companyId);
   } catch (error) {
+    if (error instanceof AccessError && error.status === 428)
+      redirect("/auth/mfa");
     if (error instanceof AccessError && error.status === 401)
       redirect("/login");
     if (!(error instanceof AccessError)) throw error;
@@ -27,7 +30,7 @@ export default async function CompanyLayout({
       </main>
     );
   }
-  return (
+  const workspace = (
     <CompanyWorkspace
       key={companyId}
       companyId={companyId}
@@ -38,5 +41,12 @@ export default async function CompanyLayout({
     >
       {children}
     </CompanyWorkspace>
+  );
+  if (!access.mfaEnrollmentPending) return workspace;
+  return (
+    <div className="sv-enrollment-workspace">
+      <MfaEnrollmentNotice />
+      <div className="sv-enrollment-work-area">{workspace}</div>
+    </div>
   );
 }

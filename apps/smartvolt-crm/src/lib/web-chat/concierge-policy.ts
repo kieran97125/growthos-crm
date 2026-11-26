@@ -1,3 +1,5 @@
+import { websitePrivacyHandoff } from "./visitor-privacy";
+
 /** Visitor preferences are separate from assignment and the human-response queue. */
 export type ChatPreference = "cooperate" | "human_only";
 export type ChatTurnKind = "message" | "human" | "human_only" | "resume_c";
@@ -28,6 +30,7 @@ export function assessChatTurn(body: string, kind: ChatTurnKind = "message") {
       text,
     );
   const human =
+    websitePrivacyHandoff(body) ||
     kind === "human" ||
     humanOnly ||
     (!resume &&

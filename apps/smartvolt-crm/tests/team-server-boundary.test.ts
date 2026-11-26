@@ -21,6 +21,8 @@ class Harness {
   };
   pairUser = this.user;
   verified = true;
+  privileged = false;
+  adminApproved = false;
   acceptError: string | null = null;
   claim = true;
   mailError: { code: string } | null = null;
@@ -149,6 +151,7 @@ before(async () => {
     "server-only": "export {};",
     "@/lib/saas/server":
       "export const requireCompany=async()=>globalThis.__conveltaTeamHarness.access;export const loadCompany=requireCompany;export const authClient=async()=>globalThis.__conveltaTeamHarness.cookies;",
+    "@/lib/saas/mfa-server": `export const hasActiveAdminMembership=async()=>globalThis.__conveltaTeamHarness.privileged; export const enforceAdminMfa=async()=>{if(!globalThis.__conveltaTeamHarness.adminApproved)throw Error("MFA pending")};`,
     "@/lib/saas/database":
       "export const database=()=>globalThis.__conveltaTeamHarness.db;",
     "@/lib/saas/config":
@@ -279,4 +282,17 @@ test("existing-account mail uses a no-create sign-in and keeps the invitation no
   assert.equal(url.pathname, "/auth/invite");
   assert.equal(url.searchParams.get("token")!.length, 43);
   assert.deepEqual(h.updates, [{ mail_state: "submitted" }]);
+});
+
+test("an existing privileged invitee proves the trusted browser session before membership or password changes", async () => {
+  h.privileged = true;
+  await assert.rejects(
+    api.acceptTeam({ ...acceptance(), password: "synthetic-test-password" }),
+    /雙重驗證/,
+  );
+  assert.equal(h.calls.length, 0);
+  assert.equal(h.cookieCalls, 0);
+  h.adminApproved = true;
+  assert.deepEqual(await api.acceptTeam(acceptance()), { companyId: company });
+  assert.equal(h.cookieCalls, 0);
 });

@@ -6,6 +6,7 @@ import {
   type AssistantInput,
   type LiveAnswer,
 } from "@/lib/demo/ai-contract";
+import { websitePrivacyHandoff } from "@/lib/web-chat/visitor-privacy";
 import { detectIntent } from "@/components/crm/studio/engine";
 const goal = z
   .enum(["answer", "book", "objection", "follow_up", "empathy", "concise"])
@@ -194,7 +195,7 @@ export function inspectGroundedAnswer(
     // later question may mention the waiting colleague without requesting a
     // second transfer. Keep the existing sensitive-topic boundary in both modes.
     (audience === "website"
-      ? /退款|投訴|經理|醫生|懷孕|發炎|refund|complaint/i.test(input.message)
+      ? websitePrivacyHandoff(input.message)
       : detectIntent(input.message) === "handoff") ||
     (output.intent === "faq" &&
       ((topic === "location" && !input.profile.allowLocation) ||

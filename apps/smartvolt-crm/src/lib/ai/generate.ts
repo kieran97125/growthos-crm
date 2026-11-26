@@ -1,15 +1,17 @@
 import { generateText, Output, type LanguageModel } from "ai";
+import { websiteModelInput } from "@/lib/web-chat/visitor-privacy";
 import { groundedAnswerSchema, inspectGroundedAnswer } from "./protocol";
 import type { AssistantInput } from "@/lib/demo/ai-contract";
 import { replyGoals, type ReplyGoal } from "./goals";
 export async function generateCompanyAnswer(
-  input: AssistantInput,
+  context: AssistantInput,
   model: LanguageModel,
   companyName: string,
   now: number,
   goal: ReplyGoal = "answer",
   audience: "staff" | "website" = "staff",
 ) {
+  const input = audience === "website" ? websiteModelInput(context) : context;
   const result = await generateText({
     model,
     output: Output.object({ schema: groundedAnswerSchema }),

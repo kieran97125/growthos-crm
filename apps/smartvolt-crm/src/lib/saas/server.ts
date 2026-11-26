@@ -1,13 +1,13 @@
 import "server-only";
 import { cache } from "react";
 import { z } from "zod";
-import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
+import { authClient } from "./session";
+export { authClient } from "./session";
+import { enforceAdminMfa } from "./mfa-server";
 import { database } from "./database";
 export { database } from "./database";
 import { projectMemberWorkspace, type MemberScope } from "./member-scope";
 import { requireCustomerScope } from "./scope-server";
-import { saasConfig } from "./config";
 import { AccessError, roleSchema, scopeSchema, type Actor } from "./identity";
 import {
   activeProducts,
@@ -18,32 +18,6 @@ import {
 } from "./products";
 import { appSchema } from "@/lib/demo/state";
 
-export async function authClient() {
-  const config = saasConfig();
-  if (!config) throw new AccessError("公司登入服務尚未啟用。", 503);
-  const jar = await cookies();
-  return createServerClient(config.url, config.key, {
-    cookieOptions: {
-      name: "smartvolt-auth",
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-    },
-    cookies: {
-      getAll: () => jar.getAll(),
-      setAll(values) {
-        try {
-          values.forEach(({ name, value, options }) =>
-            jar.set(name, value, options),
-          );
-        } catch {
-          /* Server components are refreshed by proxy. */
-        }
-      },
-    },
-  });
-}
 export const requireUser = cache(async function requireUser() {
   const client = await authClient();
   const {
@@ -65,6 +39,10 @@ export async function companiesForUser() {
     .eq("status", "active")
     .eq("sv_companies.status", "active");
   if (error) throw new AccessError("暫時未能讀取公司工作空間。", 503);
+  if (
+    data?.some((membership) => ["owner", "manager"].includes(membership.role))
+  )
+    await enforceAdminMfa(user.id);
   return { user, memberships: data ?? [] };
 }
 export const requireCompany = cache(async function requireCompany(
@@ -84,6 +62,8 @@ export const requireCompany = cache(async function requireCompany(
     .maybeSingle();
   if (error) throw new AccessError("暫時未能核實公司權限。", 503);
   if (!member) throw new AccessError("你無權進入此公司工作空間。");
+  if (member.role === "owner" || member.role === "manager")
+    await enforceAdminMfa(user.id);
   const company = Array.isArray(member.sv_companies)
     ? member.sv_companies[0]
     : member.sv_companies;

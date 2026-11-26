@@ -1,0 +1,59 @@
+.content {
+  min-width: 0;
+  line-height: 1.6;
+}
+
+.content form {
+  margin-top: 1rem;
+}
+
+.content .code {
+  font-size: 1.15rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.18em;
+}
+
+.content .secondary {
+  background: transparent;
+  border: 1px solid #ccd7eb;
+  color: #2046a5;
+}
+
+.select {
+  background: #fcfdff;
+  border: 1px solid #dce3ee;
+  border-radius: 10px;
+  color: #15233b;
+  font: inherit;
+  min-height: 48px;
+  padding: 0 12px;
+  width: 100%;
+}
+
+.qr {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 1rem auto;
+}
+
+.details {
+  margin: 1.25rem 0 0;
+  font-size: 0.85rem;
+}
+
+.details summary {
+  color: #2046a5;
+  cursor: pointer;
+  padding-block: 0.45rem;
+}
+
+.secret {
+  background: #f1f5fb;
+  border-radius: 8px;
+  color: #15233b;
+  display: block;
+  overflow-wrap: anywhere;
+  padding: 0.75rem;
+  user-select: all;
+}

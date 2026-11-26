@@ -919,3 +919,63 @@ test("public receipts and functions have no browser grants, and scoped staff can
     false,
   );
 });
+
+test("website privacy handoff preserves the enquiry, queues a human and handles older sensitive history", async () => {
+  const f = await fixture();
+  const sensitive = "懷孕時可唔可以做療程？";
+  const first = await receive(f, sensitive);
+  const skipped = await rpc("sv_web_chat_c_claim", [
+    f.company,
+    first,
+    "openai/gpt-5.4-mini",
+  ]);
+  assert.equal(skipped.dispatch, false);
+  assert.equal((await thread(f)).humanWaiting, true);
+  const next = await receive(f, "仲有冇資料？");
+  const claim = await rpc("sv_web_chat_c_claim", [
+    f.company,
+    next,
+    "openai/gpt-5.4-mini",
+  ]);
+  assert.equal(claim.dispatch, true);
+  assert.ok(
+    (claim.history as { content: string }[]).some(
+      (m) => m.content === sensitive,
+    ),
+  );
+  await rpc("sv_web_chat_c_finish", [
+    f.company,
+    next,
+    null,
+    "website_privacy_handoff",
+    null,
+    null,
+  ]);
+  await rpc("sv_web_chat_c_finish", [
+    f.company,
+    next,
+    null,
+    "website_privacy_handoff",
+    null,
+    null,
+  ]);
+  assert.equal((await thread(f)).humanWaiting, true);
+  const receipt = (
+    await db.query(
+      "select error_code,input_tokens,output_tokens from sv_web_chat_c_turns where company_id=$1 and message_id=$2",
+      [f.company, next],
+    )
+  ).rows[0];
+  assert.deepEqual(receipt, {
+    error_code: "website_privacy_handoff",
+    input_tokens: null,
+    output_tokens: null,
+  });
+  const replies = (
+    await db.query<{ count: number }>(
+      "select count(*)::int as count from sv_web_chat_messages where company_id=$1 and thread_id=$2 and sender='c'",
+      [f.company, f.thread],
+    )
+  ).rows[0];
+  assert.equal(replies.count, 1);
+});

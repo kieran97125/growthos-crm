@@ -16,6 +16,8 @@ export default async function CompanyLayout({
   try {
     access = await requireCompany(companyId);
   } catch (error) {
+    if (error instanceof AccessError && error.status === 428)
+      redirect("/auth/mfa");
     if (error instanceof AccessError && error.status === 401)
       redirect("/login");
     if (!(error instanceof AccessError)) throw error;

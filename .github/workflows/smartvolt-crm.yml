@@ -38,6 +38,8 @@ jobs:
       - run: npm run build
       - name: Select and record acceptance browser
         run: bash ../../scripts/select-ci-browser.sh
+      - name: Verify administrator enrollment and challenge with a local identity provider
+        run: npx playwright test --config=playwright.mfa.config.ts
       - name: Verify production cold load and refresh
         run: npm run test:paint
       - name: Verify campaign composer and explicit delivery intent

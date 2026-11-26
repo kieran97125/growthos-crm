@@ -6,6 +6,7 @@ import { articleSchema, botSchema } from "@/components/crm/studio/model";
 import { approvedKnowledge, retrieveKnowledge } from "@/lib/ai/protocol";
 import { generateCompanyAnswer } from "@/lib/ai/generate";
 import { aiModel } from "@/lib/ai/server";
+import { WebsitePrivacyHandoff } from "./visitor-privacy";
 import { classifyAIError } from "@/lib/ai/errors";
 import type { AssistantInput } from "@/lib/demo/ai-contract";
 
@@ -62,7 +63,10 @@ export async function processWebsiteTurn(company: string, message: string) {
       "website",
     );
   } catch (e) {
-    error = classifyAIError(e);
+    error =
+      e instanceof WebsitePrivacyHandoff
+        ? "website_privacy_handoff"
+        : classifyAIError(e);
   }
   const finish = await db.rpc("sv_web_chat_c_finish", {
     p_company: company,

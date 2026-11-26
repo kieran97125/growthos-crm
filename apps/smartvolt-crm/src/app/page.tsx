@@ -9,6 +9,8 @@ export default async function Home() {
   try {
     result = await companiesForUser();
   } catch (error) {
+    if (error instanceof AccessError && error.status === 428)
+      redirect("/auth/mfa");
     if (error instanceof AccessError && [401, 503].includes(error.status))
       redirect("/login");
     throw error;

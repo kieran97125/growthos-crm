@@ -4,6 +4,8 @@ import {
   DraftTranslation,
 } from "@/components/translation/Translation";
 import VoiceMessage from "@/components/voice/VoiceMessage";
+import MediaMessage from "@/components/media/MediaMessage";
+import MediaComposer from "@/components/media/MediaComposer";
 import { useWorkspaceChrome } from "@/components/workspace/context";
 import {
   ArrowDown,
@@ -46,6 +48,7 @@ export type PendingSend = {
 };
 export type WhatsAppInboxViewProps = {
   companyId: string;
+  actorId: string;
   companyName: string;
   canSend: boolean;
   canManage: boolean;
@@ -439,7 +442,9 @@ export default function WhatsAppInboxView({
                             "已引用訊息"}
                         </div>
                       )}
-                      {m.messageType === "audio" && p.selected ? (
+                      {m.messageType === "audio" &&
+                      m.direction === "incoming" &&
+                      p.selected ? (
                         <VoiceMessage
                           companyId={p.companyId}
                           brandId={p.selected.brandId}
@@ -450,13 +455,35 @@ export default function WhatsAppInboxView({
                       ) : m.messageType === "text" || m.direction === "note" ? (
                         <p>{m.body}</p>
                       ) : (
-                        <div className="wa-unsupported">
-                          <MoreHorizontal size={24} aria-hidden="true" />
-                          <strong>
-                            收到 {m.messageType || "未支援類型"} 訊息
-                          </strong>
-                          <p>{m.body || "目前未提供附件預覽或播放。"}</p>
-                        </div>
+                        <>
+                          {p.selected &&
+                          [
+                            "image",
+                            "video",
+                            "audio",
+                            "document",
+                            "sticker",
+                          ].includes(m.messageType) ? (
+                            <MediaMessage
+                              companyId={p.companyId}
+                              brandId={p.selected.brandId}
+                              source="whatsapp"
+                              sourceId={p.selected.id}
+                              messageId={m.id}
+                            />
+                          ) : (
+                            <div className="wa-unsupported">
+                              <MoreHorizontal size={24} aria-hidden="true" />
+                              <strong>
+                                收到 {m.messageType || "未支援類型"} 訊息
+                              </strong>
+                              <small>目前未提供附件預覽或播放。</small>
+                            </div>
+                          )}
+                          {m.body &&
+                            !m.body.startsWith("［") &&
+                            !m.body.startsWith("[附件]") && <p>{m.body}</p>}
+                        </>
                       )}
                       {p.selected &&
                         m.direction === "incoming" &&
@@ -621,6 +648,24 @@ export default function WhatsAppInboxView({
                     disabled={!p.canSend || !!p.pending || p.actionBusy}
                   />
                   <div className="wa-composer-foot">
+                    <MediaComposer
+                      companyId={p.companyId}
+                      actorId={p.actorId}
+                      brandId={p.selected.brandId}
+                      source="whatsapp"
+                      sourceId={p.selected.id}
+                      revision={p.selected.revision}
+                      canSend={p.canSend}
+                      disabled={
+                        disabled ||
+                        p.editor?.busy ||
+                        (p.editor?.state.occupied && !p.editor.state.held)
+                      }
+                      acquireEditor={() =>
+                        p.editor?.acquire() ?? Promise.resolve(null)
+                      }
+                      onSent={() => p.onRefresh?.()}
+                    />
                     <span id="wa-draft-count">
                       {p.pending?.phase === "sending"
                         ? "正在提交，等候確認…"

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useCallback, useState } from "react";
 import { Sparkles, ArrowUpRight, BookOpen } from "lucide-react";
 import AIDraft from "./AIDraft";
+import ReplyScenarios from "./ReplyScenarios";
+import { replyScenario } from "@/lib/ai/scenarios";
 import CoachingWorkroom from "@/components/coaching/CoachingWorkroom";
 import type { CoachingSource } from "@/lib/coaching/model";
 export type AIStatus = {
@@ -32,11 +34,13 @@ export default function AIStudio({
   initialStatus,
   initialBrand,
   initialCoaching,
+  initialScenario,
 }: {
   companyId: string;
   initialStatus: AIStatus;
   initialBrand?: string;
   initialCoaching?: { source: CoachingSource; sourceId: string };
+  initialScenario?: string;
 }) {
   const chrome = useWorkspaceChrome();
   const [status, setStatus] = useState<AIStatus | null>(initialStatus),
@@ -46,7 +50,9 @@ export default function AIStudio({
         ? initialBrand!
         : (initialStatus.brands[0]?.id ?? ""),
     ),
-    [message, setMessage] = useState(""),
+    [message, setMessage] = useState(
+      replyScenario(initialScenario)?.question ?? "",
+    ),
     [busy, setBusy] = useState(false),
     [locked, setLocked] = useState(false);
   const refresh = useCallback(async () => {
@@ -106,6 +112,11 @@ export default function AIStudio({
             <Link href={`/company/${companyId}/crm?view=bot`}>
               BOT 與核准知識
             </Link>
+            <Link
+              href={`/company/${companyId}/crm?view=bot&rules=1&brand=${encodeURIComponent(brand)}`}
+            >
+              回應規則
+            </Link>
           </nav>
         )}
         <div className="ai-hero">
@@ -113,6 +124,7 @@ export default function AIStudio({
             <Sparkles size={23} aria-hidden="true" />
             回覆測試
           </h1>
+          <p>用品牌資料試答，核對答案、資料來源同轉真人原因。</p>
         </div>
         {error && (
           <p role="alert" className="ai-message ai-error">
@@ -161,6 +173,11 @@ export default function AIStudio({
                 ))}
               </select>
             </label>
+            <ReplyScenarios
+              message={message}
+              disabled={locked}
+              onChoose={setMessage}
+            />
             <label>
               客戶想問乜？
               <textarea
@@ -174,6 +191,7 @@ export default function AIStudio({
             </label>
             <AIDraft
               key={brand}
+              view="test"
               context={{
                 companyId,
                 brandId: brand,
@@ -194,6 +212,13 @@ export default function AIStudio({
             />
           </section>
           <aside className="ai-knowledge-card">
+            <Link
+              className="ai-rules-link"
+              href={`/company/${companyId}/crm?view=bot&rules=1&brand=${encodeURIComponent(brand)}`}
+            >
+              設定語氣、回答範圍及交接條件{" "}
+              <ArrowUpRight size={14} aria-hidden="true" />
+            </Link>
             <div className="ai-card-heading">
               <h2>
                 <BookOpen size={17} aria-hidden="true" />
@@ -202,20 +227,23 @@ export default function AIStudio({
               <span>{selected?.knowledgeCount ?? 0} 篇可用</span>
             </div>
             {knowledge.length ? (
-              knowledge.map((a) => (
-                <article key={a.id}>
-                  <div>
-                    <b>{a.title}</b>
-                    <span>
-                      {a.status === "approved" ? "可使用" : "暫停使用"}
-                    </span>
-                  </div>
-                  <small>
-                    v{a.revision} · 有效至 {a.validUntil}
-                  </small>
-                  <p>{a.source}</p>
-                </article>
-              ))
+              <details className="ai-library-details">
+                <summary>查看品牌知識目錄（{knowledge.length}）</summary>
+                {knowledge.map((a) => (
+                  <article key={a.id}>
+                    <div>
+                      <b>{a.title}</b>
+                      <span>
+                        {a.status === "approved" ? "已核准" : "暫停使用"}
+                      </span>
+                    </div>
+                    <small>
+                      v{a.revision} · 有效至 {a.validUntil}
+                    </small>
+                    <p>{a.source}</p>
+                  </article>
+                ))}
+              </details>
             ) : (
               <div className="ai-knowledge-empty">暫未有核准知識</div>
             )}

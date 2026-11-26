@@ -6,6 +6,7 @@ import {
   type AssistantInput,
   type LiveAnswer,
 } from "@/lib/demo/ai-contract";
+import { websitePrivacyHandoff } from "@/lib/web-chat/visitor-privacy";
 import { detectIntent } from "@/components/crm/studio/engine";
 const goal = z
   .enum(["answer", "book", "objection", "follow_up", "empathy", "concise"])
@@ -77,6 +78,7 @@ export type CompanyAnswer = LiveAnswer & {
   nextStep: string;
   interest: "high" | "medium" | "low" | "unknown";
   evidence: { sourceId: string; quote: string }[];
+  review?: { handoffReasons: string[] };
 };
 export function hongKongDay(now: number) {
   return new Date(now + 8 * 3600000).toISOString().slice(0, 10);
@@ -155,6 +157,7 @@ export function inspectGroundedAnswer(
   input: AssistantInput,
   now: number,
   model: string,
+  audience: "staff" | "website" = "staff",
 ) {
   const quotesValid = output.evidence.every((e) =>
     input.articles.some(
@@ -188,7 +191,12 @@ export function inspectGroundedAnswer(
       ? "hours"
       : "service";
   const policyHandoff =
-    detectIntent(input.message) === "handoff" ||
+    // Public admission already persists actual human requests/preferences. A
+    // later question may mention the waiting colleague without requesting a
+    // second transfer. Keep the existing sensitive-topic boundary in both modes.
+    (audience === "website"
+      ? websitePrivacyHandoff(input.message)
+      : detectIntent(input.message) === "handoff") ||
     (output.intent === "faq" &&
       ((topic === "location" && !input.profile.allowLocation) ||
         (topic === "hours" && !input.profile.allowHours) ||
@@ -245,6 +253,43 @@ export function inspectGroundedAnswer(
         : output.nextStep,
     interest: output.interest,
     evidence: result.decision === "handoff" ? [] : output.evidence,
+    review: {
+      handoffReasons:
+        result.decision === "handoff"
+          ? [
+              ...new Set(
+                issues.map((issue) => {
+                  if (issue === "policy_handoff") {
+                    if (
+                      /退款|投訴|經理|醫生|懷孕|發炎|refund|complaint/i.test(
+                        input.message,
+                      )
+                    )
+                      return "查詢涉及投訴、退款或專業判斷，需要同事處理。";
+                    if (detectIntent(input.message) === "handoff")
+                      return "客人要求真人協助。";
+                    return "呢類問題未獲品牌授權由 AI 處理。";
+                  }
+                  const reasons: Record<string, string> = {
+                    invalid_quotes: "答案引文未能對應核准資料。",
+                    unquoted_source: "部分來源未有可核對嘅支持引文。",
+                    invented_price: "答案提到未有核准依據嘅價錢。",
+                    invented_link: "答案提到未經核實嘅連結。",
+                    missing_evidence: "未有足夠核准資料支持答案。",
+                    model_handoff: "AI 判斷需要同事補充資料或作出決定。",
+                    low_confidence: "目前資料不足以穩妥回答。",
+                    unknown_source: "引用資料並非目前可用嘅品牌知識。",
+                    missing_source: "未有足夠核准資料支持答案。",
+                    unsupported_booking_confirmation:
+                      "正式預約及即時名額需要同事核實。",
+                    answer_safety_handoff: "答案仍需要同事核實後處理。",
+                  };
+                  return reasons[issue] ?? "答案仍需要同事核實後處理。";
+                }),
+              ),
+            ]
+          : [],
+    },
   };
   return {
     answer,

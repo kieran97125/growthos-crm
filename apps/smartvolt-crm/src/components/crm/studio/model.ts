@@ -27,13 +27,13 @@ export const NODE_META: Record<
     tone: "green",
   },
   intent: {
-    title: "辨識客戶需要",
-    description: "一般查詢、預約意向、真人協助",
+    title: "關鍵字分流",
+    description: "按公司關鍵字分流，未能確定就交畀真人",
     tone: "violet",
   },
   condition: {
-    title: "新客／現客分流",
-    description: "按客戶類型選擇下一步",
+    title: "核實預約分流",
+    description: "按有冇核實預約紀錄選擇下一步",
     tone: "amber",
   },
   answer: {
@@ -95,6 +95,14 @@ export const nodeSchema = z.object({
     reminderHour: z.number().int().min(8).max(21),
     template: z.string().max(2000),
     bindings: z.array(bindingSchema).max(12),
+    routing: z
+      .object({
+        faq: z.array(z.string().trim().min(1).max(50)).max(20),
+        booking: z.array(z.string().trim().min(1).max(50)).max(20),
+        handoff: z.array(z.string().trim().min(1).max(50)).max(20),
+      })
+      .strict()
+      .optional(),
   }),
 });
 const edgeSchema = z.object({
@@ -123,6 +131,7 @@ export const articleSchema = z.object({
   keywords: z.array(z.string().min(1).max(50)).max(20),
   source: z.string().min(1).max(120),
   status: z.enum(["approved", "draft"]),
+  visibility: z.enum(["public", "internal"]).optional(),
   validUntil: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   revision: z.number().int().min(1),
   coaching: z

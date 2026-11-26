@@ -5,6 +5,8 @@ import { readFileSync, readdirSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { createCompanyState } from "../src/lib/saas/workspace";
 import { defaultSettings } from "../src/lib/operations/model";
+import type { Flow } from "../src/components/crm/studio/model";
+import { verifyWebsiteCNative } from "./verify-website-c-postgres";
 if (
   process.env.CI !== "true" ||
   process.env.PGHOST !== "127.0.0.1" ||
@@ -25,7 +27,8 @@ function execute(input: string) {
   });
   const done = new Promise<string>((resolve, reject) => {
     child.on("error", reject);
-    child.on("exit", (code) =>
+    // Process exit can precede the final pipe data; parse only after stdio closes.
+    child.on("close", (code) =>
       code === 0
         ? resolve(output.trim())
         : reject(new Error(error || "Native database verification failed.")),
@@ -40,6 +43,37 @@ async function sql(query: string) {
 }
 async function json<T>(query: string): Promise<T> {
   return JSON.parse(await sql(query));
+}
+async function raceUnderNativeLock<T>(
+  lock: string,
+  compete: () => Promise<T>,
+): Promise<T> {
+  const holder = execute(
+    `set role service_role;begin;${lock}\n\\echo EXPANSION_LOCK_HELD\nselect pg_sleep(2);commit;`,
+  );
+  try {
+    await new Promise<void>((resolve, reject) => {
+      let output = "";
+      const timer = setTimeout(
+        () => reject(new Error("Native expansion lock handshake timed out.")),
+        5000,
+      );
+      holder.child.stdout.on("data", (part) => {
+        output += part;
+        if (output.includes("EXPANSION_LOCK_HELD")) {
+          clearTimeout(timer);
+          resolve();
+        }
+      });
+      holder.done.catch((error) => {
+        clearTimeout(timer);
+        reject(error);
+      });
+    });
+    return await compete();
+  } finally {
+    await holder.done;
+  }
 }
 async function main() {
   const empty = await execute(
@@ -359,6 +393,482 @@ async function main() {
     true,
   );
   assert.equal((await editor(old, "read")).held, false);
+
+  // Two matching rules and duplicate webhook workers still create one private
+  // reply candidate. Separate PostgreSQL sessions then compete for checking and
+  // final admission; this never calls a provider or fabricates a received DM.
+  const socialPost = "10001_900001",
+    socialComment = "900001_900002",
+    socialPeer = String(++peer);
+  for (let i = 0; i < 2; i++) {
+    const commandId = randomUUID(),
+      definition = {
+        id: randomUUID(),
+        brandId: "main",
+        connectionId: connection,
+        postId: socialPost,
+        name: "Native synthetic comment rule " + i,
+        keywords: ["details"],
+        match: "any",
+        body: "Native synthetic private reply",
+        enabled: true,
+        revision: 0,
+      };
+    await json(
+      `select sv_social_comment_action(${quote(company)},${quote(owner)},'save',${quote(JSON.stringify({ commandId, definition }))}::jsonb,${quote(JSON.stringify({ connectionId: connection, postId: socialPost, accountId: "10001", verified: true }))}::jsonb);`,
+    );
+  }
+  const socialAt = Date.now(),
+    socialEvent = {
+      key: "c".repeat(64),
+      accountId: "10001",
+      channel: "messenger",
+      commentId: socialComment,
+      postId: socialPost,
+      peerId: socialPeer,
+      text: "Please send details",
+      createdAt: socialAt,
+      eventAt: socialAt,
+      deleted: false,
+      live: false,
+    },
+    socialIngest = () =>
+      json<number>(
+        `select sv_social_comments_ingest(${quote(connection)},${quote(JSON.stringify([socialEvent]))}::jsonb);`,
+      );
+  const socialIngests = await Promise.all([socialIngest(), socialIngest()]);
+  assert.equal(
+    socialIngests.reduce((total, count) => total + count, 0),
+    1,
+  );
+  assert.equal(
+    await sql(
+      `select count(*)from sv_social_comment_jobs where company_id=${quote(company)}and comment_id=${quote(socialComment)};`,
+    ),
+    "1",
+  );
+  type SocialClaim = { id: string; token: string } | null;
+  const socialClaim = () =>
+      json<SocialClaim>(
+        `select coalesce(sv_social_comments_claim(${quote(company)}),'null'::jsonb);`,
+      ),
+    socialClaims = await Promise.all([socialClaim(), socialClaim()]),
+    socialWinner = socialClaims.find((claim) => claim !== null);
+  assert.equal(socialClaims.filter((claim) => claim !== null).length, 1);
+  assert.ok(socialWinner);
+  const socialEvidence = {
+      commentId: socialComment,
+      postId: socialPost,
+      accountId: "10001",
+      peerId: socialPeer,
+      text: socialEvent.text,
+      eligible: true,
+      createdAt: socialAt,
+    },
+    socialAdmit = () =>
+      json<boolean>(
+        `select to_jsonb(sv_social_comment_admit(${quote(company)},${quote(socialWinner.id)},${quote(socialWinner.token)},${quote(JSON.stringify(socialEvidence))}::jsonb));`,
+      ),
+    socialAdmissions = await Promise.all([socialAdmit(), socialAdmit()]);
+  assert.equal(socialAdmissions.filter(Boolean).length, 1);
+  await sql(
+    `select sv_social_comment_finish(${quote(company)},${quote(socialWinner.id)},${quote(socialWinner.token)},'uncertain',null,null,'native_unknown');`,
+  );
+  assert.equal(await socialClaim(), null);
+  assert.equal(await socialAdmit(), false);
+  assert.equal(
+    await sql(
+      `select count(*)from sv_social_comment_attempts where company_id=${quote(company)}and job_id=${quote(socialWinner.id)}and state='sending';`,
+    ),
+    "1",
+  );
+  assert.equal(
+    await sql(
+      `select state from sv_social_comment_jobs where company_id=${quote(company)}and id=${quote(socialWinner.id)};`,
+    ),
+    "uncertain",
+  );
+  console.log(
+    "Native PostgreSQL: duplicate comment ingestion, overlapping rules, competing admission and unknown replay passed.",
+  );
+
+  // Publish the same arbitrary graph as the saved canvas, then race retries of
+  // the actual enrollment action and competing catch-up workers. Only the shared
+  // outbox may admit an external attempt; no transport is called by this script.
+  const flowThread = await inquiry(),
+    flowPeer = String(peer),
+    flowId = "native-free-graph",
+    flowNodeConfig = {
+      message: "Native graph message",
+      owner,
+      waitHours: 1,
+      reminderHour: 9,
+      template: "Native graph reminder",
+      bindings: [],
+    },
+    graph: Flow = {
+      id: flowId,
+      clientId: company,
+      brandId: "main",
+      name: "Native arbitrary graph",
+      description: "Synthetic graph admission",
+      revision: 1,
+      updatedAt: Date.now(),
+      nodes: [
+        {
+          id: "start",
+          kind: "trigger",
+          title: "Start",
+          description: "",
+          position: { x: 0, y: 0 },
+          config: flowNodeConfig,
+        },
+        {
+          id: "send",
+          kind: "message",
+          title: "Send",
+          description: "",
+          position: { x: 200, y: 0 },
+          config: flowNodeConfig,
+        },
+        {
+          id: "end",
+          kind: "end",
+          title: "End",
+          description: "",
+          position: { x: 400, y: 0 },
+          config: flowNodeConfig,
+        },
+      ],
+      edges: [
+        {
+          id: "start-send",
+          source: "start",
+          target: "send",
+          sourceHandle: null,
+        },
+        { id: "send-end", source: "send", target: "end", sourceHandle: null },
+      ],
+    };
+  await sql(
+    `select sv_meta_ingest(${quote(connection)},${quote(JSON.stringify([{ kind: "inbound", channel: "messenger", accountId: "10001", peerId: flowPeer, at: Date.now(), key: "d".repeat(64), mid: "native-graph-inbound", body: "Native service inquiry", raw: {} }]))}::jsonb);update sv_workspaces set payload=jsonb_set(payload,'{studio,flows}',${quote(JSON.stringify([graph]))}::jsonb),revision=revision+1 where company_id=${quote(company)};`,
+  );
+  const flowCustomer = await sql(
+    `select customer_id from sv_customer_threads where company_id=${quote(company)}and provider='meta'and thread_id=${quote(flowThread)};`,
+  );
+  await sql(
+    `select sv_engagement_action(${quote(company)},${quote(owner)},${quote(randomUUID())},'preference',${quote(JSON.stringify({ customerId: flowCustomer, brandId: "main", channel: "messenger", purpose: "service", allowed: true, source: "Native synthetic service request", revision: 0 }))}::jsonb);update sv_delivery_policies set minute_limit=100 where company_id=${quote(company)};`,
+  );
+  const publishCommand = randomUUID(),
+    publication = {
+      action: "publish",
+      commandId: publishCommand,
+      flow: graph,
+      revision: 0,
+      trigger: "manual",
+      provider: "meta",
+      connectionId: connection,
+      purpose: "service",
+      enabled: true,
+      deliveries: {},
+    };
+  await json(
+    `select sv_flow_action(${quote(company)},${quote(owner)},${quote(publishCommand)},'publish',${quote(JSON.stringify(publication))}::jsonb);`,
+  );
+  const enrollmentCommand = randomUUID(),
+    enrollment = {
+      action: "enroll",
+      commandId: enrollmentCommand,
+      flowId,
+      threadId: flowThread,
+    },
+    enrollFlow = () =>
+      json<{ saved: boolean; runId: string }>(
+        `select sv_flow_action(${quote(company)},${quote(owner)},${quote(enrollmentCommand)},'enroll',${quote(JSON.stringify(enrollment))}::jsonb);`,
+      ),
+    flowEnrollments = await Promise.all([enrollFlow(), enrollFlow()]);
+  assert.deepEqual(flowEnrollments[0], flowEnrollments[1]);
+  assert.equal(
+    await sql(
+      `select count(*)from sv_flow_runs where company_id=${quote(company)}and flow_id=${quote(flowId)};`,
+    ),
+    "1",
+  );
+  const flowRun = flowEnrollments[0].runId,
+    catchUpFlow = () => json(`select sv_flow_catchup(${quote(company)});`);
+  await Promise.all([catchUpFlow(), catchUpFlow()]);
+  const flowJobs = await json<{ id: string }[]>(
+    `select coalesce(json_agg(json_build_object('id',id)),'[]'::json)from sv_delivery_jobs where company_id=${quote(company)}and origin='flow'and source_id=${quote(flowRun)};`,
+  );
+  assert.equal(flowJobs.length, 1);
+  const flowAdmissions = await Promise.all([
+    claim(flowJobs[0].id),
+    claim(flowJobs[0].id),
+  ]);
+  assert.equal(flowAdmissions.filter((result) => result.dispatch).length, 1);
+  await sql(
+    `select sv_delivery_finish(${quote(company)},${quote(flowJobs[0].id)},'ambiguous',null,'native_graph_unknown');`,
+  );
+  assert.equal((await claim(flowJobs[0].id)).dispatch, false);
+  await sql(
+    `update sv_flow_runs set due_at=now() where company_id=${quote(company)}and id=${quote(flowRun)};`,
+  );
+  await Promise.all([catchUpFlow(), catchUpFlow()]);
+  assert.equal(
+    await sql(
+      `select state from sv_flow_runs where company_id=${quote(company)}and id=${quote(flowRun)};`,
+    ),
+    "stopped",
+  );
+  assert.equal(
+    await sql(
+      `select count(*)from sv_delivery_jobs where company_id=${quote(company)}and origin='flow'and source_id=${quote(flowRun)};`,
+    ),
+    "1",
+  );
+  console.log(
+    "Native PostgreSQL: duplicate graph enrollment, competing catch-up/outbox claims and unknown-result stop passed.",
+  );
+
+  // A private attachment wraps the same real editor/window/actor admission as
+  // text. Verified asset metadata here is synthetic; byte sniffing and storage
+  // transport are covered separately and are never bypassed for live data.
+  const mediaThread = await inquiry(),
+    mediaPeer = String(peer),
+    mediaAsset = randomUUID(),
+    mediaCommand = randomUUID(),
+    mediaEditor = randomUUID();
+  await sql(
+    `select sv_meta_ingest(${quote(connection)},${quote(JSON.stringify([{ kind: "inbound", channel: "messenger", accountId: "10001", peerId: mediaPeer, at: Date.now(), key: "e".repeat(64), mid: "native-media-inbound", body: "Native attachment inquiry", raw: {} }]))}::jsonb);`,
+  );
+  await json(
+    `select sv_media_reserve(${quote(company)},${quote(owner)},${quote(mediaAsset)},${quote(JSON.stringify({ brandId: "main", source: "meta", sourceId: mediaThread, filename: "native-synthetic.pdf", bytes: 128, mimeType: "application/pdf" }))}::jsonb);`,
+  );
+  await json(
+    `select sv_media_verify(${quote(company)},${quote(owner)},${quote(mediaAsset)},${quote(JSON.stringify({ kind: "document", mimeType: "application/pdf", bytes: 128, contentHash: "f".repeat(64) }))}::jsonb);`,
+  );
+  assert.equal(
+    (
+      await json<{ held: boolean }>(
+        `select sv_editor_action(${quote(company)},${quote(owner)},'meta',${quote(mediaThread)},${quote(mediaEditor)},'acquire',null);`,
+      )
+    ).held,
+    true,
+  );
+  const mediaRevision = Number(
+      await sql(
+        `select revision from sv_meta_threads where company_id=${quote(company)}and id=${quote(mediaThread)};`,
+      ),
+    ),
+    claimMedia = () =>
+      json<{ dispatch: boolean; message: { id: string; state: string } }>(
+        `select sv_media_claim(${quote(company)},${quote(owner)},${quote(mediaAsset)},${quote(mediaCommand)},${mediaRevision},'Native attachment caption',${quote(mediaEditor)});`,
+      ),
+    mediaClaims = await Promise.all([claimMedia(), claimMedia()]);
+  assert.equal(mediaClaims.filter((result) => result.dispatch).length, 1);
+  assert.equal(mediaClaims[0].message.id, mediaClaims[1].message.id);
+  assert.equal(
+    await sql(
+      `select count(*)from sv_media_commands where company_id=${quote(company)}and client_id=${quote(mediaCommand)};`,
+    ),
+    "1",
+  );
+  assert.equal(
+    await sql(
+      `select count(*)from sv_meta_messages where company_id=${quote(company)}and thread_id=${quote(mediaThread)}and direction='outbound';`,
+    ),
+    "1",
+  );
+  await sql(
+    `select sv_meta_finish(${quote(company)},${quote(mediaClaims[0].message.id)},'uncertain',null,'native_media_unknown');`,
+  );
+  const mediaReplay = await claimMedia();
+  assert.equal(mediaReplay.dispatch, false);
+  assert.equal(mediaReplay.message.state, "uncertain");
+  assert.equal(mediaReplay.message.id, mediaClaims[0].message.id);
+  console.log(
+    "Native PostgreSQL: private-media competing admission and same-receipt unknown replay passed.",
+  );
+
+  // Synthetic website sessions never guess a CRM identity. A verified site must
+  // be explicitly enabled, and both visitor and staff retries share one durable
+  // message sequence even when separate PostgreSQL sessions arrive together.
+  const chatOrigin = "https://example.org",
+    chatProof = "a".repeat(48),
+    chatHash = "b".repeat(64),
+    chatRate = "9".repeat(64),
+    chatWidget = randomUUID(),
+    chatThread = randomUUID(),
+    chatVisitorCommand = randomUUID(),
+    chatStaffCommand = randomUUID(),
+    chatForeignCompany = randomUUID(),
+    chatForeignWidget = randomUUID();
+  const createChatWidget = async (tenant: string, id: string) => {
+    const data = {
+      id,
+      brandId: "main",
+      name: "Native synthetic website",
+      greeting: "Native synthetic greeting",
+      origins: [chatOrigin],
+      enabled: false,
+      revision: 0,
+    };
+    const command = randomUUID(),
+      configure = () =>
+        json<{ ok: boolean }>(
+          `select sv_web_chat_configure(${quote(tenant)},${quote(owner)},${quote(command)},${quote(JSON.stringify(data))}::jsonb,${quote(chatProof)});`,
+        ),
+      // Both callers contend while a separate transaction holds the config
+      // lock; the shared command receipt must still resolve to one revision.
+      configurations = await raceUnderNativeLock(
+        `select pg_advisory_xact_lock(hashtextextended('web-chat-config:'||${quote(tenant)}||':'||${quote(id)},0));`,
+        () => Promise.all([configure(), configure()]),
+      );
+    assert.deepEqual(configurations[0], configurations[1]);
+    assert.equal(configurations[0].ok, true);
+    assert.equal(
+      await sql(
+        `select count(*)from sv_action_receipts where company_id=${quote(tenant)}and command_id=${quote(command)}and kind='web-chat-config';`,
+      ),
+      "1",
+    );
+    assert.equal(
+      await sql(
+        `select revision from sv_web_chat_configs where company_id=${quote(tenant)}and id=${quote(id)};`,
+      ),
+      "1",
+    );
+    await assert.rejects(
+      () =>
+        json(
+          `select sv_web_chat_public_config(${quote(id)},${quote(chatOrigin)});`,
+        ),
+      /chat_unavailable/,
+    );
+    await json(
+      `select sv_web_chat_verify(${quote(tenant)},${quote(owner)},${quote(randomUUID())},${quote(id)},1,${quote(chatOrigin)},${quote(chatProof)});`,
+    );
+    await json(
+      `select sv_web_chat_configure(${quote(tenant)},${quote(owner)},${quote(randomUUID())},${quote(JSON.stringify({ ...data, revision: 2, enabled: true }))}::jsonb,${quote(chatProof)});`,
+    );
+  };
+  await createChatWidget(company, chatWidget);
+  const chatForeignState = createCompanyState({
+    companyId: chatForeignCompany,
+    companyName: "Native foreign website",
+    brands: [{ id: "main", name: "Main", short: "M" }],
+    team: [{ id: owner, name: "Owner", initials: "O" }],
+  });
+  await sql(
+    `select sv_provision_company(${quote(chatForeignCompany)},'Native foreign website',${quote(owner)},'Owner',${quote(JSON.stringify(chatForeignState))}::jsonb,array['crm']);`,
+  );
+  await createChatWidget(chatForeignCompany, chatForeignWidget);
+  const customersBeforeChat = await sql(
+    `select count(*)from sv_customers where company_id=${quote(company)};`,
+  );
+  await json(
+    `select sv_web_chat_start(${quote(chatWidget)},${quote(chatOrigin)},${quote(chatThread)},${quote(chatHash)},'Native visitor',${quote(chatRate)});`,
+  );
+  const chatSend = (
+      widget = chatWidget,
+      origin = chatOrigin,
+      hash = chatHash,
+      body = "Native visitor question",
+    ) =>
+      json<{ ok: boolean; id: string }>(
+        `select sv_web_chat_visitor_send(${quote(widget)},${quote(origin)},${quote(chatThread)},${quote(hash)},${quote(chatVisitorCommand)},${quote(body)});`,
+      ),
+    chatVisitorReplies = await Promise.all([chatSend(), chatSend()]);
+  assert.deepEqual(chatVisitorReplies[0], chatVisitorReplies[1]);
+  assert.equal(chatVisitorReplies[0].id, chatVisitorCommand);
+  assert.equal(
+    await sql(
+      `select count(*)from sv_web_chat_messages where company_id=${quote(company)}and thread_id=${quote(chatThread)};`,
+    ),
+    "1",
+  );
+  assert.equal(
+    await sql(
+      `select revision from sv_web_chat_threads where company_id=${quote(company)}and id=${quote(chatThread)};`,
+    ),
+    "1",
+  );
+  await assert.rejects(
+    () => chatSend(chatWidget, chatOrigin, "c".repeat(64)),
+    /chat_session_invalid/,
+  );
+  await assert.rejects(
+    () => chatSend(chatWidget, "https://www.example.org"),
+    /chat_unavailable/,
+  );
+  await assert.rejects(
+    () => chatSend(chatForeignWidget),
+    /chat_session_invalid/,
+  );
+  await assert.rejects(
+    () => chatSend(chatWidget, chatOrigin, chatHash, "Changed retry"),
+    /idempotency_conflict/,
+  );
+  assert.equal(
+    await sql(
+      `select count(*)from sv_customers where company_id=${quote(company)};`,
+    ),
+    customersBeforeChat,
+  );
+  assert.equal(
+    await sql(
+      `select count(*)from sv_web_chat_threads where company_id=${quote(company)}and id=${quote(chatThread)}and customer_id is null;`,
+    ),
+    "1",
+  );
+  const chatStaffData = {
+      action: "reply",
+      threadId: chatThread,
+      revision: 1,
+      body: "Native staff reply",
+    },
+    chatStaffReply = () =>
+      json<{ ok: boolean }>(
+        `select sv_web_chat_staff_action(${quote(company)},${quote(owner)},${quote(chatStaffCommand)},${quote(JSON.stringify(chatStaffData))}::jsonb);`,
+      ),
+    chatStaffReplies = await Promise.all([chatStaffReply(), chatStaffReply()]);
+  assert.deepEqual(chatStaffReplies[0], chatStaffReplies[1]);
+  assert.equal(chatStaffReplies[0].ok, true);
+  assert.equal(
+    await sql(
+      `select count(*)from sv_web_chat_messages where company_id=${quote(company)}and thread_id=${quote(chatThread)};`,
+    ),
+    "2",
+  );
+  assert.equal(
+    await sql(
+      `select revision from sv_web_chat_threads where company_id=${quote(company)}and id=${quote(chatThread)};`,
+    ),
+    "2",
+  );
+  assert.equal(
+    await sql(
+      `select count(*)from sv_action_receipts where company_id=${quote(company)}and command_id=${quote(chatStaffCommand)}and kind='web-chat-staff';`,
+    ),
+    "1",
+  );
+  const chatHistory = await json<{
+    messages: { id: string; body: string; sequence: number }[];
+  }>(
+    `select sv_web_chat_visitor_read(${quote(chatWidget)},${quote(chatOrigin)},${quote(chatThread)},${quote(chatHash)},0);`,
+  );
+  assert.deepEqual(
+    chatHistory.messages.map((message) => message.id),
+    [chatVisitorCommand, chatStaffCommand],
+  );
+  assert.deepEqual(
+    chatHistory.messages.map((message) => message.sequence),
+    [1, 2],
+  );
+  await verifyWebsiteCNative(sql, owner, raceUnderNativeLock);
+  console.log(
+    "Native PostgreSQL: verified website enablement, competing visitor/staff retries, exact session scope and explicit CRM identity passed.",
+  );
   console.log(
     "Native PostgreSQL: roster-scoped final slot and competing editor takeover passed.",
   );

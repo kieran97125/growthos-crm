@@ -48,6 +48,7 @@ export default function BrandKnowledge({
         keywords: [],
         source: "手動新增",
         status: "approved",
+        visibility: "internal",
         revision: 1,
         validUntil: "9999-12-31",
       },
@@ -172,6 +173,10 @@ export default function BrandKnowledge({
                 title: String(data.get("question")).trim(),
                 content: String(data.get("answer")).trim(),
                 status: "approved" as const,
+                visibility:
+                  data.get("visibility") === "inherit"
+                    ? undefined
+                    : (String(data.get("visibility")) as "public" | "internal"),
                 validUntil: "9999-12-31",
                 revision:
                   editing.revision +
@@ -215,6 +220,21 @@ export default function BrandKnowledge({
                 placeholder="寫低你想 C 使用嘅答案。"
               />
             </label>
+            <label>
+              使用範圍
+              <select
+                name="visibility"
+                aria-label="FAQ 使用範圍"
+                defaultValue={editing.visibility ?? "inherit"}
+              >
+                <option value="inherit">沿用原有公開範圍</option>
+                <option value="internal">只供團隊內部使用</option>
+                <option value="public">可供網站 C 向訪客解答</option>
+              </select>
+            </label>
+            <p className="wi-hint">
+              公開知識儲存後，使用自動同步嘅網站 C 會採用最新版本。
+            </p>
             {error && (
               <p role="alert" className="wi-error">
                 {error}

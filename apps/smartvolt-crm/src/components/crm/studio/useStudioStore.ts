@@ -5,6 +5,7 @@ export type StudioController = {
   state: StudioState;
   ready: boolean;
   storageError: boolean;
+  storage?: string;
   dispatch: (action: StudioAction) => void;
 };
 export function useStudioStore(enabled: boolean): StudioController {
@@ -14,6 +15,7 @@ export function useStudioStore(enabled: boolean): StudioController {
     state: d.state.studio,
     ready: d.ready,
     storageError: d.storage.includes("未能"),
+    storage: d.storage,
     dispatch: (action) => d.dispatch({ type: "studio", action }),
   };
 }

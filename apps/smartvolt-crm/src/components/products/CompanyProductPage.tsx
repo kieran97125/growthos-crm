@@ -1,5 +1,7 @@
 import Link from "next/link";
-import UnifiedInbox from "@/components/inquiries/UnifiedInbox";
+import InboxChannels from "@/components/inquiries/InboxChannels";
+import { readChatReadiness } from "@/lib/web-chat/server";
+import type { WebChatReadiness } from "@/lib/web-chat/model";
 import { redirect } from "next/navigation";
 import { loadCompany, requireCompany } from "@/lib/saas/server";
 import { AccessError } from "@/lib/saas/identity";
@@ -28,11 +30,25 @@ export async function CompanyProductPage({
     : "inbox";
   let company;
   let access;
+  let websiteReadiness: WebChatReadiness = "unavailable";
   try {
     access = await requireCompany(companyId);
     const selected = product ?? defaultProduct(access.products);
     if (selected === "crm" && view === "inbox") {
       requireProduct(access.products, "crm");
+      websiteReadiness = await readChatReadiness(companyId);
+      if (websiteReadiness !== "ready" && query.provider === "website") {
+        const clean = new URLSearchParams();
+        for (const [key, value] of Object.entries(query))
+          if (
+            value !== undefined &&
+            !["provider", "thread", "contact", "queue"].includes(key)
+          )
+            clean.set(key, value);
+        redirect(
+          `/company/${companyId}/crm${clean.size ? "?" + clean.toString() : ""}`,
+        );
+      }
     } else
       company = await loadCompany(
         companyId,
@@ -54,7 +70,10 @@ export async function CompanyProductPage({
   }
   if (!company)
     return (
-      <UnifiedInbox
+      <InboxChannels
+        key={`${companyId}:${access.user.id}`}
+        actorId={access.user.id}
+        websiteReadiness={websiteReadiness}
         companyId={companyId}
         companyName={access.company.name}
         hasPos={access.products.includes("pos")}
@@ -67,7 +86,10 @@ export async function CompanyProductPage({
   const selected = product ?? defaultProduct(company.products)!;
   if (selected === "crm" && view === "inbox")
     return (
-      <UnifiedInbox
+      <InboxChannels
+        key={`${companyId}:${access.user.id}`}
+        actorId={access.user.id}
+        websiteReadiness={websiteReadiness}
         companyId={companyId}
         companyName={company.company.name}
         hasPos={company.products.includes("pos")}
@@ -88,6 +110,7 @@ export async function CompanyProductPage({
           <ProductWorkspace
             initialProduct={selected}
             initialView={view}
+            initialBotTab={query.rules === "1" ? "settings" : "knowledge"}
             initialContact={query.contact}
             initialBrand={query.brand}
             initialConversation={query.conversation}

@@ -94,11 +94,13 @@ const errorText = (error: unknown) =>
 
 export default function WhatsAppInbox({
   companyId,
+  actorId,
   companyName,
   canSend,
   canManage,
 }: {
   companyId: string;
+  actorId: string;
   companyName: string;
   canSend: boolean;
   canManage: boolean;
@@ -510,6 +512,7 @@ export default function WhatsAppInbox({
   return (
     <WhatsAppInboxView
       companyId={companyId}
+      actorId={actorId}
       companyName={companyName}
       canSend={canSend}
       editor={replyLease}

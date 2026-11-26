@@ -177,21 +177,25 @@ export default function DemoExperience({
       setNotice("提醒時間已過，請先更新預約日期。");
       return;
     }
-    const result = simulateFlow(flow, {
-      ...DEFAULT_SIMULATION,
-      intent: "booking",
-      manualVerified: true,
-      consent,
-      templateApproved: approved,
-      fields: {
-        name: person.name,
-        service: booking.service,
-        fee: booking.fee,
-        branch: booking.branch,
-        date: booking.date,
-        time: booking.time,
+    const result = simulateFlow(
+      flow,
+      {
+        ...DEFAULT_SIMULATION,
+        intent: "booking",
+        manualVerified: true,
+        consent,
+        templateApproved: approved,
+        fields: {
+          name: person.name,
+          service: booking.service,
+          fee: booking.fee,
+          branch: booking.branch,
+          date: booking.date,
+          time: booking.time,
+        },
       },
-    });
+      identity.scope.team,
+    );
     const step = result.steps.at(-1);
     if (result.issues.length || step?.state !== "completed" || !step.preview) {
       setNotice(result.issues[0] ?? step?.detail ?? "流程未到達提醒節點。");
@@ -656,19 +660,23 @@ export default function DemoExperience({
                 setForm(false);
                 return;
               }
-              const result = simulateFlow(flow, {
-                ...DEFAULT_SIMULATION,
-                intent: "booking",
-                manualVerified: false,
-                fields: {
-                  name: person.name,
-                  service,
-                  branch,
-                  date,
-                  time,
-                  fee: "待同事核實",
+              const result = simulateFlow(
+                flow,
+                {
+                  ...DEFAULT_SIMULATION,
+                  intent: "booking",
+                  manualVerified: false,
+                  fields: {
+                    name: person.name,
+                    service,
+                    branch,
+                    date,
+                    time,
+                    fee: "待同事核實",
+                  },
                 },
-              });
+                identity.scope.team,
+              );
               if (result.issues.length || !result.followup) {
                 setNotice(
                   result.issues[0] ?? "目前流程會轉真人，未有建立跟進卡節點。",

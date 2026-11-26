@@ -17,6 +17,7 @@ async function graph(
   body?: unknown,
   query?: Record<string, string>,
   fetcher = fetch,
+  signal?: AbortSignal,
 ): Promise<Record<string, unknown>> {
   const url = new URL(`https://graph.facebook.com/${GRAPH_VERSION}/${path}`);
   for (const [k, v] of Object.entries(query ?? {})) url.searchParams.set(k, v);
@@ -30,7 +31,9 @@ async function graph(
       body: body === undefined ? undefined : JSON.stringify(body),
       redirect: "error",
       cache: "no-store",
-      signal: AbortSignal.timeout(15000),
+      signal: signal
+        ? AbortSignal.any([signal, AbortSignal.timeout(15000)])
+        : AbortSignal.timeout(15000),
     });
     const declared = response.headers.get("content-length");
     if (declared && Number(declared) > 65536)
@@ -68,11 +71,15 @@ async function graph(
     if (!response.ok || data.error) {
       const e = data.error as { code?: number } | undefined;
       throw new MetaGraphError(
-        e?.code === 190
-          ? "token_expired"
-          : e?.code === 10 || e?.code === 200
-            ? "permission_missing"
-            : "provider_rejected",
+        e?.code === 10900
+          ? "activity_already_replied"
+          : e?.code === 10903 || e?.code === 551
+            ? "private_reply_unavailable"
+            : e?.code === 190
+              ? "token_expired"
+              : e?.code === 10 || e?.code === 200
+                ? "permission_missing"
+                : "provider_rejected",
         method !== "GET" && response.status >= 500,
       );
     }
@@ -82,6 +89,7 @@ async function graph(
     throw new MetaGraphError("provider_unreachable", method !== "GET");
   }
 }
+export { graph as metaGraphRequest };
 export async function inspectPage(
   config: GraphConfig,
   pageId: string,

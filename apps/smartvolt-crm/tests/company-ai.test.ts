@@ -58,6 +58,38 @@ const output = {
   nextStep: "了解團隊人數及現有渠道。",
   interest: "medium" as const,
 };
+test("admitted website C may answer a later question mentioning the waiting human without weakening evidence or sensitive-topic checks", () => {
+  const later = { ...input, message: "真人未覆，C幫我答點管理查詢" };
+  assert.equal(
+    inspectGroundedAnswer(output, later, now, "model").answer.decision,
+    "handoff",
+  );
+  assert.equal(
+    inspectGroundedAnswer(output, later, now, "model", "website").answer
+      .decision,
+    "draft",
+  );
+  assert.equal(
+    inspectGroundedAnswer(
+      { ...output, evidence: [] },
+      later,
+      now,
+      "model",
+      "website",
+    ).answer.decision,
+    "handoff",
+  );
+  assert.equal(
+    inspectGroundedAnswer(
+      output,
+      { ...later, message: "投訴退款" },
+      now,
+      "model",
+      "website",
+    ).answer.decision,
+    "handoff",
+  );
+});
 test("AI uses only same-company approved unexpired knowledge at Hong Kong day rollover", () => {
   const rows = [
     article,
@@ -141,6 +173,9 @@ test("answer diagnostics distinguish invalid evidence from model-requested human
     "model",
   );
   assert.equal(invalid.answer.decision, "handoff");
+  assert.deepEqual(invalid.answer.review?.handoffReasons, [
+    "答案引文未能對應核准資料。",
+  ]);
   assert.deepEqual(invalid.validation.issues, ["invalid_quotes"]);
   const handoff = inspectGroundedAnswer(
     { ...output, action: "handoff", confidence: 0.5 },
@@ -153,6 +188,54 @@ test("answer diagnostics distinguish invalid evidence from model-requested human
   assert.ok(!JSON.stringify(handoff.validation).includes(article.content));
   assert.deepEqual(
     inspectGroundedAnswer(output, input, now, "model").validation.issues,
+    [],
+  );
+});
+test("trial handoff reasons distinguish customer choice, saved scope, missing evidence and unsupported prices", () => {
+  const human = inspectGroundedAnswer(
+    output,
+    { ...input, message: "請轉真人" },
+    now,
+    "model",
+  ).answer;
+  assert.deepEqual(human.review?.handoffReasons, ["客人要求真人協助。"]);
+  const scope = inspectGroundedAnswer(
+    output,
+    { ...input, profile: { ...input.profile, allowService: false } },
+    now,
+    "model",
+  ).answer;
+  assert.deepEqual(scope.review?.handoffReasons, [
+    "呢類問題未獲品牌授權由 AI 處理。",
+  ]);
+  for (const [change, reason] of [
+    [{ reply: "服務收費 HK$999。" }, "答案提到未有核准依據嘅價錢。"],
+    [{ evidence: [], sourceIds: [] }, "未有足夠核准資料支持答案。"],
+    [{ reply: "已為你預約，保證有位。" }, "正式預約及即時名額需要同事核實。"],
+  ] as const) {
+    const answer = inspectGroundedAnswer(
+      {
+        ...output,
+        ...change,
+        evidence: [...(change.evidence ?? output.evidence)],
+        sourceIds: [...(change.sourceIds ?? output.sourceIds)],
+      },
+      input,
+      now,
+      "model",
+    ).answer;
+    assert.equal(answer.decision, "handoff");
+    assert.ok(answer.review?.handoffReasons.includes(reason));
+    assert.equal(
+      new Set(answer.review?.handoffReasons).size,
+      answer.review?.handoffReasons.length,
+    );
+    assert.deepEqual(answer.sources, []);
+    assert.deepEqual(answer.evidence, []);
+  }
+  assert.deepEqual(
+    inspectGroundedAnswer(output, input, now, "model").answer.review
+      ?.handoffReasons,
     [],
   );
 });
@@ -209,4 +292,110 @@ test("billing and authentication failures expose actionable categories without r
   );
   for (const message of Object.values(aiErrors))
     assert.ok(!message.includes("sk-"));
+});
+
+test("website privacy gate calls no model on sensitive current or historical text", async () => {
+  const model = new MockLanguageModelV4();
+  for (const sensitive of [
+    "懷孕時可唔可以做呢個療程？",
+    "I have a medication allergy",
+    "我的身分證是 X123456(7)",
+    "Can you help with a refund?",
+    "My name is Someone Else, what is the cost?",
+  ]) {
+    for (const turn of [
+      { message: sensitive, history: [] },
+      {
+        message: "Any update?",
+        history: [{ role: "user" as const, content: sensitive }],
+      },
+      {
+        message: "Any update?",
+        history: [{ role: "assistant" as const, content: sensitive }],
+      },
+    ]) {
+      await assert.rejects(
+        generateCompanyAnswer(
+          { ...input, ...turn },
+          model,
+          "Synthetic",
+          now,
+          "answer",
+          "website",
+        ),
+        { message: "website_privacy_handoff" },
+      );
+    }
+  }
+  assert.equal(model.doGenerateCalls.length, 0);
+});
+
+test("website provider sees public facts and minimized conversation without staff context", async () => {
+  const model = new MockLanguageModelV4({
+    doGenerate: {
+      content: [{ type: "text", text: JSON.stringify(output) }],
+      finishReason: { unified: "stop", raw: "stop" },
+      usage: {
+        inputTokens: { total: 80, noCache: 80, cacheRead: 0, cacheWrite: 0 },
+        outputTokens: { total: 40, text: 40, reasoning: 0 },
+      },
+      warnings: [],
+    },
+  });
+  const visitor: AssistantInput = {
+    ...input,
+    name: "Robin Example",
+    message:
+      "Robin Example: demo on 2026-12-18 19:00 for HK$228, +852 5555 0199",
+    history: [
+      {
+        role: "assistant",
+        content: "Robin, was it robin123@example.net or ２３４５－６７８９?",
+      },
+    ],
+    articles: [
+      { ...article, content: article.content + " 公開商戶電話 5555 0123" },
+    ],
+    styleGuidance: ["Private staff review"],
+    customerMemory: [
+      {
+        id: "m",
+        revision: 1,
+        category: "note",
+        content: "Private staff memory",
+      },
+    ],
+    reviewedVoice: [
+      { id: "v", revision: 1, messageId: "vm", text: "Private voice" },
+    ],
+  };
+  await generateCompanyAnswer(
+    visitor,
+    model,
+    "Synthetic",
+    now,
+    "answer",
+    "website",
+  );
+  const transmitted = JSON.stringify(model.doGenerateCalls[0].prompt);
+  for (const value of [
+    "Robin",
+    "Example",
+    "5555 0199",
+    "2345",
+    "example.net",
+    "Private staff",
+    "Private voice",
+  ])
+    assert.ok(!transmitted.toLowerCase().includes(value.toLowerCase()), value);
+  for (const value of [
+    "2026-12-18 19:00",
+    "HK$228",
+    "5555 0123",
+    "demo",
+    "[電郵]",
+    "[聯絡號碼]",
+  ])
+    assert.ok(transmitted.includes(value), value);
+  assert.ok(visitor.message.includes("Robin Example"));
 });

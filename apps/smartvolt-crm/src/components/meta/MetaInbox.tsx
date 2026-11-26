@@ -5,9 +5,11 @@ import {
   DraftTranslation,
 } from "@/components/translation/Translation";
 import VoiceMessage from "@/components/voice/VoiceMessage";
+import MediaMessage from "@/components/media/MediaMessage";
+import MediaComposer from "@/components/media/MediaComposer";
 import { useWorkspaceChrome } from "@/components/workspace/context";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { BRAND } from "@/lib/brand";
 import type { MetaChannel } from "@/lib/meta/protocol";
 import {
@@ -41,6 +43,7 @@ type Thread = ThreadOperations & {
   assignee_active?: boolean;
 };
 type Message = {
+  hasMedia?: boolean;
   id: string;
   seq: number;
   direction: string;
@@ -71,6 +74,13 @@ type Overview = {
   };
 };
 type Detail = {
+  commentSources?: {
+    at: number;
+    postId: string;
+    commentId: string;
+    permalink?: string | null;
+    body: string;
+  }[];
   activity?: ThreadActivity[];
   sources?: { at: number; adId: string | null }[];
   thread: Thread;
@@ -99,6 +109,8 @@ const date = (value: number | string) =>
   }).format(new Date(value));
 export default function MetaInbox({ companyId }: { companyId: string }) {
   const chrome = useWorkspaceChrome();
+  const verifyTokenInputId = useId();
+  const [verifyTokenVisible, setVerifyTokenVisible] = useState(false);
   const endpoint = `/api/companies/${encodeURIComponent(companyId)}/meta`;
   const [overview, setOverview] = useState<Overview | null>(null),
     [detail, setDetail] = useState<Detail | null>(null),
@@ -466,7 +478,7 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
                       {overview.readiness.blockers.join("；")}
                     </p>
                   )}
-                  <form onSubmit={connect}>
+                  <form onSubmit={connect} autoComplete="off">
                     <label>
                       渠道
                       <select name="channel">
@@ -494,6 +506,8 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
                         inputMode="numeric"
                         pattern="[1-9][0-9]{1,49}"
                         autoComplete="off"
+                        data-1p-ignore="true"
+                        data-lpignore="true"
                       />
                     </label>
                     <label>
@@ -502,7 +516,11 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
                         name="token"
                         type="password"
                         required
-                        autoComplete="off"
+                        autoComplete="new-password"
+                        data-1p-ignore="true"
+                        data-lpignore="true"
+                        autoCapitalize="none"
+                        spellCheck={false}
                         minLength={20}
                         maxLength={8192}
                       />
@@ -535,28 +553,45 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
                     />
                   </label>
                   {overview.readiness.verifyToken && (
-                    <label>
-                      Verify Token
+                    <div className="meta-verify-token">
+                      <label htmlFor={verifyTokenInputId}>Verify Token</label>
                       <input
-                        type="password"
+                        id={verifyTokenInputId}
+                        type={verifyTokenVisible ? "text" : "password"}
                         readOnly
+                        autoComplete="new-password"
+                        data-1p-ignore="true"
+                        data-lpignore="true"
+                        spellCheck={false}
                         value={overview.readiness.verifyToken}
                         onFocus={(e) => e.currentTarget.select()}
                       />
-                      <button
-                        type="button"
-                        onClick={() =>
-                          void navigator.clipboard
-                            .writeText(overview.readiness.verifyToken!)
-                            .then(
-                              () => setNotice("Verify Token 已複製。"),
-                              () => setError("請選取並複製 Verify Token。"),
-                            )
-                        }
-                      >
-                        複製 Verify Token
-                      </button>
-                    </label>
+                      <div className="meta-token-actions">
+                        <button
+                          type="button"
+                          aria-controls={verifyTokenInputId}
+                          aria-pressed={verifyTokenVisible}
+                          onClick={() =>
+                            setVerifyTokenVisible((shown) => !shown)
+                          }
+                        >
+                          {verifyTokenVisible ? "隱藏" : "顯示"} Verify Token
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            void navigator.clipboard
+                              .writeText(overview.readiness.verifyToken!)
+                              .then(
+                                () => setNotice("Verify Token 已複製。"),
+                                () => setError("請選取並複製 Verify Token。"),
+                              )
+                          }
+                        >
+                          複製 Verify Token
+                        </button>
+                      </div>
+                    </div>
                   )}
                   <ol>
                     <li>完成 Meta App 發佈及所需訊息權限。</li>
@@ -804,6 +839,26 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
                     </details>
                   )}
                   <div className="meta-messages">
+                    {!!detail.commentSources?.length && (
+                      <div className="meta-source-evidence">
+                        {detail.commentSources.map((s) => (
+                          <p key={s.commentId}>
+                            {s.permalink ? (
+                              <a
+                                href={s.permalink}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                由貼文留言開始
+                              </a>
+                            ) : (
+                              "由貼文留言開始"
+                            )}{" "}
+                            · {s.body}
+                          </p>
+                        ))}
+                      </div>
+                    )}
                     {!!detail.sources?.length && (
                       <p className="meta-source-evidence">
                         平台推薦來源：
@@ -845,7 +900,17 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
                         key={m.id}
                         className={`meta-message ${m.direction}`}
                       >
-                        <p>{m.body}</p>
+                        {connection &&
+                          (m.hasMedia || m.body.startsWith("[附件")) && (
+                            <MediaMessage
+                              companyId={companyId}
+                              brandId={connection.brand_id}
+                              source="meta"
+                              sourceId={detail.thread.id}
+                              messageId={m.id}
+                            />
+                          )}
+                        {!m.body.startsWith("[附件") && <p>{m.body}</p>}
                         {m.direction === "inbound" && connection && (
                           <MessageTranslation
                             key={detail.thread.id + m.id + m.body}
@@ -970,6 +1035,29 @@ export default function MetaInbox({ companyId }: { companyId: string }) {
                       />
                     )}
                     <footer>
+                      {!note && connection && overview && (
+                        <MediaComposer
+                          companyId={companyId}
+                          actorId={overview.actorId}
+                          brandId={connection.brand_id}
+                          source="meta"
+                          sourceId={detail.thread.id}
+                          channel={connection.channel}
+                          revision={detail.thread.revision}
+                          canSend={!!overview?.canSend}
+                          disabled={
+                            busy ||
+                            !windowOpen ||
+                            !!unresolved ||
+                            pendingThread === selected ||
+                            replyLease.busy ||
+                            (replyLease.state.occupied &&
+                              !replyLease.state.held)
+                          }
+                          acquireEditor={() => replyLease.acquire()}
+                          onSent={() => refresh()}
+                        />
+                      )}
                       <small>
                         {Array.from(draft).length}/{max}
                         {!note && unresolved ? " · 有發送結果待核對" : ""}
